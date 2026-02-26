@@ -1,0 +1,793 @@
+/* --- 设置与个人资料样式 --- */
+
+#chat-settings-screen, #group-settings-screen, #customize-screen {
+    background-color: #f2f2f2;
+}
+
+#chat-settings-screen .content, #group-settings-screen .content, #customize-screen .content {
+    padding: 0;
+    overflow-y: auto;
+}
+
+.kkt-settings-container {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* 顶部个人资料区 */
+.kkt-profile-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 5px;
+    padding: 20px 20px 5px;
+}
+
+.kkt-profile-avatar {
+    width: 90px;
+    height: 90px;
+    border-radius: 42%; /* 稍微圆一点的矩形，或者50%全圆 */
+    object-fit: cover;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.kkt-profile-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.kkt-profile-status {
+    font-size: 13px;
+    color: #888;
+}
+
+/* 分组卡片 */
+.kkt-group {
+    background-color: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* 列表项 */
+.kkt-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    border-bottom: 1px solid #f5f5f5;
+    background-color: #fff;
+    transition: background-color 0.2s;
+    font-size: calc(15px * var(--app-font-scale));
+}
+
+.kkt-item:last-child {
+    border-bottom: none;
+}
+
+.kkt-item:active {
+    background-color: #f9f9f9;
+}
+
+/* 修复 KKT 设置页面中的文本框拉伸问题 */
+.kkt-item textarea {
+    resize: vertical !important;
+    width: 100% !important;
+    box-sizing: border-box;
+}
+
+/* 气泡预览区域样式 */
+.bubble-css-preview {
+    width: 100%;
+    min-height: 80px;
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.kkt-item-label {
+    color: #333;
+    font-weight: 400;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.kkt-item-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #888;
+    font-size: calc(14px * var(--app-font-scale));
+}
+
+.kkt-arrow {
+    font-size: 12px;
+    color: #ccc;
+    margin-left: 5px;
+}
+
+/* 开关样式 */
+.kkt-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.kkt-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.kkt-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.kkt-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .kkt-slider {
+    background-color: #fae100; /* KKT 黄色风格 */
+}
+
+input:checked + .kkt-slider:before {
+    transform: translateX(20px);
+}
+
+/* 小头像预览 */
+.kkt-small-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid #eee;
+}
+
+/* 底部退出按钮 */
+.kkt-danger-btn {
+    width: 100%;
+    padding: 15px;
+    text-align: center;
+    background-color: #fff;
+    color: #ff3b30;
+    font-size: 15px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.kkt-danger-btn:active {
+    background-color: #f5f5f5;
+}
+
+
+/* 群聊设置页面的成员列表样式适配 */
+#group-settings-screen .group-member,
+#group-settings-screen .add-member-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+#group-settings-screen .group-member img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 5px;
+    border: 2px solid #eee;
+}
+
+#group-settings-screen .add-member-btn .add-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px dashed #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #ccc;
+    margin-bottom: 5px;
+    transition: all 0.2s ease;
+}
+
+#group-settings-screen .add-member-btn:hover .add-icon {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+#group-settings-screen .group-member span,
+#group-settings-screen .add-member-btn span {
+    font-size: 12px;
+    text-align: center;
+    color: var(--text-color);
+}
+
+
+/* 自定义图标设置 */
+#customize-screen .icon-custom-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+#customize-screen .icon-custom-item:last-child {
+    border-bottom: none;
+}
+
+#customize-screen .icon-preview {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+#customize-screen .icon-details {
+    flex-grow: 1;
+}
+
+#customize-screen .icon-details p {
+    margin: 0 0 8px 0;
+    font-weight: 600;
+}
+
+#customize-screen .icon-details input {
+    width: calc(100% - 70px);
+}
+
+#customize-screen .reset-icon-btn {
+    background: #e0e0e0;
+    color: #555;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+#peek-app-icons-settings .icon-preview {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+/* 壁纸设置 */
+.wallpaper-preview {
+    width: 100%;
+    aspect-ratio: 9 / 16;
+    max-height: 450px;
+    border-radius: var(--border-radius);
+    margin-bottom: 25px;
+    background-size: cover;
+    background-position: center;
+    border: 3px dashed var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--secondary-color);
+    font-style: italic;
+    background-color: #fff8fa;
+}
+
+/* Sticker Group Tags Styles in Settings */
+#setting-char-sticker-groups-container,
+#setting-group-sticker-groups-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-height: none !important; 
+    overflow-y: visible !important;
+    border: none !important; 
+    padding: 0 !important; 
+    background: transparent !important;
+}
+
+.sticker-group-tag {
+    padding: 6px 12px;
+    background-color: #f0f0f0;
+    color: #555;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    user-select: none;
+}
+
+.sticker-group-tag.selected {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.sticker-group-tag:hover {
+    transform: translateY(-1px);
+}
+
+/* Settings Tabs */
+.settings-tabs {
+    display: flex;
+    justify-content: center;
+    background-color: #fff;
+    border-radius: 25px;
+    padding: 4px;
+    margin: 0 20px 5px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.settings-tab-item {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.settings-tab-item.active {
+    background-color: #2a3032;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.settings-tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.settings-tab-content.active {
+    display: block;
+}
+
+/* Group Member Edit Modals */
+#edit-group-member-modal,
+#create-member-for-group-modal {
+    z-index: 102;
+}
+
+#edit-group-member-modal .avatar-preview,
+#create-member-for-group-modal .avatar-preview {
+    width: 80px;
+    height: 80px;
+}
+
+/* Group Recipient Selection */
+#group-recipient-selection-modal {
+    z-index: 201;
+}
+
+#group-recipient-selection-modal .modal-window {
+    width: 90%;
+    max-width: 380px;
+}
+
+#group-recipient-selection-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+.group-recipient-select-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 5px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.group-recipient-select-item:last-child {
+    border-bottom: none;
+}
+
+.group-recipient-select-item input[type="checkbox"] {
+    margin-right: 15px;
+    width: 20px;
+    height: 20px;
+}
+
+.group-recipient-select-item label {
+    font-weight: 500;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.group-recipient-select-item img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Member Selection List */
+.member-selection-list {
+    list-style: none;
+    padding: 0;
+    margin: 15px 0;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+.member-selection-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 5px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.member-selection-item:last-child {
+    border-bottom: none;
+}
+
+.member-selection-item input[type="checkbox"] {
+    margin-right: 15px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.member-selection-item img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 10px;
+}
+
+.member-selection-item label {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+/* Invite Member Modal */
+#invite-member-modal {
+    z-index: 201;
+}
+
+#invite-member-modal .modal-window {
+    width: 90%;
+    max-width: 380px;
+}
+
+#invite-member-selection-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+.invite-member-select-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 5px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.invite-member-select-item:last-child {
+    border-bottom: none;
+}
+
+.invite-member-select-item input[type="checkbox"] {
+    margin-right: 15px;
+    width: 20px;
+    height: 20px;
+}
+
+.invite-member-select-item label {
+    font-weight: 500;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.invite-member-select-item img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Storage Analysis Styles */
+.storage-detail-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.storage-detail-item:last-child {
+    border-bottom: none;
+}
+.storage-color-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 15px;
+    flex-shrink: 0;
+}
+.storage-detail-info {
+    flex-grow: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+.storage-detail-name {
+    font-size: 16px;
+    color: #333;
+    font-weight: 500;
+}
+.storage-detail-size {
+    font-size: 15px;
+    color: #666;
+    text-align: right;
+}
+.storage-detail-percentage {
+    font-size: 12px;
+    color: #999;
+    width: 50px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* 存储分析页 - 底部移动端控制台 */
+.storage-console-widget {
+    width: 100%;
+    margin-top: 20px;
+    flex-shrink: 0;
+}
+.storage-console-bar {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 15px;
+    color: #333;
+    text-align: left;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.storage-console-bar:hover {
+    background: #f0f2f5;
+}
+.storage-console-bar:active {
+    background: #e8eaed;
+}
+.storage-console-bar-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    margin-right: 12px;
+    background: rgba(90, 152, 219, 0.12);
+    border-radius: 10px;
+    color: #5a98db;
+}
+.storage-console-bar-label {
+    font-weight: 600;
+    flex-grow: 1;
+}
+.storage-console-bar-counts {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 8px;
+}
+.storage-console-count {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.storage-console-count-log {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+.storage-console-count-warn {
+    background: #fff8e1;
+    color: #f57c00;
+}
+.storage-console-count-error {
+    background: #ffebee;
+    color: #c62828;
+}
+.storage-console-bar-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    transition: transform 0.25s ease;
+}
+.storage-console-widget.expanded .storage-console-bar-chevron {
+    transform: rotate(180deg);
+}
+.storage-console-panel {
+    margin-top: 10px;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    max-height: 280px;
+    display: flex;
+    flex-direction: column;
+}
+.storage-console-panel[hidden] {
+    display: none !important;
+}
+.storage-console-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+.storage-console-tab {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #666;
+    background: #f5f5f5;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+.storage-console-tab:hover {
+    background: #eee;
+    color: #333;
+}
+.storage-console-tab.active {
+    background: #e3f2fd;
+    color: #1976d2;
+    border-color: #90caf9;
+}
+.storage-console-tab[data-filter="warn"].active {
+    background: #fff8e1;
+    color: #f57c00;
+    border-color: #ffb74d;
+}
+.storage-console-tab[data-filter="error"].active {
+    background: #ffebee;
+    color: #c62828;
+    border-color: #ef5350;
+}
+.storage-console-tab[data-filter="log"].active {
+    background: #e3f2fd;
+    color: #1976d2;
+    border-color: #90caf9;
+}
+.storage-console-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 13px;
+    color: #666;
+}
+.storage-console-filter-label {
+    font-weight: 500;
+}
+.storage-console-clear-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    color: #5a98db;
+    background: transparent;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s, color 0.2s;
+}
+.storage-console-clear-btn:hover {
+    background: #f0f2f5;
+    color: #1976d2;
+}
+.storage-console-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    min-height: 80px;
+    font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+}
+.storage-console-log-item {
+    padding: 6px 10px;
+    margin-bottom: 4px;
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+.storage-console-log-item.type-log {
+    background: #f5f9ff;
+    border-left-color: #90caf9;
+    color: #333;
+}
+.storage-console-log-item.type-warn {
+    background: #fffbf0;
+    border-left-color: #ffb74d;
+    color: #e65100;
+}
+.storage-console-log-item.type-error {
+    background: #fff5f5;
+    border-left-color: #ef5350;
+    color: #b71c1c;
+}
+.storage-console-log-item .storage-console-time {
+    font-size: 11px;
+    color: #999;
+    margin-right: 8px;
+}
+.storage-console-list:empty::before {
+    content: '暂无日志';
+    display: block;
+    padding: 16px;
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+}

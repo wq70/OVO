@@ -1,0 +1,135 @@
+/* --- Peek Steps App Styles (偷看步数应用样式) --- */
+
+#peek-steps-screen {
+    background-color: #f0f2f5;
+    color: #1c1e21;
+}
+
+#peek-steps-screen .app-header {
+    background-color: #f0f2f5;
+    border-bottom: 1px solid #dcdcdc;
+}
+
+#peek-steps-screen .app-header .title,
+#peek-steps-screen .app-header .back-btn {
+    color: #1c1e21;
+}
+
+#peek-steps-screen .content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.steps-header {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 30px;
+    padding: 0 10px;
+}
+
+.steps-header-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    margin-right: 15px;
+}
+
+.steps-header-name {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.steps-progress-container {
+    width: 220px;
+    height: 220px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 35px;
+    flex-shrink: 0;
+}
+
+.steps-progress-circle {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(
+        #4CAF50 0deg,
+        #4CAF50 calc(3.6deg * var(--steps-percentage, 0)),
+        #e6e6e6 calc(3.6deg * var(--steps-percentage, 0)),
+        #e6e6e6 360deg
+    );
+    transition: background 0.5s ease-in-out;
+}
+
+.steps-progress-inner {
+    position: absolute;
+    width: 85%;
+    height: 85%;
+    background-color: #f0f2f5;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.steps-count {
+    font-size: 42px;
+    font-weight: bold;
+    color: #4CAF50;
+}
+
+.steps-label {
+    font-size: 14px;
+    color: #65676b;
+    margin-top: 5px;
+}
+
+.steps-module {
+    width: 100%;
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.steps-module-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.activity-track-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.activity-track-item {
+    font-size: 15px;
+    color: #333;
+    padding: 8px 0;
+}
+
+.steps-annotation {
+    width: 100%;
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 15px;
+    margin-top: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    font-size: 14px;
+    color: #555;
+    line-height: 1.6;
+    font-style: italic;
+}

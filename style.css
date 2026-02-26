@@ -1,0 +1,20 @@
+/* 
+ * style.css 已被拆分
+ * 
+ * 为了更好的维护性，CSS 样式已经被拆分到 css/ 目录下的多个文件中。
+ * 请查看 index.html 中的引用列表。
+ *
+ * 拆分结构如下：
+ * - css/base.css: 基础变量、重置样式、通用组件
+ * - css/layout.css: 布局、主屏幕、Dock
+ * - css/chat.css: 聊天相关样式
+ * - css/settings.css: 设置与个人资料样式
+ * - css/modules/peek.css: 偷看功能样式
+ * - css/modules/pomodoro.css: 番茄钟样式
+ * - css/modules/forum.css: 论坛样式
+ * - css/modules/worldbook.css: 世界书样式
+ * - css/modules/journal.css: 日记样式
+ * - css/modules/steps.css: 步数样式
+ *
+ * (此文件保留作为占位符，以防万一有遗漏的引用，但应保持为空或仅包含此注释)
+ */

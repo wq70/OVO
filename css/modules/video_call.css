@@ -1,0 +1,879 @@
+/* =========================================
+   Video Call Module Styles
+   混合风格：通话界面深色沉浸 (旧版恢复)，模态框浅色 iOS 风格 (保留)
+   ========================================= */
+
+:root {
+    /* --- 模态框/列表变量 (浅色 iOS 风格 - 保留) --- */
+    --vc-modal-bg: #ffffff;
+    --vc-modal-bg-sec: #f2f2f7;
+    --vc-modal-text: #000000;
+    --vc-modal-text-sub: #8e8e93;
+    --vc-modal-border: #c6c6c8;
+    
+    /* --- 通话界面变量 (深色沉浸风格 - 恢复旧版) --- */
+    --vc-bg-color: #050505;
+    
+    /* AI 阵营色 (冷调) */
+    --vc-ai-color: #a3c2c2; 
+    --vc-ai-glow: rgba(163, 194, 194, 0.3);
+    --vc-ai-voice: #f0f0f0;
+
+    /* 玩家 阵营色 (暖调) */
+    --vc-user-color: #e3decb;
+    --vc-user-glow: rgba(227, 222, 203, 0.3);
+    --vc-user-voice: #e3decb;
+    
+    --vc-text-sub: #666;
+    --vc-font-serif: "Songti SC", "Noto Serif SC", serif;
+    
+    /* --- 通用功能色 --- */
+    --vc-accent-color: #007aff;
+    --vc-danger-color: #ff3b30;
+    --vc-success-color: #34c759;
+    
+    /* 阴影与模糊 */
+    --vc-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --vc-backdrop-blur: blur(20px);
+    
+    /* 字体 */
+    --vc-font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --vc-font-mono: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
+
+    /* 浮窗尺寸 - 在这里调整大小 */
+    --vc-float-width: 76.5px;
+    --vc-float-height: 102px;
+}
+
+/* 场景容器 */
+.vc-scene {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: opacity 0.3s ease;
+    opacity: 1;
+    background-color: var(--vc-bg-color); /* 深色背景 */
+    font-family: var(--vc-font-sans);
+    overflow: hidden;
+    color: #fff;
+    z-index: 20000;
+}
+
+.vc-hidden {
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+    display: none !important;
+}
+
+/* =========================================
+   SCENE 1: 加载/连线界面 (Loading) - 恢复旧版深色
+   ========================================= */
+#vc-scene-loading {
+    flex-direction: column;
+    z-index: 20100;
+    background: radial-gradient(circle at 50% 50%, #111 0%, #000 80%);
+    padding-top: env(safe-area-inset-top);
+}
+
+.vc-center-wrapper {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding-bottom: 60px;
+}
+
+.vc-connection-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 40px;
+    max-width: 450px;
+    position: relative;
+    height: 140px;
+}
+
+.vc-avatar-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+}
+
+.vc-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    transition: all 0.5s ease;
+    background-color: #333;
+}
+
+.vc-avatar.ai {
+    border: 1px solid rgba(163, 194, 194, 0.5);
+    box-shadow: 0 0 20px var(--vc-ai-glow);
+}
+
+.vc-avatar.user {
+    border: 1px solid rgba(227, 222, 203, 0.5);
+    box-shadow: 0 0 20px var(--vc-user-glow);
+}
+
+.vc-avatar-label {
+    margin-top: 12px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    opacity: 0.7;
+    text-transform: uppercase;
+}
+
+/* SVG 连线 (旧版心电图) */
+.vc-signal-bridge {
+    flex: 1;
+    height: 60px;
+    margin: 0 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+}
+
+.vc-ekg-svg { width: 100%; height: 100%; overflow: visible; }
+.vc-ekg-line {
+    fill: none;
+    stroke: url(#vcSignalGradient);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-dasharray: 200; 
+    stroke-dashoffset: 200;
+    animation: vc-signal-flow 3s infinite linear;
+    opacity: 0.8;
+}
+.vc-ekg-line.ghost { opacity: 0.2; stroke-width: 1; transform: scaleY(1.2); }
+
+.vc-status-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    height: 60px;
+    margin-top: 20px; 
+}
+
+.vc-status-text {
+    font-size: 15px;
+    color: rgba(255,255,255,0.9);
+    letter-spacing: 1.5px;
+    font-weight: 300;
+}
+
+.vc-sub-status {
+    font-size: 10px;
+    color: var(--vc-text-sub);
+    font-family: Consolas, monospace;
+    background: rgba(255,255,255,0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.vc-loading-footer {
+    padding-bottom: 60px;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+/* =========================================
+   SCENE 2: 通话界面 (Call Interface) - 恢复旧版深色
+   ========================================= */
+#vc-scene-call {
+    background: var(--vc-bg-color);
+    z-index: 20050;
+}
+
+.vc-call-header {
+    height: auto;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: calc(30px + env(safe-area-inset-top));
+    padding-bottom: 10px;
+    background: linear-gradient(to bottom, var(--vc-bg-color) 40%, transparent);
+    z-index: 10;
+}
+
+.vc-contact-info .name { font-size: 16px; font-weight: 500; text-align: center; margin-bottom: 5px; color: #fff; }
+.vc-contact-info .time { font-size: 12px; color: rgba(255,255,255,0.4); font-family: monospace; text-align: center; }
+
+.vc-header-avatar {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    margin-top: 15px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    background-color: #333;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.vc-header-avatar:active { transform: scale(0.95); }
+
+.vc-online-dot {
+    width: 8px; height: 8px; background: #32d74b;
+    border: 1px solid #000; border-radius: 50%;
+    position: absolute; bottom: -2px; right: -2px;
+}
+
+/* 聊天区 */
+.vc-chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    mask-image: linear-gradient(to bottom, transparent 0%, black 10%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%);
+    
+    /* 禁用文本选中和系统长按菜单 */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.vc-msg-row { display: flex; flex-direction: column; max-width: 85%; opacity: 0; animation: vc-slideUp 0.5s forwards; }
+.vc-msg-row.ai { align-self: flex-start; text-align: left; }
+.vc-msg-row.user { align-self: flex-end; text-align: right; align-items: flex-end; }
+
+.vc-text-visual {
+    font-family: var(--vc-font-serif); font-size: 13px; line-height: 1.5; margin-bottom: 4px; font-style: italic;
+}
+.vc-text-visual.ai { color: var(--vc-ai-color); }
+.vc-text-visual.user { color: #9e998e; }
+
+.vc-text-voice { font-size: 15px; line-height: 1.5; font-weight: 300; }
+.vc-text-voice.ai { color: var(--vc-ai-voice); text-shadow: 0 0 8px rgba(255,255,255,0.15); }
+.vc-text-voice.user { color: var(--vc-user-voice); }
+
+.vc-deco-line { width: 1px; height: 10px; margin-bottom: 5px; opacity: 0.4; background: currentColor; }
+
+/* 底部控制区 */
+.vc-controls-wrapper {
+    padding: 20px 0 40px 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.95), transparent);
+    border-top: none; /* 移除新版的边框 */
+}
+.vc-controls { display: flex; justify-content: center; gap: 40px; align-items: center; }
+
+.vc-c-btn {
+    display: flex; flex-direction: column; align-items: center;
+    background: none; border: none; cursor: pointer;
+    padding: 0;
+}
+.vc-c-icon-box {
+    width: 56px; height: 56px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.03); backdrop-filter: blur(5px);
+    margin-bottom: 8px; transition: transform 0.2s;
+    color: #fff; /* 确保 SVG 图标为白色 */
+}
+.vc-c-btn:active .vc-c-icon-box { transform: scale(0.92); background: rgba(255,255,255,0.1); }
+
+/* 挂断按钮 */
+.vc-btn-hangup .vc-c-icon-box { border-color: rgba(255,80,80,0.4); background: rgba(255,80,80,0.08); }
+.vc-btn-hangup span { color: #ff5050; opacity: 0.8; }
+.vc-icon-hangup { width: 14px; height: 14px; background: #ff5050; transform: rotate(45deg); border-radius: 2px; }
+
+.vc-c-label { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 1px; text-transform: uppercase; }
+
+/* 简单图标绘制 (保留以防万一，虽然新版用SVG) */
+.vc-icon-eye { width: 18px; height: 10px; border: 1px solid #fff; border-radius: 50%; position: relative; }
+.vc-icon-eye::after { content:''; position: absolute; top:50%; left:50%; transform:translate(-50%,-50%); width: 4px; height: 4px; background: #fff; border-radius: 50%; }
+.vc-icon-mic { width: 10px; height: 16px; border: 1px solid #fff; border-radius: 5px; }
+
+/* 适配新版 SVG 图标 */
+.vc-c-icon-box svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+/* =========================================
+   Input Overlay (通话输入框) - 深色适配 (保留新功能)
+   ========================================= */
+.vc-input-overlay {
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.3);
+    z-index: 20060;
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 140px;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.vc-input-box {
+    width: 85%;
+    max-width: 400px;
+    background: rgba(40,40,40,0.9);
+    backdrop-filter: blur(20px);
+    border-radius: 28px;
+    padding: 6px 12px 6px 20px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    animation: vc-slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.vc-input-box input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    outline: none;
+    padding: 8px 0;
+}
+.vc-input-box input::placeholder { color: rgba(255,255,255,0.4); }
+
+#vc-input-help-btn {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: rgba(255,255,255,0.6);
+    display: flex; align-items: center; justify-content: center;
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+/* =========================================
+   Call Type Modal (极简 Action Sheet) - 浅色 iOS 风格 (保留)
+   ========================================= */
+.vc-type-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(2px);
+    z-index: 20150; /* 提升层级，高于通话界面(20050)和加载界面(20100) */
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+/* 确保操作菜单/确认框在历史记录之上 */
+#vc-type-modal {
+    z-index: 20250;
+}
+.vc-type-modal.visible { display: flex; opacity: 1; }
+
+.vc-type-sheet {
+    width: 95%;
+    max-width: 400px;
+    background: transparent;
+    padding: 0 0 20px 0;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.vc-type-modal.visible .vc-type-sheet { transform: translateY(0); }
+
+.vc-type-header { display: none; }
+
+/* 按钮组容器 */
+.vc-type-group {
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(20px);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+/* 极简按钮样式 */
+.vc-type-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    color: var(--vc-accent-color);
+    font-size: 18px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-align: center;
+}
+.vc-type-btn:last-child { border-bottom: none; }
+.vc-type-btn:active { background: rgba(0,0,0,0.05); }
+
+/* 取消按钮单独样式 */
+.vc-type-cancel {
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(20px);
+    border-radius: 14px;
+    padding: 16px;
+    color: var(--vc-accent-color);
+    font-size: 18px;
+    font-weight: 600;
+    border: none;
+    width: 100%;
+    cursor: pointer;
+}
+.vc-type-cancel:active { background: rgba(255,255,255,0.7); }
+
+.vc-type-icon, .vc-type-desc { display: none; }
+.vc-type-info { align-items: center; }
+.vc-type-label { font-weight: 400; font-size: 18px; }
+
+
+/* =========================================
+   Call History List (iOS 原生风格) - 浅色 (保留)
+   ========================================= */
+#vc-history-modal .vc-type-sheet {
+    background: var(--vc-modal-bg);
+    border-radius: 20px 20px 0 0;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 85vh;
+    gap: 0;
+}
+
+#vc-history-modal .vc-type-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--vc-modal-border);
+    background: var(--vc-modal-bg);
+    border-radius: 20px 20px 0 0;
+}
+
+.vc-type-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--vc-modal-text);
+}
+
+/* 关闭按钮样式 */
+.vc-type-close {
+    background: rgba(142, 142, 147, 0.12);
+    border: none;
+    color: var(--vc-modal-text-sub);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    font-size: 20px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+    padding: 0;
+}
+.vc-type-close:active { background: rgba(142, 142, 147, 0.2); }
+
+.vc-history-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 0 20px;
+}
+
+.vc-history-empty {
+    text-align: center;
+    color: var(--vc-modal-text-sub);
+    margin-top: 60px;
+    font-size: 15px;
+}
+
+/* 列表项容器 */
+.vc-history-item-container {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--vc-modal-border);
+    padding-right: 20px;
+}
+.vc-history-item-container:last-child { border-bottom: none; }
+
+/* 列表项头部 */
+.vc-history-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    cursor: pointer;
+    background: transparent;
+    min-height: 60px;
+}
+.vc-history-header:active { opacity: 0.6; }
+
+.vc-history-icon {
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    margin-right: 12px;
+    color: var(--vc-modal-text-sub);
+    background: transparent;
+    border-radius: 0;
+}
+
+.vc-history-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+}
+.vc-history-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--vc-modal-text);
+}
+.vc-history-subtitle {
+    font-size: 13px;
+    color: var(--vc-modal-text-sub);
+}
+
+.vc-history-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.vc-history-date {
+    font-size: 15px;
+    color: var(--vc-modal-text-sub);
+}
+.vc-history-info-icon {
+    width: 22px; height: 22px;
+    border: 1px solid var(--vc-accent-color);
+    border-radius: 50%;
+    color: var(--vc-accent-color);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    font-family: serif;
+    font-weight: bold;
+}
+
+/* 详情折叠区域 */
+.vc-history-detail {
+    height: 0;
+    overflow: hidden;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--vc-modal-bg-sec);
+    margin-left: -20px;
+    padding-left: 20px;
+}
+
+.vc-history-item-container.expanded .vc-history-detail {
+    height: auto;
+    border-bottom: 1px solid var(--vc-modal-border);
+}
+
+.vc-detail-content {
+    padding: 16px 20px 16px 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--vc-modal-text);
+}
+
+/* 总结部分 */
+.vc-detail-summary {
+    margin-bottom: 12px;
+    padding: 10px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.vc-summary-label {
+    font-size: 11px;
+    color: var(--vc-modal-text-sub);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+.vc-summary-text { font-weight: 500; }
+
+/* 对话记录部分 */
+.vc-detail-log {
+    white-space: pre-wrap;
+    font-family: var(--vc-font-sans);
+    color: var(--vc-modal-text);
+}
+.vc-log-line { margin-bottom: 6px; display: block; }
+.vc-log-role { font-weight: 600; margin-right: 4px; font-size: 13px; color: var(--vc-modal-text-sub); }
+.vc-log-text { color: var(--vc-modal-text); }
+.vc-log-visual { color: var(--vc-modal-text-sub); font-style: italic; }
+
+/* =========================================
+   Incoming Call Notification (iOS Style) - 保留
+   ========================================= */
+.vc-incoming-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: transparent;
+    z-index: 20200;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: calc(12px + env(safe-area-inset-top));
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none !important;
+}
+
+.vc-incoming-overlay.visible { display: flex; opacity: 1; }
+
+.vc-incoming-banner {
+    width: 94%;
+    max-width: 380px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 40px; /* 灵动岛风格 */
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    transform: translateY(-150%);
+    transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    border: 1px solid rgba(255,255,255,0.5);
+    pointer-events: auto;
+}
+
+.vc-incoming-overlay.visible .vc-incoming-banner { transform: translateY(0); }
+
+/* 修复：添加内容容器布局 */
+.vc-incoming-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    margin-right: 10px;
+}
+
+.vc-incoming-avatar {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    margin-right: 12px;
+    background-color: #f0f0f0;
+    flex-shrink: 0;
+    box-shadow: var(--vc-shadow-sm);
+}
+
+.vc-incoming-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+    margin-right: 10px;
+}
+
+.vc-incoming-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vc-incoming-type {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+}
+
+.vc-incoming-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.vc-incoming-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+    flex: none;
+    color: #fff;
+}
+.vc-incoming-btn:active { transform: scale(0.9); }
+
+.vc-incoming-btn.reject { background-color: var(--vc-danger-color); }
+.vc-incoming-btn.accept { background-color: var(--vc-success-color); }
+
+/* =========================================
+   Floating Window (Mini Mode)
+   ========================================= */
+.vc-floating-window {
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    width: var(--vc-float-width);
+    height: var(--vc-float-height); /* 3:4 比例 */
+    background: #000;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    z-index: 20300;
+    overflow: hidden;
+    cursor: move;
+    transition: transform 0.1s;
+    touch-action: none; /* 防止滚动 */
+}
+
+.vc-float-avatar {
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-color: #333;
+}
+
+.vc-float-timer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 4px 0;
+    background: transparent; /* 去掉黑色遮幕 */
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8); /* 增加阴影保证清晰度 */
+    color: #fff;
+    font-size: 10px;
+    text-align: center;
+    font-family: monospace;
+    pointer-events: none;
+}
+
+/* 缩小按钮 (全屏界面左上角) */
+.vc-minimize-btn {
+    position: absolute;
+    top: calc(15px + env(safe-area-inset-top));
+    left: 20px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(5px);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    z-index: 20;
+    transition: background 0.2s;
+}
+.vc-minimize-btn:active { background: rgba(255,255,255,0.3); }
+.vc-minimize-btn svg { width: 20px; height: 20px; fill: currentColor; }
+
+/* 动画 */
+@keyframes vc-signal-flow { 0% { stroke-dashoffset: 200; } 100% { stroke-dashoffset: -200; } }
+@keyframes vc-slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes vc-fadePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* 头像处理中动画 */
+@keyframes vc-avatar-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(163, 194, 194, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(163, 194, 194, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(163, 194, 194, 0); }
+}
+
+.vc-header-avatar.processing {
+    animation: vc-avatar-pulse 2s infinite;
+    border-color: var(--vc-ai-color);
+}
+
+/* 确保 Toast 在视频通话界面之上，并且允许换行 */
+#toast-notification {
+    z-index: 21000 !important;
+    height: auto;
+    min-height: 44px;
+}
+
+#toast-notification .toast-message {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    line-height: 1.4;
+}
+
+/* 上下文菜单 (长按菜单) */
+.vc-context-menu {
+    position: fixed;
+    background: rgba(40, 40, 40, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    z-index: 20100;
+    display: flex;
+    flex-direction: column;
+    min-width: 100px;
+    opacity: 0;
+    transform: scale(0.9);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+}
+
+.vc-context-menu.visible {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+.vc-context-item {
+    padding: 10px 16px;
+    color: #fff;
+    font-size: 15px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.vc-context-item:active {
+    background: rgba(255,255,255,0.15);
+}
+
+/* 双语字幕样式 */
+.vc-voice-origin {
+    display: block;
+}
+
+.vc-voice-trans {
+    display: block;
+    font-size: 12px;
+    opacity: 0.7;
+    margin-top: 4px;
+    font-weight: normal;
+    line-height: 1.4;
+    letter-spacing: 0.5px;
+}

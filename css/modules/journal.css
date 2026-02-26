@@ -1,0 +1,279 @@
+/* --- 记忆日记 (Memory Journal) 样式 --- */
+
+#memory-journal-screen .content {
+    padding: 15px;
+    background-color: #f9f9f9;
+}
+
+.journal-card {
+    background-color: #fdfdfd;
+    border: 1px solid #eee;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 15px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.journal-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* 多选模式下的卡片样式 */
+.journal-card.select-mode {
+    padding-left: 50px; /* 为复选框留出空间 */
+}
+
+.journal-checkbox {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    display: none; /* 默认隐藏 */
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.journal-card.select-mode .journal-checkbox {
+    display: flex;
+}
+
+.journal-checkbox.checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.journal-checkbox.checked::after {
+    content: '';
+    width: 6px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin-top: -2px;
+}
+
+.journal-card-title {
+    font-size: 18px;
+    font-weight: bold;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    color: #333;
+    flex-grow: 1;
+    padding-right: 60px; /* Space for buttons */
+}
+
+.journal-card-actions {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.journal-card-actions .action-icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.journal-card-actions .action-icon-btn:hover {
+    color: var(--primary-color);
+}
+
+.journal-card-actions .action-icon-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.journal-card-actions .favorite-journal-btn .star-solid {
+    fill: #FFD700; /* Gold */
+    display: none;
+}
+
+.journal-card-actions .favorite-journal-btn.favorited .star-solid {
+    display: inline;
+}
+
+.journal-card-actions .favorite-journal-btn.favorited .star-outline {
+    display: none;
+}
+
+.journal-card-content {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #444;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-out, margin-top 0.4s ease-out, padding-top 0.4s ease-out;
+    white-space: pre-wrap;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 1px solid #f0f0f0;
+}
+
+.journal-card.expanded .journal-card-content {
+    max-height: 1000px;
+    margin-top: 15px;
+    padding-top: 15px;
+}
+
+.journal-card-content.editing {
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 8px;
+    min-height: 150px;
+    background: #fff;
+    max-height: 1000px !important;
+}
+
+.journal-card-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 10px;
+    height: 0;
+    opacity: 0;
+    transition: height 0.4s ease-out, opacity 0.4s ease-out;
+}
+
+.journal-card.expanded .journal-card-footer {
+    height: auto;
+    opacity: 1;
+}
+
+.journal-card-range {
+    font-size: 12px;
+    color: #aaa;
+}
+
+/* 日记生成中状态 */
+.journal-card.generating {
+    border: 1px dashed var(--primary-color);
+    background-color: #f9f9f9;
+    cursor: default;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 25px;
+    gap: 10px;
+    min-height: 120px;
+}
+
+.journal-card.generating .spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid #e0e0e0;
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: block;
+}
+
+.journal-card.generating .text {
+    font-size: 14px;
+    color: var(--primary-color);
+    font-weight: 500;
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+/* Journal World Book Selection Modal */
+#journal-worldbook-selection-modal .modal-window {
+    width: 90%;
+    max-width: 380px;
+}
+
+#journal-worldbook-selection-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+/* 日记生成模态框 */
+#generate-journal-modal .modal-window {
+    width: 85%;
+    max-width: 340px;
+}
+
+/* 底部多选操作栏 */
+#journal-multi-select-bar {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 10px 20px;
+    border-radius: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    z-index: 100;
+    width: 90%;
+    max-width: 400px;
+    animation: slideUpBar 0.3s ease-out;
+}
+
+#journal-select-count {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+
+@keyframes slideUpBar {
+    from { transform: translate(-50%, 100%); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+/* 调整回忆日记右上角按钮间距 */
+#memory-journal-screen .app-header .action-btn-group {
+    gap: 20px;
+}
+
+/* 调整回忆日记顶栏右边距 */
+#memory-journal-screen .app-header {
+    padding-right: 15px;
+}
+
+/* 调整回忆日记右上角按钮大小 */
+#memory-journal-screen .app-header .action-btn-group .action-btn {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+}
+
+/* 调整回忆日记右上角按钮内图标大小 */
+#memory-journal-screen .app-header .action-btn-group .action-btn svg {
+    width: 22px;
+    height: 22px;
+}

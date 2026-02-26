@@ -1,0 +1,878 @@
+/* --- 4. 联系人界面样式 --- */
+
+/* 顶部操作区 (搜索/添加/设置) */
+#contacts-screen .header-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 10px 15px;
+}
+
+#contacts-screen .action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    margin-left: 5px;
+    color: #333;
+}
+
+
+
+.profile-item.my-profile {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.profile-item.my-profile:active {
+    background-color: rgba(0,0,0,0.05);
+}
+
+.profile-avatar.squircle {
+    width: 60px;
+    height: 60px;
+    border-radius: 22px; /* KKT style squircle approximation */
+    margin-right: 15px;
+    object-fit: cover;
+}
+
+.profile-info {
+    flex: 1;
+    overflow: hidden;
+}
+
+.profile-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.profile-status {
+    font-size: 13px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Divider */
+.section-divider {
+    height: 1px;
+    background-color: #f0f0f0;
+    margin: 0 15px;
+}
+
+/* Friends List */
+.friends-section {
+    padding: 15px;
+}
+
+.section-title {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.friend-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.friend-list .profile-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f9f9f9;
+    cursor: pointer;
+}
+
+.friend-list .profile-item:last-child {
+    border-bottom: none;
+}
+
+.friend-list .profile-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 18px;
+    margin-right: 12px;
+    object-fit: cover;
+    border: 1px solid #f0f0f0;
+}
+
+.friend-list .profile-name {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Fix for bottom navigation bar overlap */
+#contacts-screen .content {
+    padding: 0;
+    padding-bottom: 80px;
+}
+
+/* --- Profile Card Modal --- */
+.pc-header {
+    background: linear-gradient(to bottom, rgba(0,0,0,0.4), transparent), url('https://i.postimg.cc/g0ZZDXfg/Camera_1040g3k031kbtbqsdk8105o6u9s3g8jicmr9oq9g.jpg') center/cover;
+    height: 180px;
+    position: relative;
+    border-radius: 16px 16px 0 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+.pc-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 30px;
+    border: 3px solid #fff;
+    margin-bottom: -40px;
+    object-fit: cover;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.pc-content {
+    padding: 50px 20px 20px;
+    text-align: center;
+}
+
+.pc-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+}
+
+.pc-remark {
+    font-size: 13px;
+    color: #888;
+    margin-top: 4px;
+    margin-bottom: 20px;
+}
+
+.pc-stats-grid {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 25px;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 12px;
+}
+
+.pc-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pc-stat-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.pc-stat-label {
+    font-size: 11px;
+    color: #999;
+    margin-top: 4px;
+}
+
+.pc-stat-token-wrap {
+    cursor: pointer;
+}
+.pc-stat-token-wrap:hover .pc-stat-value,
+.pc-stat-token-wrap:active .pc-stat-value {
+    color: var(--primary-color, #5b9bd5);
+}
+
+.pc-persona-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.pc-persona-block {
+    background: #fff;
+    border: 1px solid #eee;
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-align: left;
+    max-height: 72px;
+    overflow-y: auto;
+}
+
+.pc-persona-block .pc-persona-label {
+    font-size: 11px;
+    color: #aaa;
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.pc-persona-block .pc-persona-text {
+    font-size: 12px;
+    color: #555;
+    line-height: 1.45;
+    display: block;
+}
+
+.pc-persona-label {
+    font-size: 11px;
+    color: #aaa;
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+#pc-persona-text {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.5;
+}
+
+/* Token 分布弹窗 */
+.token-distribution-window {
+    max-width: 95%;
+    width: 360px;
+    max-height: 85vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.token-distribution-title {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    text-align: center;
+    width: 100%;
+}
+
+/* 饼图容器：正中间一个大圆饼，与存储分布一致 */
+#token-chart-container {
+    width: 280px !important;
+    height: 280px !important;
+    margin: 0 auto 8px;
+    flex-shrink: 0;
+}
+
+.token-total-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+.token-total-label { font-size: 14px; color: #666; }
+.token-total-value { font-size: 22px; color: #333; }
+.token-total-unit { font-size: 12px; color: #999; }
+
+.token-details-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+    width: 100%;
+}
+
+.token-detail-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.token-detail-item:hover { background: #f5f5f5; }
+.token-detail-item.active { background: #e8f4fd; border-color: var(--primary-color, #5b9bd5); }
+
+.token-detail-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.token-detail-info { flex: 1; min-width: 0; }
+.token-detail-name { font-size: 14px; font-weight: 500; color: #333; }
+.token-detail-value { font-size: 13px; color: #666; margin-top: 2px; }
+
+.token-detail-percent {
+    font-size: 12px;
+    color: #999;
+    flex-shrink: 0;
+}
+
+.token-detail-desc {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.5;
+    padding: 10px 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    min-height: 40px;
+    width: 100%;
+    box-sizing: border-box;
+}
+.token-detail-desc:empty { display: none; }
+
+.token-distribution-close {
+    width: 100%;
+}
+
+.pc-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.pc-btn-primary {
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.1s;
+}
+
+.pc-btn-primary:active {
+    transform: scale(0.96);
+}
+
+.pc-btn-secondary {
+    background-color: #f0f0f0;
+    color: #333;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+/* --- My Profile Screen Refactored (Cover Flow) --- */
+
+/* 1. 允许整体页面滚动 */
+#my-profile-screen main.content {
+    display: block; /* 移除 flex 布局以允许自然流 */
+    overflow-y: auto; /* 允许垂直滚动 */
+    padding-bottom: 80px; /* 留出底部按钮空间 */
+}
+
+/* 背景模糊层 */
+.mp-bg-blur {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 350px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(30px);
+    opacity: 0.4;
+    z-index: 0;
+    pointer-events: none;
+    mask-image: linear-gradient(to bottom, black, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, black, transparent);
+}
+
+/* 顶部轮播容器 */
+.mp-carousel-container {
+    position: relative;
+    z-index: 1;
+    margin-top: 15px; /* 避开 Header */
+    margin-bottom: 0;
+    height: 150px; /* 增加高度 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* 垂直居中 */
+}
+
+/* Cover Flow Carousel */
+.mp-carousel {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: visible; /* 允许头像放大时超出容器边界而不被裁剪 */
+    scroll-snap-type: x mandatory;
+    padding: 0; /* JS 会计算左右 padding */
+    gap: 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    align-items: center; /* 确保卡片垂直居中 */
+    height: 100%;
+}
+
+.mp-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+.mp-carousel-item {
+    /* 关键：不设 flex-basis 100%，而是固定宽度，通过负 margin 挤压 */
+    flex: 0 0 100px; 
+    width: 100px;
+    margin-right: -40px; /* 负边距实现重叠 (100px宽 - 40px重叠 = 60px可见区域) */
+    
+    scroll-snap-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    /* 初始状态：小且模糊 */
+    transform: scale(0.8);
+    opacity: 0.6;
+    filter: blur(2px);
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                opacity 0.3s, 
+                filter 0.3s, 
+                z-index 0s; /* z-index 不做过渡，避免闪烁 */
+    
+    position: relative;
+    z-index: 1;
+}
+
+/* 激活状态由 JS 计算 style 覆盖，这里仅作默认参考 */
+.mp-carousel-item.active {
+    transform: scale(1.1);
+    opacity: 1;
+    filter: blur(0);
+    z-index: 100;
+}
+
+.mp-avatar-card {
+    width: 80px;
+    height: 80px;
+    border-radius: 35px; /* KKT squircle */
+    object-fit: cover;
+    background-color: #fff;
+    cursor: pointer;
+    /* 移除大阴影，改用轻微内阴影或极淡外阴影 */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+    border: 1.5px solid rgba(255,255,255,0.8);
+}
+
+.mp-add-card {
+    width: 100px;
+    height: 100px;
+    border-radius: 35px;
+    background-color: rgba(255,255,255,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #666;
+    font-size: 32px;
+    border: 2px dashed rgba(0,0,0,0.1);
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.mp-carousel-indicators {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 0px;
+    margin-bottom: 20px;
+}
+
+.mp-indicator {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: rgba(0,0,0,0.2);
+    transition: all 0.3s;
+}
+
+.mp-indicator.active {
+    background-color: var(--primary-color);
+    width: 10px;
+    border-radius: 3px;
+}
+
+/* 信息编辑区 (不再固定高度) */
+.mp-info-container {
+    background: #fff;
+    border-radius: 24px 24px 0 0;
+    padding: 20px 20px 40px;
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.03);
+    position: relative;
+    z-index: 2;
+    min-height: 400px; /* 保证有足够高度 */
+}
+
+.mp-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0px; /* 减小间距，让昵称上移 */
+}
+
+.mp-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.mp-transparent-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 0px 0;
+    font-family: inherit;
+    color: #333;
+}
+
+.mp-transparent-input:focus {
+    outline: none;
+}
+
+.mp-transparent-input.title-input {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    border-bottom: 1px solid transparent;
+}
+.mp-transparent-input.title-input:focus {
+    border-bottom-color: #eee;
+}
+
+textarea.mp-transparent-input {
+    resize: none;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #666;
+    background: #f9f9f9;
+    padding: 10px;
+    border-radius: 12px;
+    height: 150px;  /* <--- 添加这一行来固定高度 */
+    /* 或者 */
+    min-height: 150px; /* <--- 设置最小高度 */
+}
+
+.mp-divider {
+    height: 1px;
+    background-color: #f0f0f0;
+    margin: 13px 0;
+}
+
+/* Tag System */
+.mp-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.mp-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px 6px 6px;
+    background-color: #f0f2f5;
+    border-radius: 20px;
+    font-size: 10px;
+    color: #333;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    border: 1px solid transparent;
+}
+
+.mp-tag:active {
+    transform: scale(0.97);
+    background-color: #e4e6eb;
+}
+
+.mp-tag.has-extra {
+    background-color: #e7f0ff;
+    color: var(--primary-color);
+    border-color: rgba(0, 123, 255, 0.1);
+}
+
+.mp-tag-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-right: 8px;
+    object-fit: cover;
+}
+
+.mp-tag-add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    background: none;
+    border: 1px dashed #ccc;
+    border-radius: 20px;
+    color: #888;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+/* 底部保存栏 */
+.mp-bottom-bar {
+    position: fixed; /* 固定在视口底部 */
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 100; /* 确保在最上层 */
+}
+
+.mp-save-btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    border-radius: 16px;
+}
+
+/* 专属设定面板 (Action Sheet style) */
+.mp-exclusive-panel {
+    background: #fff;
+    border-radius: 20px 20px 0 0 !important;
+    padding: 20px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    max-width: 500px; /* Desktop adaptation */
+}
+
+.mp-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 15px;
+}
+
+.mp-panel-char-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mp-panel-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    object-fit: cover;
+}
+
+#mp-panel-char-name {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.mp-panel-body {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.mp-label {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 8px;
+}
+
+#mp-panel-input {
+    width: 100%;
+    padding: 12px;
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none;
+    font-family: inherit;
+}
+
+.mp-panel-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+    font-size: 14px;
+    color: #333;
+}
+
+.mp-panel-footer {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+#mp-panel-confirm-btn {
+    flex: 2;
+}
+#mp-panel-unbind-btn {
+    flex: 1;
+    background-color: #ffeeee;
+    color: #ff4d4f;
+}
+
+#mp-set-active-btn {
+    color: #ccc;
+    transition: color 0.3s, fill 0.3s;
+}
+
+#mp-set-active-btn.active {
+    color: #f1c40f;
+    fill: #f1c40f;
+}
+
+/* 角色选择列表样式 */
+.mp-select-list {
+    max-height: 300px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mp-select-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.mp-select-item:hover {
+    background: #f5f5f5;
+}
+
+.mp-select-checkbox {
+    margin-right: 12px;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary-color);
+}
+
+.mp-select-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    margin-right: 10px;
+    object-fit: cover;
+}
+
+.mp-select-name {
+    font-size: 14px;
+    color: #333;
+}
+/* --- Friends (Contacts) Screen Styles --- */
+#contacts-screen {
+    background-color: #fff;
+    color: #222;
+}
+
+/* Profile Item (My Profile & Friends) */
+.profile-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.profile-item:hover {
+    background-color: #f9f9f9;
+}
+
+.profile-avatar {
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    margin-right: 15px;
+    background-color: #eee;
+}
+
+/* Squircle Shape (KakaoTalk Style) */
+.squircle {
+    border-radius: 18px; /* 42% of width approx, gives a soft square look */
+}
+
+/* My Profile Specifics (Bigger Avatar) */
+.profile-item.my-profile {
+    padding: 8px 20px;
+}
+
+.profile-item.my-profile .profile-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 24px;
+}
+
+.profile-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.profile-name {
+    font-size: calc(16px * var(--app-font-scale));
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.profile-status {
+    font-size: calc(12px * var(--app-font-scale));
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 16px; /* Ensure height even if empty */
+}
+
+/* Section Divider */
+.section-divider {
+    height: 1px;
+    background-color: #f0f0f0;
+    margin: 5px 20px;
+}
+
+/* Friends Section */
+.friends-section {
+    padding-top: 2px;
+}
+
+.section-title {
+    padding: 2px 2px 0px;
+    font-size: 11px;
+    color: #999;
+}
+
+.friend-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}

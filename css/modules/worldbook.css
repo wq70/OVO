@@ -1,0 +1,206 @@
+/* --- 世界书 (World Book) 样式 --- */
+
+#world-book-screen, 
+#edit-world-book-screen {
+    background-color: #f2f2f2;
+}
+
+#chat-list-screen .content,
+#world-book-screen .content {
+    padding: 10px 0 80px 0;
+}
+
+/* 世界书列表项 */
+#world-book-list-container {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+/* 世界书分类标题 */
+.world-book-category-title {
+    padding: 10px 20px 5px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #555;
+    background-color: #f2f4f5;
+    border-bottom: 1px solid #e5e5e5;
+    border-top: 1px solid #e5e5e5;
+    margin-top: 10px;
+}
+
+#world-book-list-container > .world-book-category-title:first-child {
+    margin-top: 0;
+    border-top: none;
+}
+
+/* 世界书分类选择样式 (Accordion) */
+.world-book-category-group {
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 5px;
+}
+
+.world-book-category-group:last-child {
+    border-bottom: none;
+}
+
+.world-book-category-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 5px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.world-book-category-header .category-checkbox {
+    margin-right: 15px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.world-book-category-header .category-name {
+    font-weight: 600;
+    color: #333333;
+    flex-grow: 1;
+}
+
+.world-book-category-header .category-arrow {
+    font-size: 12px;
+    transition: transform 0.3s ease;
+    color: #999;
+}
+
+.world-book-category-group.open .category-arrow {
+    transform: rotate(180deg);
+}
+
+.world-book-items-list {
+    list-style: none;
+    padding: 0 0 0 25px; /* 左侧缩进 */
+    margin: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out;
+}
+
+.world-book-category-group.open .world-book-items-list {
+    max-height: 1000px;
+    padding-bottom: 10px;
+}
+
+/* 世界书条目 */
+.world-book-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s ease;
+    position: relative;
+    background-color: #fff;
+}
+
+.world-book-item:last-child {
+    border-bottom: none;
+}
+
+.world-book-item:hover {
+    background-color: #fdf6f8;
+}
+
+.world-book-item.is-selecting {
+    cursor: pointer;
+}
+
+.world-book-item.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-50%);
+    background-color: var(--primary-color);
+    color: white;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.world-book-item.selected {
+    padding-left: 50px !important;
+    background-color: rgba(206, 228, 241, 0.3);
+}
+
+/* 世界书多选工具栏 */
+#world-book-multi-select-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    padding-bottom: 10px;
+    border-top: 1px solid #eee;
+    z-index: 20;
+    animation: slideUp 0.3s ease-out;
+}
+
+/* 世界书选择模态框 */
+#world-book-selection-modal,
+#global-pomodoro-world-book-selection-modal,
+#journal-worldbook-selection-modal {
+    z-index: 201;
+}
+
+#world-book-selection-modal .modal-window,
+#global-pomodoro-world-book-selection-modal .modal-window,
+#journal-worldbook-selection-modal .modal-window {
+    width: 90%;
+    max-width: 380px;
+}
+
+#world-book-selection-list,
+#global-pomodoro-world-book-selection-list,
+#journal-worldbook-selection-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+.world-book-select-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 5px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.world-book-select-item:last-child {
+    border-bottom: none;
+}
+
+.world-book-select-item input[type="checkbox"] {
+    margin-right: 15px;
+    width: 20px;
+    height: 20px;
+}
+
+.world-book-select-item label {
+    font-weight: 500;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}

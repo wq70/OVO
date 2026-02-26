@@ -1,0 +1,283 @@
+/* 直播间核心样式 - 沉浸式电影感 */
+#live-room-screen {
+    background-color: #000;
+    color: #fff;
+    overflow: hidden;
+    font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* 背景层 */
+.live-bg-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-size: cover;
+    background-position: center;
+    filter: brightness(0.6) blur(0px); /* 稍微压暗背景 */
+    transition: all 0.5s ease;
+}
+
+/* 电影遮罩 (Letterbox) - 营造电影感 */
+.live-letterbox {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    background: linear-gradient(to bottom, 
+        rgba(0,0,0,0.8) 0%, 
+        rgba(0,0,0,0) 15%, 
+        rgba(0,0,0,0) 85%, 
+        rgba(0,0,0,0.9) 100%
+    );
+}
+
+/* 顶部信息栏 */
+.live-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 15px 20px;
+    padding-top: calc(15px + constant(safe-area-inset-top));
+    padding-top: calc(15px + env(safe-area-inset-top));
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+.live-host-info {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 4px 12px 4px 4px;
+    border-radius: 20px;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.live-host-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid #ff4757; /* 活跃状态圈 */
+    margin-right: 8px;
+}
+
+.live-host-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.live-host-name {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.live-host-hot {
+    font-size: 10px;
+    color: #ddd;
+    line-height: 1.2;
+}
+
+.live-close-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.3);
+    border-radius: 50%;
+    border: none;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+/* 核心舞台区 - 文字流 */
+.live-stage {
+    position: absolute;
+    top: 25%;
+    left: 10%;
+    width: 80%;
+    z-index: 5;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+}
+
+/* 动作描写 - 电影字幕风格 */
+.live-action-text {
+    font-family: 'Songti SC', 'SimSun', serif; /* 衬线体 */
+    font-size: 22px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    margin-bottom: 20px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.live-action-text.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 主播语音 - 高亮气泡 */
+.live-speech-bubble {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    padding: 12px 20px;
+    border-radius: 16px;
+    font-size: 16px;
+    color: #fff;
+    max-width: 90%;
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: scale(0.9);
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.live-speech-bubble.show {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* 弹幕区 - 极简风格 */
+.live-danmaku-area {
+    position: absolute;
+    bottom: 100px;
+    left: 15px;
+    width: 70%;
+    height: 200px;
+    z-index: 8;
+    overflow: hidden;
+    mask-image: linear-gradient(to top, black 60%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to top, black 60%, transparent 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.live-danmaku-item {
+    font-size: 13px;
+    color: rgba(255,255,255,0.8);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    animation: slideInLeft 0.3s ease-out;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.live-danmaku-name {
+    color: rgba(255,255,255,0.5);
+    font-size: 12px;
+}
+
+.live-danmaku-content {
+    background: rgba(0,0,0,0.2);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+@keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* 底部操作栏 */
+.live-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 15px 20px 30px; /* 适配全面屏底部 */
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+}
+
+.live-input-box {
+    flex: 1;
+    height: 40px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    color: rgba(255,255,255,0.6);
+    font-size: 14px;
+    backdrop-filter: blur(5px);
+    cursor: text;
+}
+
+.live-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.live-btn:active {
+    transform: scale(0.9);
+}
+
+.live-gift-btn {
+    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+    color: #d63384;
+}
+
+/* 礼物特效容器 */
+.live-gift-effect-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.live-gift-toast {
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: bold;
+    border: 1px solid #ff4757;
+    box-shadow: 0 0 20px rgba(255, 71, 87, 0.5);
+    animation: popInAndOut 3s forwards;
+}
+
+@keyframes popInAndOut {
+    0% { transform: scale(0); opacity: 0; }
+    10% { transform: scale(1.1); opacity: 1; }
+    20% { transform: scale(1); }
+    80% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-50px); }
+}

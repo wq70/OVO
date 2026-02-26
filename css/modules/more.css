@@ -1,0 +1,189 @@
+/* --- More Screen Styles --- */
+#more-screen {
+    background-color: #fff; /* 整体背景色 */
+}
+
+/* 自定义毛玻璃风格卡片 (2025 风格重构) */
+.more-profile-card.custom-glass-style {
+    position: relative;
+    width: 100%;
+    background-color: transparent; /* 移除白色背景 */
+    border-radius: 0;
+    overflow: visible; /* 允许头像和引号溢出 */
+    box-shadow: none;
+    padding-bottom: 0;
+    margin-top: 0;
+}
+
+/* 顶部固定高度毛玻璃背景层 */
+.glass-background-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 115px; /* 减小高度以匹配目标样式 */
+    background-image: url('https://i.postimg.cc/XvFDdTKY/Smart-Select-20251013-023208.jpg');
+    background-size: cover;
+    background-position: center;
+    border-radius: 20px;
+    z-index: 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+}
+
+/* 添加白色半透明遮罩以增强毛玻璃感 */
+.glass-background-layer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.01);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 20px;
+}
+
+/* 内容层 */
+.profile-content-layer {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding-top: 38px; /* 调整顶部内边距，控制整体位置 */
+    pointer-events: none; /* 让点击穿透到背景层 */
+}
+
+/* 恢复内容层子元素的交互 */
+.profile-content-layer > * {
+    pointer-events: auto;
+}
+
+/* 名字 (移至卡片内部) */
+.more-profile-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-top: 0;
+    margin-bottom: 1px; /* 名字和头像的间距 */
+    letter-spacing: 0.5px;
+    z-index: 2;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.8); /* 增加文字阴影防止背景干扰 */
+}
+
+/* 头像与双引号容器 */
+.avatar-quote-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 8px;
+    position: static;
+}
+
+/* 双引号 (卡在背景层边缘) */
+.quote-symbol {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    font-family: serif;
+    line-height: 1;
+    padding-top: 10px;
+    position: absolute;
+    top: 115px; /* 精确卡在背景层底部 */
+    transform: translateY(-50%); /* 垂直居中于底边 */
+    z-index: 3;
+}
+
+.quote-symbol.left {
+    left: 50%;
+    background-color: #ecf7ff;
+    color: #9a9a9a;
+    margin-left: -78px; /* 距离中心 (头像宽40 + 双引号宽24 + 间距4) */
+}
+
+.quote-symbol.right {
+    left: 50%;
+    background-color: #9a9a9a;
+    color: #ecf7ff;
+    margin-left: 54px; /* 距离中心 (头像宽40 + 间距4) */
+}
+
+/* 头像包装器 (内白外粉，双层边框) */
+.avatar-wrapper {
+    width: 80px; /* 加大头像 */
+    height: 80px;
+    padding: 4px;
+    background-color: #fff;
+    border: 2px solid #f1f8fe;
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 2;
+}
+
+.more-profile-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 16px;
+    object-fit: cover;
+    display: block;
+}
+
+/* 日期显示 */
+.current-date-display {
+    font-size: 15px;
+    color: #666;
+    font-weight: 500;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* 搜索条装饰 */
+.search-bar-decoration {
+    width: 90%;
+    height: 28px;
+    background-color: #fff; /* 纯白背景 */
+    border-radius: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #bbb;
+    font-size: 14px;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* 轻微阴影 */
+}
+
+.more-content-placeholder {
+    flex-grow: 1;
+    /* Future content will go here */
+}
+
+.preset-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.preset-card-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.preset-card-actions {
+    display: flex;
+    gap: 10px;
+}
+.chat-category-tabs {
+    /* ✅【添加这一行】防止被聊天列表挤压变形 */
+    flex-shrink: 0; 
+    z-index: 5;
+}

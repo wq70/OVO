@@ -1,0 +1,167 @@
+/* --- Tutorial Screen Styles --- */
+
+#tutorial-screen {
+    background-color: #f2f2f2;
+}
+
+#tutorial-screen .content {
+    padding: 15px;
+}
+
+.tutorial-item {
+    margin-bottom: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #ffffff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+}
+
+.tutorial-header {
+    padding: 12px 18px;
+    font-weight: 600;
+    color: var(--secondary-color);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tutorial-header::after {
+    content: '▼';
+    font-size: 12px;
+    transition: transform 0.3s ease;
+    color: #999;
+}
+
+.tutorial-item.open .tutorial-header::after {
+    transform: rotate(180deg);
+}
+
+.tutorial-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-in-out, padding 0.5s ease;
+    padding: 0 10px;
+}
+
+.tutorial-item.open .tutorial-content {
+    padding: 10px 10px;
+    /* A large value to ensure it expands to fit the content */
+    max-height: 5000px;
+}
+
+.tutorial-content img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    display: block;
+}
+
+/* --- Guide System Styles --- */
+
+.guide-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 100000; /* Highest priority */
+    pointer-events: auto; /* Block interactions */
+    display: none;
+}
+
+.guide-overlay.visible {
+    display: block;
+}
+
+/* The highlight box uses a massive box-shadow to create the dimming effect around it */
+.guide-highlight-box {
+    position: absolute;
+    border-radius: 8px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75); 
+    z-index: 100001;
+    pointer-events: none; /* Let clicks pass through to the target if needed, but usually we block */
+    transition: all 0.3s ease;
+    /* Optional: Add a pulsing border */
+    border: 2px solid var(--primary-color);
+    animation: guide-pulse 2s infinite;
+}
+
+@keyframes guide-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(var(--primary-color-rgb), 0.4), 0 0 0 9999px rgba(0, 0, 0, 0.75); }
+    70% { box-shadow: 0 0 0 10px rgba(var(--primary-color-rgb), 0), 0 0 0 9999px rgba(0, 0, 0, 0.75); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--primary-color-rgb), 0), 0 0 0 9999px rgba(0, 0, 0, 0.75); }
+}
+
+.guide-tooltip {
+    position: absolute;
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    width: 280px;
+    max-width: 90vw;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    z-index: 100002;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: auto;
+}
+
+.guide-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.guide-tooltip::after {
+    content: '';
+    position: absolute;
+    border: 8px solid transparent;
+}
+
+/* Tooltip Arrows */
+.guide-tooltip.bottom::after {
+    top: -16px;
+    left: var(--arrow-left, 50%);
+    transform: translateX(-50%);
+    border-bottom-color: #fff;
+}
+
+.guide-tooltip.top::after {
+    bottom: -16px;
+    left: var(--arrow-left, 50%);
+    transform: translateX(-50%);
+    border-top-color: #fff;
+}
+
+.guide-content {
+    font-size: 14px;
+    color: #333;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.guide-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.guide-btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    border: none;
+}
+
+.guide-btn-primary {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.guide-btn-skip {
+    background: transparent;
+    color: #999;
+}
