@@ -869,6 +869,7 @@ async function checkAndTriggerAutoJournal(chat) {
         await saveData();
     } catch (err) {
         console.error('自动总结失败:', err);
+        showApiError(err);
     } finally {
         currentChatId = savedChatId;
         currentChatType = savedChatType;
