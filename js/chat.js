@@ -393,6 +393,8 @@ function setupChatRoom() {
 
     document.getElementById('cancel-multi-select-btn').addEventListener('click', exitMultiSelectMode);
     document.getElementById('delete-selected-btn').addEventListener('click', deleteSelectedMessages);
+    const favoriteSelectedBtn = document.getElementById('favorite-selected-btn');
+    if (favoriteSelectedBtn) favoriteSelectedBtn.addEventListener('click', () => { if (typeof addFavoritesFromSelection === 'function') addFavoritesFromSelection(); });
     document.getElementById('generate-capture-btn').addEventListener('click', generateCapture);
     document.getElementById('close-capture-modal-btn').addEventListener('click', () => {
         document.getElementById('capture-result-modal').classList.remove('visible');

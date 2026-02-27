@@ -585,7 +585,12 @@ async function generateJournal(start, end, includeFavorited = false, silent = fa
 
         if (currentChatType === 'group') {
             // 群聊逻辑
-            const groupWorldBooks = (chat.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
+            // 收集关联的 + 全局的世界书（去重）
+            const associatedIds = chat.worldBookIds || [];
+            const globalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+            const globalIds = globalBooks.map(wb => wb.id);
+            const allBookIds = [...new Set([...associatedIds, ...globalIds])];
+            const groupWorldBooks = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
             worldBooksContent = groupWorldBooks.map(wb => wb.content).join('\n\n');
 
             summaryPrompt = `你是一个群聊记录总结助手。请以完全客观的第三视角，对以下群聊记录进行精简总结。\n\n`;
@@ -636,8 +641,12 @@ async function generateJournal(start, end, includeFavorited = false, silent = fa
             // 0. 确保迁移
             migrateJournalSettings(chat);
 
-            // 1. 自动获取通用世界书 (Context)
-            const commonWorldBooks = (chat.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
+            // 1. 自动获取通用世界书 (Context) + 全局世界书
+            const associatedIds = chat.worldBookIds || [];
+            const globalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+            const globalIds = globalBooks.map(wb => wb.id);
+            const allBookIds = [...new Set([...associatedIds, ...globalIds])];
+            const commonWorldBooks = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
             worldBooksContent = commonWorldBooks.map(wb => wb.content).join('\n\n');
 
             // 2. 获取风格设置
@@ -736,7 +745,15 @@ Strictly output in JSON format only. Do not speak outside the JSON object.
             }
         }
 
-        let { url, key, model, provider } = db.apiSettings;
+        // === 使用总结API（如果已配置）===
+        let apiConfig;
+        if (db.summaryApiSettings && db.summaryApiSettings.url && db.summaryApiSettings.key && db.summaryApiSettings.model) {
+            apiConfig = db.summaryApiSettings;
+        } else {
+            apiConfig = db.apiSettings;
+        }
+        
+        let { url, key, model, provider } = apiConfig;
         if (!url || !key || !model) {
             throw new Error("API设置不完整。");
         }
@@ -754,7 +771,7 @@ Strictly output in JSON format only. Do not speak outside the JSON object.
         const endpoint = `${url}/v1/chat/completions`;
         const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` };
 
-        const rawContent = await fetchAiResponse(db.apiSettings, requestBody, headers, endpoint);
+        const rawContent = await fetchAiResponse(apiConfig, requestBody, headers, endpoint);
 
         let cleanContent = rawContent.trim();
         cleanContent = cleanContent.replace(/```json\s*/gi, '').replace(/```\s*/g, '');

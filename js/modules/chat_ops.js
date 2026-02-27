@@ -46,6 +46,10 @@ function handleMessageLongPress(messageWrapper, x, y) {
         }
     }
 
+    if (!isInvisibleMessage) {
+        menuItems.push({label: '收藏', action: () => { if (typeof addMessageToFavorites === 'function') addMessageToFavorites(messageId); }});
+    }
+
     menuItems.push({
         label: isDebugMode ? '退出调试' : '进入调试',
         action: () => {
@@ -56,6 +60,9 @@ function handleMessageLongPress(messageWrapper, x, y) {
     });
 
     menuItems.push({label: '删除', action: () => enterMultiSelectMode(messageId)});
+    if (!isInvisibleMessage) {
+        menuItems.push({label: '多选收藏', action: () => enterMultiSelectMode(messageId, 'favorite')});
+    }
 
     if (menuItems.length > 0) {
         triggerHapticFeedback('medium');
@@ -397,9 +404,20 @@ function enterMultiSelectMode(initialMessageId, mode = 'delete') {
     if (mode === 'delete') {
         multiSelectBar.classList.add('visible');
         document.getElementById('multi-select-title').textContent = '选择消息';
+        const delBtn = document.getElementById('delete-selected-btn');
+        const favBtn = document.getElementById('favorite-selected-btn');
+        if (delBtn) delBtn.style.display = '';
+        if (favBtn) favBtn.style.display = 'none';
     } else if (mode === 'capture') {
         document.getElementById('capture-mode-bar').classList.add('visible');
         document.getElementById('multi-select-title').textContent = '选择截图范围';
+    } else if (mode === 'favorite') {
+        multiSelectBar.classList.add('visible');
+        document.getElementById('multi-select-title').textContent = '选择要收藏的消息';
+        const delBtn = document.getElementById('delete-selected-btn');
+        const favBtn = document.getElementById('favorite-selected-btn');
+        if (delBtn) delBtn.style.display = 'none';
+        if (favBtn) favBtn.style.display = '';
     }
     
     chatRoomScreen.classList.add('multi-select-active');
@@ -417,6 +435,10 @@ function exitMultiSelectMode() {
     
     multiSelectBar.classList.remove('visible');
     document.getElementById('capture-mode-bar').classList.remove('visible');
+    const delBtn = document.getElementById('delete-selected-btn');
+    const favBtn = document.getElementById('favorite-selected-btn');
+    if (delBtn) delBtn.style.display = '';
+    if (favBtn) favBtn.style.display = 'none';
     
     chatRoomScreen.classList.remove('multi-select-active');
     selectedMessageIds.forEach(id => {
@@ -443,8 +465,10 @@ function toggleMessageSelection(messageId) {
         deleteSelectedBtn.disabled = selectedMessageIds.size === 0;
     } else if (currentMultiSelectMode === 'capture') {
         document.getElementById('capture-select-count').textContent = `已选择 ${selectedMessageIds.size} 项`;
-        // 截图模式下，即使没选也可以生成（虽然没意义，但保持逻辑简单），或者禁用
-        // document.getElementById('generate-capture-btn').disabled = selectedMessageIds.size === 0;
+    } else if (currentMultiSelectMode === 'favorite') {
+        selectCount.textContent = `已选择 ${selectedMessageIds.size} 项`;
+        const favBtn = document.getElementById('favorite-selected-btn');
+        if (favBtn) favBtn.disabled = selectedMessageIds.size === 0;
     }
 }
 

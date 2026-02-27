@@ -1218,13 +1218,23 @@ function sendRenameNotification(group, newName) {
 }
 
 function generateGroupSystemPrompt(group) {
-    const worldBooksBefore = (group.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(Boolean).map(wb => wb.content).join('\n');
-    const worldBooksAfter = (group.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(Boolean).map(wb => wb.content).join('\n');
+    // 收集关联的 + 全局的世界书（去重）
+    const associatedIds = group.worldBookIds || [];
+    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+    const globalIds = globalBooks.map(wb => wb.id);
+    const allBookIds = [...new Set([...associatedIds, ...globalIds])];
+    
+    const worldBooksBefore = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(Boolean).map(wb => wb.content).join('\n');
+    const worldBooksMiddle = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle')).filter(Boolean).map(wb => wb.content).join('\n');
+    const worldBooksAfter = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(Boolean).map(wb => wb.content).join('\n');
 
     let prompt = `你正在一个名为“404”的线上聊天软件中，在一个名为“${group.name}”的群聊里进行角色扮演。请严格遵守以下所有规则：\n\n`;
 
     if (worldBooksBefore) {
         prompt += `${worldBooksBefore}\n\n`;
+    }
+    if (worldBooksMiddle) {
+        prompt += `${worldBooksMiddle}\n\n`;
     }
 
     const favoritedJournals = (group.memoryJournals || [])

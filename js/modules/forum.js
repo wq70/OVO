@@ -89,34 +89,60 @@ function setupForumBindingFeature() {
     }
 }
 
+function getPostDisplayTime(post) {
+    if (post.timestamp) return new Date(post.timestamp).toLocaleString();
+    const parts = post.id.split('_');
+    if (parts[1]) return new Date(parts[1] * 1).toLocaleString();
+    return '';
+}
+
 function renderPostDetail(post) {
     const detailScreen = document.getElementById('forum-post-detail-screen');
     if (!detailScreen || !post) return;
 
+    const defaultAvatarUrl = 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg';
     const npcColors = ["#FFB6C1", "#87CEFA", "#98FB98", "#F0E68C", "#DDA0DD", "#FFDAB9", "#B0E0E6"];
     const getRandomColor = () => npcColors[Math.floor(Math.random() * npcColors.length)];
 
     let commentsHtml = '';
     if (post.comments && post.comments.length > 0) {
         post.comments.forEach(comment => {
-            const firstChar = comment.username.charAt(0).toUpperCase();
+            const firstChar = (comment.username || '').charAt(0).toUpperCase() || '?';
+            const isUserComment = comment.authorId === 'user';
+            const isAuthor = comment.authorId === post.authorId;
+            const userAvatarUrl = comment.avatar || (db.forumUserProfile && db.forumUserProfile.avatar) || defaultAvatarUrl;
+            const avatarHtml = isUserComment
+                ? `<img src="${userAvatarUrl}" class="comment-author-avatar" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+                : `<div class="comment-author-avatar" style="background-color: ${getRandomColor()}">${firstChar}</div>`;
+            
+            const authorBadge = isAuthor ? '<span class="author-badge">楼主</span>' : '';
+            
             commentsHtml += `
             <li class="comment-item">
-                <div class="comment-author-avatar" style="background-color: ${getRandomColor()}">${firstChar}</div>
+                ${avatarHtml}
                 <div class="comment-body">
-                    <div class="comment-author-name">${comment.username}</div>
-                    <div class="comment-content">${comment.content.replace(/\n/g, '<br>')}</div>
-                    <div class="comment-timestamp">${comment.timestamp}</div>
+                    <div class="comment-author-name">${comment.username || ''}${authorBadge}</div>
+                    <div class="comment-content">${(comment.content || '').replace(/\n/g, '<br>')}</div>
+                    <div class="comment-timestamp">${comment.timestamp || ''}</div>
                 </div>
             </li>
             `;
         });
     }
 
-    const authorFirstChar = post.username.charAt(0).toUpperCase();
+    const likeCount = post.likeCount != null ? post.likeCount : 0;
+    const isLiked = !!post.isLiked;
+    const isFavorited = !!post.isFavorited;
+    const commentCount = post.comments ? post.comments.length : 0;
+    const isOwnPost = post.authorId === 'user';
+
+    const authorAvatarHtml = isOwnPost
+        ? `<img src="${(db.forumUserProfile && db.forumUserProfile.avatar) || defaultAvatarUrl}" class="author-avatar author-avatar-img" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+        : (() => { const authorFirstChar = (post.username || '').charAt(0).toUpperCase() || '?'; return `<div class="author-avatar" style="background-color:${getRandomColor()};color:#fff;">${authorFirstChar}</div>`; })();
+
     detailScreen.innerHTML = `
     <header class="app-header">
-        <button class="back-btn" data-target="forum-screen">‹</button>
+        <button class="back-btn" data-target="forum-screen">&#8249;</button>
         <div class="title-container">
             <h1 class="title">帖子详情</h1>
         </div>
@@ -128,48 +154,105 @@ function renderPostDetail(post) {
         <div class="post-detail-container">
             <div class="post-detail-main">
                 <div class="post-author-info">
-                    <div class="author-avatar">${authorFirstChar}</div>
-                    <div class="author-details">
-                        <span class="author-name">${post.username}</span>
-                        <span class="post-meta-data">${new Date(post.id.split('_')[1] * 1).toLocaleString()}</span>
+                    ${authorAvatarHtml}
+                    <div class="author-details" style="display:flex;flex-direction:column;gap:2px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                            <span class="author-name">${post.username || ''}</span>
+                            ${!isOwnPost && post.username ? '<button type="button" class="btn btn-primary btn-small" id="forum-dm-author-btn" style="padding:4px 12px;font-size:13px;border-radius:16px;flex-shrink:0;">发私信</button>' : ''}
+                        </div>
+                        <span class="post-meta-data">${getPostDisplayTime(post)}</span>
                     </div>
                 </div>
-                <h2 class="post-detail-title">${post.title}</h2>
-                <div class="post-detail-content-body">${post.content.replace(/\n/g, '<br>')}</div>
+                <h2 class="post-detail-title">${post.title || ''}</h2>
+                <div class="post-detail-content-body">${(post.content || '').replace(/\n/g, '<br>')}</div>
                 <div class="post-detail-actions">
+                    <div class="action-item" id="like-post-btn" data-post-id="${post.id}" data-liked="${isLiked}" role="button" tabindex="0" style="cursor:pointer;border:none;background:none;padding:0;display:inline-flex;align-items:center;gap:4px;">
+                        <svg viewBox="0 0 24 24" fill="${isLiked ? '#ff4757' : 'none'}" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                        <span id="like-count">${likeCount}</span>
+                    </div>
                     <div class="action-item">
                         <svg viewBox="0 0 24 24"><path d="M20,8H4V6H20V8M18,10H6V12H18V10M16,14H8V16H16V14M22,4V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V4A2,2 0 0,1 4,2H20A2,2 0 0,1 22,4Z" /></svg>
-                        <span>${post.comments ? post.comments.length : 0}</span>
+                        <span id="comment-count">${commentCount}</span>
                     </div>
-                    <div class="action-item">
-                        <svg viewBox="0 0 24 24"><path d="M12.1,18.55L12,18.65L11.89,18.55C7.14,14.24 4,11.39 4,8.5C4,6.5 5.5,5 7.5,5C9.04,5 10.54,6 11.07,7.35H12.93C13.46,6 14.96,5 16.5,5C18.5,5 20,6.5 20,8.5C20,11.39 16.86,14.24 12.1,18.55M16.5,3C14.76,3 13.09,3.81 12,5.08C10.91,3.81 9.24,3 7.5,3C4.42,3 2,5.41 2,8.5C2,12.27 5.4,15.36 10.55,20.03L12,21.35L13.45,20.03C18.6,15.36 22,12.27 22,8.5C22,5.41 19.58,3 16.5,3Z" /></svg>
-                        <span>${post.likeCount}</span>
-                    </div>
-                    <div class="action-item">
-                        <svg viewBox="0 0 24 24"><path d="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V4C4,2.89 4.89,2 6,2M15,18V16H6V18H15M18,14V12H6V14H18Z" /></svg>
+                    <div class="action-item" id="favorite-post-btn" data-post-id="${post.id}" data-favorited="${isFavorited}" role="button" tabindex="0" style="cursor:pointer;">
+                        <svg viewBox="0 0 24 24" fill="${isFavorited ? '#ffd700' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
                         <span>收藏</span>
                     </div>
+                    ${isOwnPost ? `<button type="button" class="action-item" id="delete-post-btn" data-post-id="${post.id}" style="color:#ff4757;border:none;background:none;"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg><span>删除</span></button>` : ''}
                 </div>
             </div>
         </div>
 
         <div class="comments-section">
-            <div class="comments-header">全部评论 (${post.comments ? post.comments.length : 0})</div>
+            <div class="comments-header">全部评论 (${commentCount})</div>
             <ul class="comment-list">
                 ${commentsHtml}
             </ul>
         </div>
+
+        <div class="comment-input-wrapper" style="position:sticky;bottom:0;background:var(--panel-bg,#fff);border-top:1px solid #e0e0e0;padding:10px 15px;display:flex;gap:10px;align-items:center;">
+            <input type="text" id="forum-comment-input" placeholder="写下你的评论..." autocomplete="off" style="flex:1;padding:10px 15px;border:1px solid #e0e0e0;border-radius:20px;outline:none;">
+            <button type="button" id="ai-reply-comment-btn" class="icon-btn ai-reply-btn" title="AI回复" style="width:40px;height:40px;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    <path d="M8 10h.01M12 10h.01M16 10h.01"></path>
+                </svg>
+            </button>
+            <button type="button" id="send-forum-comment-btn" class="icon-btn" style="background:var(--primary-color);color:#fff;border:none;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;box-shadow:none;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+        </div>
     </main>`;
 
     const shareBtn = detailScreen.querySelector('#header-share-btn');
-    if (shareBtn) {
-        shareBtn.addEventListener('click', () => {
-            openSharePostModal(post.id);
+    if (shareBtn) shareBtn.addEventListener('click', () => openSharePostModal(post.id));
+
+    const likeBtn = detailScreen.querySelector('#like-post-btn');
+    if (likeBtn) {
+        likeBtn.addEventListener('click', () => forumTogglePostLike(post.id));
+        likeBtn.addEventListener('keypress', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); forumTogglePostLike(post.id); } });
+    }
+    
+    const favoriteBtn = detailScreen.querySelector('#favorite-post-btn');
+    if (favoriteBtn) {
+        favoriteBtn.addEventListener('click', () => forumTogglePostFavorite(post.id));
+        favoriteBtn.addEventListener('keypress', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); forumTogglePostFavorite(post.id); } });
+    }
+
+    const deleteBtn = detailScreen.querySelector('#delete-post-btn');
+    if (deleteBtn) deleteBtn.addEventListener('click', () => forumDeletePost(post.id));
+
+    const sendCommentBtn = detailScreen.querySelector('#send-forum-comment-btn');
+    const commentInput = detailScreen.querySelector('#forum-comment-input');
+    const aiReplyCommentBtn = detailScreen.querySelector('#ai-reply-comment-btn');
+    
+    if (sendCommentBtn && commentInput) {
+        const sendComment = () => {
+            const content = commentInput.value.trim();
+            if (content) forumPublishComment(post.id, content);
+        };
+        sendCommentBtn.addEventListener('click', sendComment);
+        commentInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendComment(); });
+    }
+    
+    if (aiReplyCommentBtn) {
+        aiReplyCommentBtn.addEventListener('click', () => forumGenerateAICommentReplies(post.id));
+    }
+
+    const dmAuthorBtn = detailScreen.querySelector('#forum-dm-author-btn');
+    if (dmAuthorBtn && post.username && post.authorId !== 'user') {
+        dmAuthorBtn.addEventListener('click', () => {
+            const userId = 'npc_' + post.username;
+            forumOpenDMConversation(userId, post.username);
         });
     }
 }
 
 function setupForumFeature() {
+    forumInitUserProfile();
+    forumAddHeaderButtonsAndFAB();
+    forumBindNewEvents();
+
     const refreshBtn = document.getElementById('forum-refresh-btn');
     const postsContainer = document.getElementById('forum-posts-container');
     const forumScreen = document.getElementById('forum-screen');
@@ -211,6 +294,7 @@ function setupForumFeature() {
                     } else {
                         postsContainer.innerHTML = '<p class="placeholder-text" style="margin-top: 50px;">这里空空也...<br>点击右上角刷新按钮加载帖子吧！</p>';
                     }
+                    forumUpdateDMUnreadBadge();
                 }
             }
         }
@@ -373,7 +457,7 @@ async function handleForumRefresh() {
 背景信息如下：
 ${context}
 
-你的任务是读取背景世界观生成6到8篇风格各异、内容有趣的论坛帖子，每条帖子下面生成4~8条评论，每个帖子评论数量应该不一样，注意区分真实姓名和网名，注意user隐私，你的角色是“世界构建者”和“社区模拟器”，你需要分析char设定和user人设所处世界的世界观而不是“角色扮演者”，发帖人应该是该角色所处世界观下的其他NPC，发帖人不能是user。ABSOLUTELY DO NOT。若角色为普通人或需保密等神秘身份就禁止提及角色真实姓名，可以用代称或者暗号，只有当user或者char是公众人物名气大时才可以提及真实姓名。char的备注或者昵称是仅供user使用的，NPC不知道也禁止提及char的备注。若user和char不在一个地区就禁止有NPC目睹二人同框。
+你的任务是读取背景世界观生成${(db.forumSettings && db.forumSettings.postsPerGeneration) || 8}篇风格各异、内容有趣的论坛帖子，每条帖子下面生成${(db.forumSettings && db.forumSettings.commentsPerPost && db.forumSettings.commentsPerPost.min) || 4}到${(db.forumSettings && db.forumSettings.commentsPerPost && db.forumSettings.commentsPerPost.max) || 8}条评论，每个帖子评论数量应该不一样，注意区分真实姓名和网名，注意user隐私，你的角色是“世界构建者”和“社区模拟器”，你需要分析char设定和user人设所处世界的世界观而不是“角色扮演者”，发帖人应该是该角色所处世界观下的其他NPC，发帖人不能是user。ABSOLUTELY DO NOT。若角色为普通人或需保密等神秘身份就禁止提及角色真实姓名，可以用代称或者暗号，只有当user或者char是公众人物名气大时才可以提及真实姓名。char的备注或者昵称是仅供user使用的，NPC不知道也禁止提及char的备注。若user和char不在一个地区就禁止有NPC目睹二人同框。
 
 请严格按照下面的JSON格式返回，不要包含任何多余的解释和注释，仅返回JSON内容本身。禁止以user的视角进行创作。
 
@@ -404,10 +488,15 @@ ${context}
             systemPrompt += `\n\n重要指令：本次生成的所有帖子标题必须和以下关键词相关：【${keywords}】，同时也需要和之前绑定的设定相关。禁止相似帖子过多，不要特地把关键词标注出来。`;
         }
 
+        const forumApiSettings = db.forumApiSettings || {};
+        const useForumApi = forumApiSettings.useForumApi && forumApiSettings.url && forumApiSettings.key && forumApiSettings.model;
+        const apiToUse = useForumApi ? forumApiSettings : db.apiSettings;
+        const temperature = apiToUse.temperature !== undefined ? apiToUse.temperature : 0.8;
+
         const requestBody = {
             model: model,
             messages: [{ role: "user", content: systemPrompt }],
-            temperature: 0.8,
+            temperature: temperature,
             response_format: { type: "json_object" },
         };
 
@@ -421,14 +510,16 @@ ${context}
             const enhancedPosts = jsonData.posts.map(post => ({
               ...post,
               id: `post_${Date.now()}_${Math.random()}`,
-              username: `楼主${Math.floor(100 + Math.random() * 900)}`, 
+              authorId: 'npc',
+              username: `楼主${Math.floor(100 + Math.random() * 900)}`,
               likeCount: Math.floor(Math.random() * 200),
               shareCount: Math.floor(Math.random() * 50),
-              comments: post.comments || []
-
+              isLiked: false,
+              comments: (post.comments || []).map(c => ({ ...c, authorId: 'npc' }))
             }));
 
-            db.forumPosts = enhancedPosts;
+            const userPosts = (db.forumPosts || []).filter(p => p.authorId === 'user');
+            db.forumPosts = userPosts.concat(enhancedPosts);
             await saveData();
             renderForumPosts(db.forumPosts);
 
@@ -444,7 +535,7 @@ ${context}
     }
 }
 
-function renderForumPosts(posts) {
+function renderForumPosts(posts, filter = 'all') {
     const postsContainer = document.getElementById('forum-posts-container');
     postsContainer.innerHTML = ''; 
 
@@ -452,8 +543,22 @@ function renderForumPosts(posts) {
         postsContainer.innerHTML = '<p class="placeholder-text" style="margin-top: 50px;">AI还没生成任何帖子，请点击刷新按钮。';
         return;
     }
+    
+    let filteredPosts = posts;
+    
+    if (filter === 'liked') {
+        filteredPosts = posts.filter(p => p.isLiked);
+    } else if (filter === 'favorited') {
+        filteredPosts = posts.filter(p => p.isFavorited);
+    }
+    
+    if (filteredPosts.length === 0) {
+        const filterText = filter === 'liked' ? '点赞' : filter === 'favorited' ? '收藏' : '';
+        postsContainer.innerHTML = `<p class="placeholder-text" style="margin-top: 50px;">暂无${filterText}的帖子</p>`;
+        return;
+    }
 
-    posts.forEach(post => {
+    filteredPosts.forEach(post => {
         const card = document.createElement('div');
         card.className = 'forum-post-card';
         card.dataset.id = post.id;
@@ -471,4 +576,1069 @@ function renderForumPosts(posts) {
 
         postsContainer.appendChild(card);
     });
+}
+
+function forumInitUserProfile() {
+    if (!db.forumUserProfile || typeof db.forumUserProfile !== 'object') {
+        db.forumUserProfile = { username: '', avatar: 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg', bio: '', joinDate: Date.now() };
+        saveData();
+    }
+    if (!db.forumUserProfile.username && db.forumUserProfile.joinDate) {
+        db.forumUserProfile.username = '用户' + Math.floor(1000 + Math.random() * 9000);
+        saveData();
+    }
+}
+
+function forumAddHeaderButtonsAndFAB() {
+    const actionBtnGroup = document.querySelector('#forum-screen .action-btn-group');
+    if (!actionBtnGroup) return;
+
+    if (!document.getElementById('forum-dm-btn')) {
+        const dmBtn = document.createElement('button');
+        dmBtn.className = 'action-btn';
+        dmBtn.id = 'forum-dm-btn';
+        dmBtn.title = '私信';
+        dmBtn.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>';
+        actionBtnGroup.appendChild(dmBtn);
+    }
+
+    if (!document.getElementById('forum-settings-btn')) {
+        const settingsBtn = document.createElement('button');
+        settingsBtn.className = 'action-btn';
+        settingsBtn.id = 'forum-settings-btn';
+        settingsBtn.title = '设置';
+        settingsBtn.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>';
+        actionBtnGroup.appendChild(settingsBtn);
+    }
+
+    const forumScreen = document.getElementById('forum-screen');
+    if (forumScreen && !document.getElementById('create-post-fab')) {
+        const fab = document.createElement('button');
+        fab.className = 'forum-fab';
+        fab.id = 'create-post-fab';
+        fab.title = '发布新帖';
+        fab.innerHTML = '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
+        forumScreen.appendChild(fab);
+    }
+
+    if (!document.getElementById('forum-fab-style')) {
+        const style = document.createElement('style');
+        style.id = 'forum-fab-style';
+        style.textContent = '.forum-fab{position:fixed;bottom:80px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--primary-color);color:#fff;border:none;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:100;}.forum-fab:active{transform:scale(0.95);}';
+        document.head.appendChild(style);
+    }
+}
+
+function forumTogglePostLike(postId) {
+    const post = db.forumPosts.find(p => p.id === postId);
+    if (!post) return;
+    post.isLiked = !post.isLiked;
+    post.likeCount = (post.likeCount || 0) + (post.isLiked ? 1 : -1);
+    saveData();
+    const likeBtn = document.getElementById('like-post-btn');
+    const likeCountEl = document.getElementById('like-count');
+    if (likeBtn) {
+        likeBtn.dataset.liked = post.isLiked;
+        const svg = likeBtn.querySelector('svg');
+        if (svg) svg.setAttribute('fill', post.isLiked ? '#ff4757' : 'none');
+    }
+    if (likeCountEl) likeCountEl.textContent = post.likeCount;
+}
+
+function forumTogglePostFavorite(postId) {
+    const post = db.forumPosts.find(p => p.id === postId);
+    if (!post) return;
+    post.isFavorited = !post.isFavorited;
+    saveData();
+    const favoriteBtn = document.getElementById('favorite-post-btn');
+    if (favoriteBtn) {
+        favoriteBtn.dataset.favorited = post.isFavorited;
+        const svg = favoriteBtn.querySelector('svg');
+        if (svg) svg.setAttribute('fill', post.isFavorited ? '#ffd700' : 'none');
+    }
+    showToast(post.isFavorited ? '已收藏' : '已取消收藏');
+}
+
+function forumPublishComment(postId, content) {
+    const post = db.forumPosts.find(p => p.id === postId);
+    if (!post) return;
+    forumInitUserProfile();
+    const profile = db.forumUserProfile;
+    const defaultAvatarUrl = 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg';
+    const newComment = { id: 'comment_' + Date.now() + '_' + Math.random(), authorId: 'user', username: profile.username || '用户', avatar: profile.avatar || defaultAvatarUrl, content: content, timestamp: new Date().toLocaleString() };
+    if (!post.comments) post.comments = [];
+    post.comments.push(newComment);
+    saveData();
+    renderPostDetail(post);
+    const input = document.getElementById('forum-comment-input');
+    if (input) input.value = '';
+    showToast('评论成功');
+}
+
+async function forumPublishPost() {
+    const titleInput = document.getElementById('forum-post-title-input');
+    const contentInput = document.getElementById('forum-post-content-input');
+    const title = titleInput && titleInput.value.trim();
+    const content = contentInput && contentInput.value.trim();
+    if (!title || !content) { showToast('标题和内容不能为空'); return; }
+    
+    forumInitUserProfile();
+    const profile = db.forumUserProfile;
+    const newPost = { 
+        id: 'post_' + Date.now() + '_' + Math.random(), 
+        authorId: 'user', 
+        username: profile.username || '用户', 
+        title: title, 
+        content: content, 
+        summary: content.length > 100 ? content.substring(0, 100) + '...' : content, 
+        timestamp: Date.now(), 
+        likeCount: 0, 
+        isLiked: false, 
+        comments: [] 
+    };
+    
+    if (!db.forumPosts) db.forumPosts = [];
+    db.forumPosts.unshift(newPost);
+    await saveData();
+    
+    renderForumPosts(db.forumPosts);
+    document.getElementById('create-forum-post-modal').classList.remove('visible');
+    showToast('发布成功');
+    
+    if (titleInput) titleInput.value = '';
+    if (contentInput) contentInput.value = '';
+    
+    const autoReplyCount = (db.forumSettings && db.forumSettings.autoReplyCount) || 0;
+    if (autoReplyCount > 0) {
+        forumGenerateAutoReplies(newPost.id, autoReplyCount);
+    }
+}
+
+async function forumGenerateAutoReplies(postId, replyCount) {
+    const post = db.forumPosts.find(p => p.id === postId);
+    if (!post) return;
+    
+    const forumApiSettings = db.forumApiSettings || {};
+    let apiSettings = forumApiSettings.useForumApi ? forumApiSettings : db.apiSettings;
+    
+    if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
+        showToast('未配置API，无法自动生成评论');
+        return;
+    }
+    
+    showToast('正在生成AI评论...');
+    
+    try {
+        const context = getForumGenerationContext();
+        
+        const systemPrompt = `你是一位论坛内容生成专家。
+背景信息：
+${context}
+
+用户刚发布了一篇新帖：
+标题: ${post.title}
+内容: ${post.content}
+作者: ${post.username}
+
+请生成${replyCount}条来自不同NPC的评论。评论要有不同的观点和风格，有的支持，有的质疑，有的提供新的视角。评论者都是论坛中的NPC用户，要根据背景设定来回复。
+
+返回JSON格式:
+{
+  "comments": [
+    {
+      "username": "评论者昵称",
+      "content": "评论内容",
+      "timestamp": "刚刚"
+    }
+  ]
+}`;
+        
+        let url = apiSettings.url;
+        if (url.endsWith('/')) url = url.slice(0, -1);
+        
+        const temperature = apiSettings.temperature !== undefined ? apiSettings.temperature : 0.9;
+        
+        const requestBody = {
+            model: apiSettings.model,
+            messages: [{ role: "user", content: systemPrompt }],
+            temperature: temperature,
+            response_format: { type: "json_object" },
+        };
+        
+        const endpoint = `${url}/v1/chat/completions`;
+        const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiSettings.key}` };
+        
+        const contentStr = await fetchAiResponse(apiSettings, requestBody, headers, endpoint);
+        const jsonData = JSON.parse(contentStr);
+        
+        if (jsonData && Array.isArray(jsonData.comments)) {
+            if (!post.comments) post.comments = [];
+            
+            jsonData.comments.forEach(comment => {
+                const newComment = {
+                    id: 'comment_' + Date.now() + '_' + Math.random(),
+                    authorId: 'npc',
+                    username: comment.username || '路人' + Math.floor(100 + Math.random() * 900),
+                    content: comment.content || '',
+                    timestamp: comment.timestamp || '刚刚'
+                };
+                post.comments.push(newComment);
+            });
+            
+            await saveData();
+            renderForumPosts(db.forumPosts);
+            showToast(`成功生成${jsonData.comments.length}条AI评论`);
+        }
+        
+    } catch (error) {
+        console.error('自动回复生成失败:', error);
+        showToast('自动生成评论失败');
+    }
+}
+
+function forumDeletePost(postId) {
+    if (!confirm('确定要删除这篇帖子吗？')) return;
+    const index = db.forumPosts.findIndex(p => p.id === postId);
+    if (index === -1) return;
+    const post = db.forumPosts[index];
+    if (post.authorId !== 'user') { showToast('只能删除自己的帖子'); return; }
+    db.forumPosts.splice(index, 1);
+    saveData();
+    switchScreen('forum-screen');
+    renderForumPosts(db.forumPosts);
+    showToast('帖子已删除');
+}
+
+function forumLoadSettings() {
+    const s = db.forumSettings || { postsPerGeneration: 8, commentsPerPost: { min: 4, max: 8 }, autoReplyCount: 3, detailReplyCount: 2 };
+    const postsInput = document.getElementById('forum-posts-count-input');
+    const minInput = document.getElementById('forum-comments-min-input');
+    const maxInput = document.getElementById('forum-comments-max-input');
+    const autoReplyInput = document.getElementById('forum-auto-reply-count-input');
+    const detailReplyInput = document.getElementById('forum-detail-reply-count-input');
+    
+    if (postsInput) postsInput.value = s.postsPerGeneration || 8;
+    if (minInput) minInput.value = (s.commentsPerPost && s.commentsPerPost.min) != null ? s.commentsPerPost.min : 4;
+    if (maxInput) maxInput.value = (s.commentsPerPost && s.commentsPerPost.max) != null ? s.commentsPerPost.max : 8;
+    if (autoReplyInput) autoReplyInput.value = s.autoReplyCount != null ? s.autoReplyCount : 3;
+    if (detailReplyInput) detailReplyInput.value = s.detailReplyCount != null ? s.detailReplyCount : 2;
+    
+    const apiSettings = db.forumApiSettings || { useForumApi: false, url: '', key: '', model: '', temperature: 0.9 };
+    const useApiToggle = document.getElementById('forum-use-api-toggle');
+    const apiUrlInput = document.getElementById('forum-api-url-input');
+    const apiKeyInput = document.getElementById('forum-api-key-input');
+    const apiModelSelect = document.getElementById('forum-api-model-select');
+    const apiConfigSection = document.getElementById('forum-api-config-section');
+    
+    if (useApiToggle) {
+        useApiToggle.checked = apiSettings.useForumApi || false;
+        useApiToggle.addEventListener('change', function() {
+            if (apiConfigSection) apiConfigSection.style.display = this.checked ? 'block' : 'none';
+        });
+        if (apiConfigSection) apiConfigSection.style.display = useApiToggle.checked ? 'block' : 'none';
+    }
+    
+    if (apiUrlInput) apiUrlInput.value = apiSettings.url || '';
+    if (apiKeyInput) apiKeyInput.value = apiSettings.key || '';
+    if (apiModelSelect && apiSettings.model) {
+        apiModelSelect.innerHTML = `<option value="${apiSettings.model}">${apiSettings.model}</option>`;
+    }
+    
+    const tempSlider = document.getElementById('forum-temperature-slider');
+    const tempValue = document.getElementById('forum-temperature-value');
+    if (tempSlider && tempValue) {
+        const savedTemp = apiSettings.temperature !== undefined ? apiSettings.temperature : 0.9;
+        tempSlider.value = savedTemp;
+        tempValue.textContent = savedTemp;
+        
+        tempSlider.addEventListener('input', (e) => {
+            tempValue.textContent = e.target.value;
+        });
+    }
+    
+    const fetchModelsBtn = document.getElementById('forum-fetch-models-btn');
+    if (fetchModelsBtn) {
+        fetchModelsBtn.addEventListener('click', forumFetchModels);
+    }
+}
+
+function forumSaveSettings() {
+    const postsInput = document.getElementById('forum-posts-count-input');
+    const minInput = document.getElementById('forum-comments-min-input');
+    const maxInput = document.getElementById('forum-comments-max-input');
+    const autoReplyInput = document.getElementById('forum-auto-reply-count-input');
+    const detailReplyInput = document.getElementById('forum-detail-reply-count-input');
+    
+    const postsCount = parseInt(postsInput && postsInput.value, 10) || 8;
+    const commentsMin = parseInt(minInput && minInput.value, 10) || 4;
+    const commentsMax = parseInt(maxInput && maxInput.value, 10) || 8;
+    const autoReplyCount = parseInt(autoReplyInput && autoReplyInput.value, 10) || 3;
+    const detailReplyCount = parseInt(detailReplyInput && detailReplyInput.value, 10) || 2;
+    
+    if (commentsMin > commentsMax) { showToast('最小评论数不能大于最大评论数'); return; }
+    
+    db.forumSettings = { 
+        postsPerGeneration: postsCount, 
+        commentsPerPost: { min: commentsMin, max: commentsMax },
+        autoReplyCount: autoReplyCount,
+        detailReplyCount: detailReplyCount
+    };
+    
+    const useApiToggle = document.getElementById('forum-use-api-toggle');
+    const apiUrlInput = document.getElementById('forum-api-url-input');
+    const apiKeyInput = document.getElementById('forum-api-key-input');
+    const apiModelSelect = document.getElementById('forum-api-model-select');
+    const tempSlider = document.getElementById('forum-temperature-slider');
+    
+    db.forumApiSettings = {
+        useForumApi: useApiToggle ? useApiToggle.checked : false,
+        url: (apiUrlInput && apiUrlInput.value.trim()) || '',
+        key: (apiKeyInput && apiKeyInput.value.trim()) || '',
+        model: (apiModelSelect && apiModelSelect.value.trim()) || '',
+        temperature: tempSlider ? parseFloat(tempSlider.value) : 0.9
+    };
+    
+    saveData();
+    showToast('设置已保存');
+}
+
+function forumGetUserStats() {
+    const posts = db.forumPosts || [];
+    let postCount = 0, commentCount = 0, likeCount = 0;
+    posts.forEach(p => {
+        if (p.authorId === 'user') postCount++;
+        (p.comments || []).forEach(c => { if (c.authorId === 'user') commentCount++; });
+        if (p.authorId === 'user') likeCount += p.likeCount || 0;
+    });
+    return { posts: postCount, comments: commentCount, likes: likeCount };
+}
+
+async function forumFetchModels() {
+    const apiUrlInput = document.getElementById('forum-api-url-input');
+    const apiKeyInput = document.getElementById('forum-api-key-input');
+    const modelSelect = document.getElementById('forum-api-model-select');
+    const fetchBtn = document.getElementById('forum-fetch-models-btn');
+    
+    let apiUrl = apiUrlInput ? apiUrlInput.value.trim() : '';
+    const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+    
+    if (!apiUrl || !apiKey) {
+        showToast('请先填写API地址和密钥！');
+        return;
+    }
+    
+    if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
+    
+    const endpoint = `${apiUrl}/v1/models`;
+    
+    if (fetchBtn) {
+        fetchBtn.classList.add('loading');
+        fetchBtn.disabled = true;
+    }
+    
+    try {
+        const headers = { Authorization: `Bearer ${apiKey}` };
+        const response = await fetch(endpoint, { method: 'GET', headers });
+        
+        if (!response.ok) {
+            const error = new Error(`网络响应错误: ${response.status}`);
+            error.response = response;
+            throw error;
+        }
+        
+        const data = await response.json();
+        let models = [];
+        
+        if (data.data) {
+            models = data.data.map(e => e.id);
+        }
+        
+        const currentVal = modelSelect ? modelSelect.value : '';
+        
+        if (modelSelect) {
+            modelSelect.innerHTML = '';
+            if (models.length > 0) {
+                models.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m;
+                    modelSelect.appendChild(opt);
+                });
+                
+                if (models.includes(currentVal)) {
+                    modelSelect.value = currentVal;
+                } else if (db.forumApiSettings && db.forumApiSettings.model && models.includes(db.forumApiSettings.model)) {
+                    modelSelect.value = db.forumApiSettings.model;
+                }
+                
+                showToast(`成功拉取 ${models.length} 个模型`);
+            } else {
+                modelSelect.innerHTML = '<option value="">未找到可用模型</option>';
+                showToast('未找到可用模型');
+            }
+        }
+        
+    } catch (error) {
+        console.error('拉取模型失败:', error);
+        showToast('拉取模型失败: ' + (error.message || '未知错误'));
+        if (modelSelect) {
+            modelSelect.innerHTML = '<option value="">拉取失败</option>';
+        }
+    } finally {
+        if (fetchBtn) {
+            fetchBtn.classList.remove('loading');
+            fetchBtn.disabled = false;
+        }
+    }
+}
+
+function forumLoadProfile() {
+    forumInitUserProfile();
+    const p = db.forumUserProfile;
+    const nameEl = document.getElementById('forum-user-name-display');
+    const avatarEl = document.getElementById('forum-user-avatar-display');
+    const usernameInput = document.getElementById('forum-username-input');
+    const bioInput = document.getElementById('forum-bio-input');
+    if (nameEl) nameEl.textContent = p.username || '未设置昵称';
+    if (avatarEl) avatarEl.src = p.avatar || 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg';
+    if (usernameInput) usernameInput.value = p.username || '';
+    if (bioInput) bioInput.value = p.bio || '';
+    const stats = forumGetUserStats();
+    const postsCountEl = document.getElementById('user-posts-count');
+    const commentsCountEl = document.getElementById('user-comments-count');
+    const likesCountEl = document.getElementById('user-likes-count');
+    if (postsCountEl) postsCountEl.textContent = stats.posts;
+    if (commentsCountEl) commentsCountEl.textContent = stats.comments;
+    if (likesCountEl) likesCountEl.textContent = stats.likes;
+}
+
+function forumSaveProfile() {
+    const usernameInput = document.getElementById('forum-username-input');
+    const bioInput = document.getElementById('forum-bio-input');
+    const username = usernameInput && usernameInput.value.trim();
+    if (!username) { showToast('昵称不能为空'); return; }
+    forumInitUserProfile();
+    db.forumUserProfile.username = username;
+    db.forumUserProfile.bio = (bioInput && bioInput.value) || '';
+    saveData();
+    showToast('资料已保存');
+}
+
+function forumBindNewEvents() {
+    document.getElementById('create-post-fab') && document.getElementById('create-post-fab').addEventListener('click', () => { document.getElementById('create-forum-post-modal').classList.add('visible'); });
+    document.getElementById('create-forum-post-form') && document.getElementById('create-forum-post-form').addEventListener('submit', function(e) { e.preventDefault(); forumPublishPost(); });
+    document.getElementById('cancel-forum-post-btn') && document.getElementById('cancel-forum-post-btn').addEventListener('click', () => { document.getElementById('create-forum-post-modal').classList.remove('visible'); });
+
+    document.getElementById('forum-settings-btn') && document.getElementById('forum-settings-btn').addEventListener('click', () => { switchScreen('forum-settings-screen'); forumLoadSettings(); });
+    document.getElementById('save-forum-settings-btn') && document.getElementById('save-forum-settings-btn').addEventListener('click', forumSaveSettings);
+    document.getElementById('forum-goto-profile-btn') && document.getElementById('forum-goto-profile-btn').addEventListener('click', () => { switchScreen('forum-profile-screen'); forumLoadProfile(); });
+
+    document.getElementById('forum-dm-btn') && document.getElementById('forum-dm-btn').addEventListener('click', () => { switchScreen('forum-dm-list-screen'); forumRenderDMList(); });
+
+    document.getElementById('save-forum-profile-btn') && document.getElementById('save-forum-profile-btn').addEventListener('click', () => { forumSaveProfile(); switchScreen('forum-screen'); });
+    document.getElementById('forum-profile-screen') && document.getElementById('forum-profile-screen').addEventListener('click', function(e) {
+        if (e.target.id === 'forum-user-avatar-display' || e.target.closest('#forum-user-avatar-display')) document.getElementById('forum-avatar-upload').click();
+    });
+    document.getElementById('forum-avatar-upload') && document.getElementById('forum-avatar-upload').addEventListener('change', function(e) {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = function() { forumInitUserProfile(); db.forumUserProfile.avatar = reader.result; saveData(); const el = document.getElementById('forum-user-avatar-display'); if (el) el.src = reader.result; };
+        reader.readAsDataURL(f);
+        e.target.value = '';
+    });
+
+    const dmList = document.getElementById('forum-dm-list-container');
+    if (dmList) dmList.addEventListener('click', function(e) {
+        const item = e.target.closest('.forum-dm-item[data-user-id]');
+        if (!item) return;
+        if (forumDMListDeleteMode) {
+            var id = item.dataset.userId;
+            if (forumDMSelectedUserIds.has(id)) forumDMSelectedUserIds.delete(id);
+            else forumDMSelectedUserIds.add(id);
+            forumRenderDMList();
+        } else {
+            forumOpenDMConversation(item.dataset.userId, item.dataset.userName || '');
+        }
+    });
+    document.getElementById('forum-dm-list-refresh-btn') && document.getElementById('forum-dm-list-refresh-btn').addEventListener('click', forumGenerateStrangerDMs);
+    document.getElementById('forum-dm-list-delete-btn') && document.getElementById('forum-dm-list-delete-btn').addEventListener('click', forumToggleDMListDeleteMode);
+    document.getElementById('forum-dm-select-all-btn') && document.getElementById('forum-dm-select-all-btn').addEventListener('click', forumDMSelectAll);
+    document.getElementById('forum-dm-delete-selected-btn') && document.getElementById('forum-dm-delete-selected-btn').addEventListener('click', forumDMDeleteSelected);
+    document.getElementById('forum-dm-cancel-delete-btn') && document.getElementById('forum-dm-cancel-delete-btn').addEventListener('click', forumDMCancelDeleteMode);
+
+    document.getElementById('send-forum-dm-btn') && document.getElementById('send-forum-dm-btn').addEventListener('click', forumSendDM);
+    document.getElementById('forum-dm-input') && document.getElementById('forum-dm-input').addEventListener('keypress', function(e) { if (e.key === 'Enter') forumSendDM(); });
+    document.getElementById('ai-reply-dm-btn') && document.getElementById('ai-reply-dm-btn').addEventListener('click', forumGenerateAIDMReply);
+    
+    setupForumDMMessageAreaLongPress();
+    setupForumDMEditModal();
+    
+    const filterTabs = document.querySelectorAll('.forum-filter-tab');
+    filterTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            filterTabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            const filter = this.dataset.filter;
+            renderForumPosts(db.forumPosts, filter);
+        });
+    });
+}
+
+function forumGetDMUserList() {
+    const users = new Map();
+    (db.forumMessages || []).forEach(m => {
+        const other = m.fromUserId === 'user' ? m.toUserId : m.fromUserId;
+        if (other && other !== 'user') users.set(other, { id: other, name: other.replace(/^npc_/, '') });
+    });
+    return Array.from(users.values());
+}
+
+function forumToggleDMListDeleteMode() {
+    if (forumDMListDeleteMode) return;
+    forumDMListDeleteMode = true;
+    forumDMSelectedUserIds.clear();
+    var toolbar = document.getElementById('forum-dm-delete-toolbar');
+    if (toolbar) toolbar.style.display = 'flex';
+    var deleteBtn = document.getElementById('forum-dm-list-delete-btn');
+    if (deleteBtn) deleteBtn.style.display = 'none';
+    forumRenderDMList();
+}
+
+function forumDMSelectAll() {
+    var users = forumGetDMUserList();
+    forumDMSelectedUserIds.clear();
+    users.forEach(function(u) { forumDMSelectedUserIds.add(u.id); });
+    forumRenderDMList();
+}
+
+function forumDMDeleteSelected() {
+    if (forumDMSelectedUserIds.size === 0) { showToast('请先选择要删除的对话'); return; }
+    if (!confirm('确定要删除选中的 ' + forumDMSelectedUserIds.size + ' 个对话吗？该对话下的所有私信将被删除。')) return;
+    if (!db.forumMessages) db.forumMessages = [];
+    db.forumMessages = db.forumMessages.filter(function(m) {
+        var other = m.fromUserId === 'user' ? m.toUserId : m.fromUserId;
+        return !forumDMSelectedUserIds.has(other);
+    });
+    saveData();
+    forumDMSelectedUserIds.clear();
+    forumDMListDeleteMode = false;
+    var toolbar = document.getElementById('forum-dm-delete-toolbar');
+    if (toolbar) toolbar.style.display = 'none';
+    var deleteBtn = document.getElementById('forum-dm-list-delete-btn');
+    if (deleteBtn) deleteBtn.style.display = '';
+    forumRenderDMList();
+    showToast('已删除选中对话');
+}
+
+function forumDMCancelDeleteMode() {
+    forumDMListDeleteMode = false;
+    forumDMSelectedUserIds.clear();
+    var toolbar = document.getElementById('forum-dm-delete-toolbar');
+    if (toolbar) toolbar.style.display = 'none';
+    var deleteBtn = document.getElementById('forum-dm-list-delete-btn');
+    if (deleteBtn) deleteBtn.style.display = '';
+    forumRenderDMList();
+}
+
+function forumRenderDMList() {
+    const list = document.getElementById('forum-dm-list-container');
+    if (!list) return;
+    const users = forumGetDMUserList();
+    list.innerHTML = '';
+    if (users.length === 0) { list.innerHTML = '<li class="placeholder-text" style="padding:20px;">暂无私信对话</li>'; return; }
+    
+    const defaultAvatarUrl = 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg';
+    const npcColors = ["#FFB6C1", "#87CEFA", "#98FB98", "#F0E68C", "#DDA0DD", "#FFDAB9", "#B0E0E6"];
+    const getRandomColor = () => npcColors[Math.floor(Math.random() * npcColors.length)];
+    
+    users.forEach(u => {
+        const conv = (db.forumMessages || []).filter(m => (m.fromUserId === 'user' && m.toUserId === u.id) || (m.fromUserId === u.id && m.toUserId === 'user'));
+        const last = conv[conv.length - 1];
+        const unread = (db.forumMessages || []).filter(m => m.toUserId === 'user' && m.fromUserId === u.id && !m.isRead).length;
+        
+        const firstChar = (u.name || '').charAt(0).toUpperCase() || '?';
+        const avatarColor = getRandomColor();
+        
+        const li = document.createElement('li');
+        li.className = 'forum-dm-item';
+        if (forumDMListDeleteMode) {
+            li.classList.add('dm-delete-mode');
+            if (forumDMSelectedUserIds.has(u.id)) li.classList.add('dm-selected');
+        }
+        li.dataset.userId = u.id;
+        li.dataset.userName = u.name;
+        
+        const checkboxHtml = forumDMListDeleteMode ? '<div class="dm-select-checkbox"></div>' : '';
+        li.innerHTML = checkboxHtml + `
+            <div class="dm-avatar" style="width:48px;height:48px;border-radius:50%;background:${avatarColor};color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;flex-shrink:0;">${firstChar}</div>
+            <div class="dm-info">
+                <div class="dm-name">${u.name || u.id}</div>
+                <div class="dm-last-message">${last ? (last.fromUserId === 'user' ? '我: ' : '') + (last.content || '').substring(0, 30) : '暂无消息'}</div>
+            </div>
+            ${unread > 0 ? `<span class="dm-unread-badge">${unread}</span>` : ''}
+        `;
+        
+        list.appendChild(li);
+    });
+}
+
+var forumCurrentDMUserId = null;
+var forumDMLongPressTimer = null;
+var editingForumDMId = null;
+var forumDMListDeleteMode = false;
+var forumDMSelectedUserIds = new Set();
+
+function forumOpenDMConversation(userId, userName) {
+    forumCurrentDMUserId = userId;
+    forumMarkDMRead(userId);
+    forumUpdateDMUnreadBadge();
+    document.getElementById('forum-dm-conversation-title').textContent = userName || userId || '私信';
+    forumRenderDMConversation(userId);
+    switchScreen('forum-dm-conversation-screen');
+}
+
+function forumMarkDMRead(userId) {
+    if (!db.forumMessages) return;
+    db.forumMessages.forEach(m => { if (m.toUserId === 'user' && m.fromUserId === userId) m.isRead = true; });
+    saveData();
+}
+
+function forumRenderDMConversation(userId) {
+    const area = document.getElementById('forum-dm-message-area');
+    if (!area) return;
+    
+    const messages = (db.forumMessages || []).filter(m => (m.fromUserId === 'user' && m.toUserId === userId) || (m.fromUserId === userId && m.toUserId === 'user')).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    
+    area.innerHTML = '';
+    
+    forumInitUserProfile();
+    const userProfile = db.forumUserProfile;
+    const userAvatar = userProfile.avatar || 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg';
+    
+    const npcColors = ["#FFB6C1", "#87CEFA", "#98FB98", "#F0E68C", "#DDA0DD", "#FFDAB9", "#B0E0E6"];
+    const getRandomColor = () => npcColors[Math.floor(Math.random() * npcColors.length)];
+    const npcName = userId.replace(/^npc_/, '');
+    const npcFirstChar = npcName.charAt(0).toUpperCase() || '?';
+    const npcColor = getRandomColor();
+    
+    messages.forEach(m => {
+        const isUser = m.fromUserId === 'user';
+        const div = document.createElement('div');
+        div.className = isUser ? 'dm-message dm-message-user' : 'dm-message dm-message-npc';
+        div.dataset.id = m.id || '';
+        
+        const avatarHtml = isUser 
+            ? `<img src="${userAvatar}" class="dm-message-avatar" alt="我" />`
+            : `<div class="dm-message-avatar dm-npc-avatar" style="background:${npcColor}">${npcFirstChar}</div>`;
+        
+        const bubble = document.createElement('div');
+        bubble.className = 'dm-message-bubble';
+        bubble.textContent = m.content || '';
+        
+        if (isUser) {
+            div.innerHTML = avatarHtml;
+            div.appendChild(bubble);
+        } else {
+            div.innerHTML = avatarHtml;
+            div.appendChild(bubble);
+        }
+        
+        area.appendChild(div);
+    });
+    
+    area.scrollTop = area.scrollHeight;
+}
+
+function setupForumDMMessageAreaLongPress() {
+    const area = document.getElementById('forum-dm-message-area');
+    if (!area) return;
+    area.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        const msgEl = e.target.closest('.dm-message');
+        if (!msgEl || !msgEl.dataset.id) return;
+        forumDMHandleLongPress(msgEl, e.clientX, e.clientY);
+    });
+    area.addEventListener('touchstart', function(e) {
+        const msgEl = e.target.closest('.dm-message');
+        if (!msgEl || !msgEl.dataset.id) return;
+        forumDMLongPressTimer = setTimeout(function() {
+            const t = e.touches[0];
+            forumDMHandleLongPress(msgEl, t.clientX, t.clientY);
+        }, 400);
+    });
+    area.addEventListener('touchend', function() { clearTimeout(forumDMLongPressTimer); });
+    area.addEventListener('touchmove', function() { clearTimeout(forumDMLongPressTimer); });
+}
+
+function forumDMHandleLongPress(domMessage, x, y) {
+    const msgId = domMessage.dataset.id;
+    const menuItems = [
+        { label: '编辑', action: function() { openForumDMEditModal(msgId); } },
+        { label: '删除', action: function() { deleteForumDMMessage(msgId); }, danger: true }
+    ];
+    if (typeof triggerHapticFeedback === 'function') triggerHapticFeedback('medium');
+    createContextMenu(menuItems, x, y);
+}
+
+function openForumDMEditModal(msgId) {
+    if (!db.forumMessages) return;
+    const msg = db.forumMessages.find(function(m) { return m.id === msgId; });
+    if (!msg) return;
+    editingForumDMId = msgId;
+    const ta = document.getElementById('forum-dm-edit-textarea');
+    const modal = document.getElementById('forum-dm-edit-modal');
+    if (ta) ta.value = msg.content || '';
+    if (modal) modal.classList.add('visible');
+    if (ta) ta.focus();
+}
+
+function setupForumDMEditModal() {
+    var form = document.getElementById('forum-dm-edit-form');
+    var cancelBtn = document.getElementById('forum-dm-edit-cancel-btn');
+    var deleteBtn = document.getElementById('forum-dm-edit-delete-btn');
+    if (form) form.addEventListener('submit', function(e) { e.preventDefault(); saveForumDMEdit(); });
+    if (cancelBtn) cancelBtn.addEventListener('click', function() {
+        document.getElementById('forum-dm-edit-modal').classList.remove('visible');
+        editingForumDMId = null;
+    });
+    if (deleteBtn) deleteBtn.addEventListener('click', function() {
+        if (confirm('确定要删除这条私信吗？')) deleteForumDMMessage(editingForumDMId);
+    });
+}
+
+function saveForumDMEdit() {
+    if (!editingForumDMId) return;
+    var content = (document.getElementById('forum-dm-edit-textarea') && document.getElementById('forum-dm-edit-textarea').value || '').trim();
+    var msg = db.forumMessages && db.forumMessages.find(function(m) { return m.id === editingForumDMId; });
+    if (msg) {
+        msg.content = content;
+        saveData();
+        if (forumCurrentDMUserId) forumRenderDMConversation(forumCurrentDMUserId);
+        document.getElementById('forum-dm-edit-modal').classList.remove('visible');
+        showToast('私信已更新');
+    }
+    editingForumDMId = null;
+}
+
+function deleteForumDMMessage(msgId) {
+    if (!msgId || !db.forumMessages) return;
+    db.forumMessages = db.forumMessages.filter(function(m) { return m.id !== msgId; });
+    saveData();
+    if (forumCurrentDMUserId) forumRenderDMConversation(forumCurrentDMUserId);
+    var modal = document.getElementById('forum-dm-edit-modal');
+    if (modal) modal.classList.remove('visible');
+    editingForumDMId = null;
+    showToast('私信已删除');
+}
+
+function forumSendDM() {
+    if (!forumCurrentDMUserId) return;
+    const input = document.getElementById('forum-dm-input');
+    const content = (input && input.value || '').trim();
+    if (!content) return;
+    if (!db.forumMessages) db.forumMessages = [];
+    db.forumMessages.push({ id: 'dm_' + Date.now(), fromUserId: 'user', toUserId: forumCurrentDMUserId, content: content, timestamp: Date.now(), isRead: false });
+    saveData();
+    if (input) input.value = '';
+    forumRenderDMConversation(forumCurrentDMUserId);
+}
+
+function forumUpdateDMUnreadBadge() {
+    const btn = document.getElementById('forum-dm-btn');
+    if (!btn) return;
+    const n = (db.forumMessages || []).filter(m => m.toUserId === 'user' && !m.isRead).length;
+    let badge = btn.querySelector('.forum-dm-badge');
+    if (n > 0) {
+        if (!badge) { badge = document.createElement('span'); badge.className = 'forum-dm-badge'; badge.style.cssText = 'position:absolute;top:-4px;right:-4px;background:#ff4757;color:#fff;font-size:10px;padding:2px 5px;border-radius:10px;'; btn.style.position = 'relative'; btn.appendChild(badge); }
+        badge.textContent = n > 99 ? '99+' : n;
+    } else if (badge) badge.remove();
+}
+
+async function forumGenerateStrangerDMs() {
+    const forumApiSettings = db.forumApiSettings || {};
+    var apiSettings = forumApiSettings.useForumApi ? forumApiSettings : db.apiSettings;
+    if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
+        showToast('请先配置API设置');
+        return;
+    }
+    var refreshBtn = document.getElementById('forum-dm-list-refresh-btn');
+    if (refreshBtn) refreshBtn.disabled = true;
+    showToast('正在生成陌生人私信...');
+    try {
+        forumInitUserProfile();
+        var userProfile = db.forumUserProfile;
+        var worldContext = getForumGenerationContext();
+        var userPosts = (db.forumPosts || []).filter(function(p) { return p.authorId === 'user'; });
+        var userPostsText = '';
+        if (userPosts.length === 0) {
+            userPostsText = '用户暂无发帖记录。';
+        } else {
+            userPosts.slice(0, 5).forEach(function(p, i) {
+                userPostsText += '【帖子' + (i + 1) + '】\n标题: ' + (p.title || '') + '\n内容: ' + (p.content || '') + '\n\n';
+            });
+        }
+        var strangerCount = 4;
+        var systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (userProfile.username || '用户') + '\n简介: ' + (userProfile.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n\n请生成 ' + strangerCount + ' 条陌生人私信。要求：\n1. 每条私信来自不同的NPC（陌生人），senderName 为符合世界观的论坛昵称。\n2. 若用户发过帖：私信内容可以是看到某篇帖子后的搭讪、提问、共鸣或讨论，语气自然、口语化。\n3. 若用户从未发帖：私信可以是简单打招呼、自我介绍、或与世界观/社区氛围相关的一句闲聊。\n4. 每条私信 1～2 句话即可，像真实论坛私信。\n5. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"dms":[{"senderName":"NPC昵称","content":"该陌生人发给用户的一条私信内容"}]}';
+        var url = apiSettings.url;
+        if (url.endsWith('/')) url = url.slice(0, -1);
+        var temperature = apiSettings.temperature !== undefined ? apiSettings.temperature : 0.9;
+        var requestBody = { model: apiSettings.model, messages: [{ role: 'user', content: systemPrompt }], temperature: temperature, response_format: { type: 'json_object' } };
+        var endpoint = url + '/v1/chat/completions';
+        var headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiSettings.key };
+        var contentStr = await fetchAiResponse(apiSettings, requestBody, headers, endpoint);
+        var jsonData = JSON.parse(contentStr);
+        if (jsonData && Array.isArray(jsonData.dms) && jsonData.dms.length > 0) {
+            if (!db.forumMessages) db.forumMessages = [];
+            var baseTime = Date.now();
+            jsonData.dms.forEach(function(dm, i) {
+                var senderName = (dm.senderName || ('路人' + (i + 1))).trim().replace(/\s+/g, '_');
+                if (!senderName) senderName = '路人' + (i + 1);
+                var fromUserId = senderName.indexOf('npc_') === 0 ? senderName : 'npc_' + senderName;
+                db.forumMessages.push({
+                    id: 'dm_' + baseTime + '_' + i + '_' + Math.random(),
+                    fromUserId: fromUserId,
+                    toUserId: 'user',
+                    content: (dm.content || '').trim() || '你好',
+                    timestamp: baseTime + i,
+                    isRead: false
+                });
+            });
+            await saveData();
+            forumRenderDMList();
+            forumUpdateDMUnreadBadge();
+            showToast('已生成 ' + jsonData.dms.length + ' 条陌生人私信');
+        } else {
+            throw new Error('AI返回的数据格式不正确');
+        }
+    } catch (error) {
+        console.error('生成陌生人私信失败:', error);
+        showApiError(error);
+    } finally {
+        if (refreshBtn) refreshBtn.disabled = false;
+    }
+}
+
+async function forumGenerateAIDMReply() {
+    if (!forumCurrentDMUserId) {
+        showToast('请先选择私信对象');
+        return;
+    }
+    
+    const forumApiSettings = db.forumApiSettings || {};
+    let apiSettings = forumApiSettings.useForumApi ? forumApiSettings : db.apiSettings;
+    
+    if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
+        showToast('请先配置API设置');
+        return;
+    }
+    
+    const aiReplyBtn = document.getElementById('ai-reply-dm-btn');
+    
+    if (aiReplyBtn) aiReplyBtn.disabled = true;
+    showToast('AI正在生成回复...');
+    
+    try {
+        const npcName = forumCurrentDMUserId.replace(/^npc_/, '');
+        const npcPosts = (db.forumPosts || []).filter(p => p.username === npcName);
+        
+        const worldContext = getForumGenerationContext();
+        
+        let npcContext = `这是一个名叫"${npcName}"的论坛用户。`;
+        if (npcPosts.length > 0) {
+            npcContext += `\n\n以下是Ta发过的帖子:\n`;
+            npcPosts.slice(0, 3).forEach(post => {
+                npcContext += `标题: ${post.title}\n内容: ${post.content}\n\n`;
+            });
+        }
+        
+        forumInitUserProfile();
+        const userProfile = db.forumUserProfile;
+        const userContext = `用户资料:\n昵称: ${userProfile.username}\n简介: ${userProfile.bio || '无'}`;
+        
+        const conversation = (db.forumMessages || [])
+            .filter(m => (m.fromUserId === 'user' && m.toUserId === forumCurrentDMUserId) || 
+                         (m.fromUserId === forumCurrentDMUserId && m.toUserId === 'user'))
+            .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+            .slice(-10);
+        
+        let conversationText = '对话历史:\n';
+        if (conversation.length > 0) {
+            conversation.forEach(m => {
+                const sender = m.fromUserId === 'user' ? userProfile.username : npcName;
+                conversationText += `${sender}: ${m.content}\n`;
+            });
+        } else {
+            conversationText += '(这是第一次对话)\n';
+        }
+        
+        const replyCount = (db.forumSettings && db.forumSettings.detailReplyCount) || 2;
+        
+        const systemPrompt = `你正在扮演论坛用户"${npcName}"，根据以下信息生成${replyCount}条连续的私信回复。
+
+===== 世界观背景 =====
+${worldContext}
+
+===== 角色信息 =====
+${npcContext}
+
+===== 用户信息 =====
+${userContext}
+
+===== 对话历史 =====
+${conversationText}
+
+请以"${npcName}"的口吻和风格，根据世界观设定、Ta发过的帖子内容和人设，生成${replyCount}条自然、符合角色性格的私信回复。回复应该简短自然，就像真实的私信对话一样，可以分多条发送，每条独立表达一个想法或情绪。
+
+返回JSON格式:
+{
+  "replies": [
+    "第一条回复内容",
+    "第二条回复内容"
+  ]
+}`;
+        
+        let url = apiSettings.url;
+        if (url.endsWith('/')) url = url.slice(0, -1);
+        
+        const temperature = apiSettings.temperature !== undefined ? apiSettings.temperature : 0.9;
+        
+        const requestBody = {
+            model: apiSettings.model,
+            messages: [{ role: "user", content: systemPrompt }],
+            temperature: temperature,
+            response_format: { type: "json_object" },
+        };
+        
+        const endpoint = `${url}/v1/chat/completions`;
+        const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiSettings.key}` };
+        
+        const contentStr = await fetchAiResponse(apiSettings, requestBody, headers, endpoint);
+        const jsonData = JSON.parse(contentStr);
+        
+        if (jsonData && Array.isArray(jsonData.replies) && jsonData.replies.length > 0) {
+            if (!db.forumMessages) db.forumMessages = [];
+            
+            jsonData.replies.forEach((replyContent, index) => {
+                const newMessage = {
+                    id: 'dm_' + Date.now() + '_' + Math.random(),
+                    fromUserId: forumCurrentDMUserId,
+                    toUserId: 'user',
+                    content: replyContent.trim(),
+                    timestamp: Date.now() + index,
+                    isRead: true
+                };
+                db.forumMessages.push(newMessage);
+            });
+            
+            await saveData();
+            forumRenderDMConversation(forumCurrentDMUserId);
+            showToast(`${npcName}发来了${jsonData.replies.length}条消息`);
+        } else {
+            throw new Error('AI返回的数据格式不正确');
+        }
+        
+    } catch (error) {
+        console.error('AI回复生成失败:', error);
+        showApiError(error);
+    } finally {
+        if (aiReplyBtn) aiReplyBtn.disabled = false;
+    }
+}
+
+async function forumGenerateAICommentReplies(postId) {
+    const post = db.forumPosts.find(p => p.id === postId);
+    if (!post) return;
+    
+    const forumApiSettings = db.forumApiSettings || {};
+    let apiSettings = forumApiSettings.useForumApi ? forumApiSettings : db.apiSettings;
+    
+    if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
+        showToast('请先配置API设置');
+        return;
+    }
+    
+    const aiReplyBtn = document.getElementById('ai-reply-comment-btn');
+    if (aiReplyBtn) aiReplyBtn.disabled = true;
+    showToast('AI正在生成评论...');
+    
+    try {
+        const replyCount = (db.forumSettings && db.forumSettings.detailReplyCount) || 2;
+        const context = getForumGenerationContext();
+        
+        let existingComments = '';
+        if (post.comments && post.comments.length > 0) {
+            existingComments = '现有评论:\n';
+            post.comments.forEach(c => {
+                existingComments += `${c.username}: ${c.content}\n`;
+            });
+        }
+        
+        const systemPrompt = `你是一位论坛内容生成专家。
+背景信息：
+${context}
+
+帖子信息：
+标题: ${post.title}
+内容: ${post.content}
+作者: ${post.username}
+
+${existingComments}
+
+请生成${replyCount}条不同视角的评论。每条评论要有独特的观点，可以互相回复或讨论。评论者都是NPC，要根据背景设定来回复。
+
+返回JSON格式:
+{
+  "comments": [
+    {
+      "username": "评论者昵称",
+      "content": "评论内容",
+      "timestamp": "刚刚"
+    }
+  ]
+}`;
+        
+        let url = apiSettings.url;
+        if (url.endsWith('/')) url = url.slice(0, -1);
+        
+        const temperature = apiSettings.temperature !== undefined ? apiSettings.temperature : 0.9;
+        
+        const requestBody = {
+            model: apiSettings.model,
+            messages: [{ role: "user", content: systemPrompt }],
+            temperature: temperature,
+            response_format: { type: "json_object" },
+        };
+        
+        const endpoint = `${url}/v1/chat/completions`;
+        const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiSettings.key}` };
+        
+        const contentStr = await fetchAiResponse(apiSettings, requestBody, headers, endpoint);
+        const jsonData = JSON.parse(contentStr);
+        
+        if (jsonData && Array.isArray(jsonData.comments)) {
+            if (!post.comments) post.comments = [];
+            
+            jsonData.comments.forEach(comment => {
+                const newComment = {
+                    id: 'comment_' + Date.now() + '_' + Math.random(),
+                    authorId: 'npc',
+                    username: comment.username || '路人' + Math.floor(100 + Math.random() * 900),
+                    content: comment.content || '',
+                    timestamp: comment.timestamp || '刚刚'
+                };
+                post.comments.push(newComment);
+            });
+            
+            await saveData();
+            renderPostDetail(post);
+            showToast(`成功生成${jsonData.comments.length}条AI评论`);
+        }
+        
+    } catch (error) {
+        console.error('AI评论生成失败:', error);
+        showApiError(error);
+    } finally {
+        if (aiReplyBtn) aiReplyBtn.disabled = false;
+    }
 }

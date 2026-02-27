@@ -100,7 +100,9 @@ const peekScreenApps = {
     'drafts': { name: '草稿箱', url: 'https://i.postimg.cc/ZKqC9D2R/export202509181827225860.png' },
     'album': { name: '相册', url: 'https://i.postimg.cc/qBcdpqNc/export202509221549335970.png' },
     'steps': { name: '步数', url: 'https://i.postimg.cc/5NndFrq6/export202509181824532800.png' },
-    'unlock': { name: 'unlock！', url: 'https://i.postimg.cc/28zNyYWs/export202509221542593320.png' }
+    'unlock': { name: 'unlock！', url: 'https://i.postimg.cc/28zNyYWs/export202509221542593320.png' },
+    'wallet': { name: '钱包', url: 'https://i.postimg.cc/3NBWY1RV/87C8E6E2942AED8F4B7161342198C744.png' },
+    'timeThoughts': { name: '时光想说', url: 'https://i.postimg.cc/sxgY7vtV/F23EDFB4269AABBEA753D86388808766.png' }
 };
 
 const DEFAULT_COT_PRESETS = [
@@ -155,12 +157,13 @@ const DEFAULT_COT_PRESETS = [
 ];
 
 const globalSettingKeys = [
-    'apiSettings', 'wallpaper', 'homeScreenMode', 'fontUrl', 'customIcons',
-    'apiPresets', 'bubbleCssPresets', 'myPersonaPresets', 'globalCss',
-    'globalCssPresets', 'fontPresets', 'homeSignature', 'forumPosts', 'forumBindings', 'pomodoroTasks', 'pomodoroSettings', 'insWidgetSettings', 'homeWidgetSettings',
+    'apiSettings', 'summaryApiSettings', 'backgroundApiSettings', 'wallpaper', 'homeScreenMode', 'fontUrl', 'customIcons',
+    'apiPresets', 'summaryApiPresets', 'backgroundApiPresets', 'bubbleCssPresets', 'myPersonaPresets', 'globalCss',
+    'globalCssPresets', 'fontPresets', 'homeSignature', 'forumPosts', 'forumBindings', 'forumUserProfile', 'forumSettings', 'forumMessages', 'pomodoroTasks', 'pomodoroSettings', 'insWidgetSettings', 'homeWidgetSettings',
     'chatFolders', 'fontSizeScale', 'activePersonaId', 'moreProfileCardBg', 'statusBarPresets', 'themeSettings', 'themePresets', 'savedKeyboardHeight',
-    'globalSendSound', 'globalReceiveSound', 'multiMsgSoundEnabled', 'soundPresets', 'galleryPresets', 'iconPresets',
-    'cotSettings', 'cotPresets', 'hasSeenVideoCallDisclaimer', 'hasSeenVideoCallAvatarHint'
+    'globalSendSound', 'globalReceiveSound', 'multiMsgSoundEnabled', 'soundPresets', 'galleryPresets', 'iconPresets', 'homeWidgetPresets',
+    'cotSettings', 'cotPresets', 'hasSeenVideoCallDisclaimer', 'hasSeenVideoCallAvatarHint',
+    'favorites', 'piggyBank'
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
 
@@ -332,6 +335,8 @@ var db = {
     characters: [],
     groups: [],
     apiSettings: {},
+    summaryApiSettings: {},
+    backgroundApiSettings: {},
     wallpaper: 'https://i.postimg.cc/W4Z9R9x4/ins-1.jpg',
     myStickers: [],
     homeScreenMode: 'night',
@@ -339,6 +344,8 @@ var db = {
     fontUrl: '',
     customIcons: {},
     apiPresets: [],
+    summaryApiPresets: [],
+    backgroundApiPresets: [],
     bubbleCssPresets: [],
     myPersonaPresets: [],
     fontPresets: [],
@@ -412,7 +419,9 @@ var db = {
         enabled: false,
         activePresetId: 'default'
     },
-    cotPresets: JSON.parse(JSON.stringify(DEFAULT_COT_PRESETS))
+    cotPresets: JSON.parse(JSON.stringify(DEFAULT_COT_PRESETS)),
+    archives: [],
+    favorites: []  // 消息收藏：{ id, messageId, chatId, chatType, chatName, content, timestamp, favoriteTime, note, sender }
 };
 
 var currentChatId = null;
@@ -478,11 +487,15 @@ function initDatabase() {
             
             const settingsToMigrate = {
                 apiSettings: data.apiSettings || {},
+                summaryApiSettings: data.summaryApiSettings || {},
+                backgroundApiSettings: data.backgroundApiSettings || {},
                 wallpaper: data.wallpaper || 'https://i.postimg.cc/W4Z9R9x4/ins-1.jpg',
                 homeScreenMode: data.homeScreenMode || 'night',
                 fontUrl: data.fontUrl || '',
                 customIcons: data.customIcons || {},
                 apiPresets: data.apiPresets || [],
+                summaryApiPresets: data.summaryApiPresets || [],
+                backgroundApiPresets: data.backgroundApiPresets || [],
                 bubbleCssPresets: data.bubbleCssPresets || [],
                 myPersonaPresets: data.myPersonaPresets || [],
                 globalCss: data.globalCss || '',
@@ -510,6 +523,14 @@ function initDatabase() {
             console.log("No old data found to migrate.");
         }
     });
+    dexieDB.version(3).stores({
+        characters: '&id',
+        groups: '&id',
+        worldBooks: '&id',
+        myStickers: '&id',
+        globalSettings: 'key',
+        archives: '&id,characterId,timestamp'
+    });
 }
 
 // 数据保存与加载
@@ -519,6 +540,7 @@ const saveData = async () => {
         await dexieDB.groups.bulkPut(db.groups);
         await dexieDB.worldBooks.bulkPut(db.worldBooks);
         await dexieDB.myStickers.bulkPut(db.myStickers);
+        if (dexieDB.archives) await dexieDB.archives.bulkPut(db.archives || []);
 
         const settingsPromises = globalSettingKeys.map(key => {
             if (db[key] !== undefined) {
@@ -531,18 +553,27 @@ const saveData = async () => {
 };
 
 const loadData = async () => {
-    const [characters, groups, worldBooks, myStickers, settingsArray] = await Promise.all([
+    const tables = [
         dexieDB.characters.toArray(),
         dexieDB.groups.toArray(),
         dexieDB.worldBooks.toArray(),
         dexieDB.myStickers.toArray(),
         dexieDB.globalSettings.toArray()
-    ]);
+    ];
+    if (dexieDB.archives) tables.push(dexieDB.archives.toArray());
+    const results = await Promise.all(tables);
+    const characters = results[0];
+    const groups = results[1];
+    const worldBooks = results[2];
+    const myStickers = results[3];
+    const settingsArray = results[4];
+    const archives = results[5];
 
     db.characters = characters;
     db.groups = groups;
     db.worldBooks = worldBooks;
     db.myStickers = myStickers;
+    db.archives = archives || [];
 
     const settings = settingsArray.reduce((acc, { key, value }) => {
         acc[key] = value;
@@ -552,18 +583,26 @@ const loadData = async () => {
     globalSettingKeys.forEach(key => {
         const defaultValue = {
             apiSettings: {},
+            summaryApiSettings: {},
+            backgroundApiSettings: {},
             wallpaper: 'https://i.postimg.cc/W4Z9R9x4/ins-1.jpg',
             homeScreenMode: 'night',
             fontUrl: '',
             customIcons: {},
             apiPresets: [],
+            summaryApiPresets: [],
+            backgroundApiPresets: [],
             bubbleCssPresets: [],
             myPersonaPresets: [],
             fontPresets: [],
             globalCss: '',
             globalCssPresets: [],
             homeSignature: '编辑个性签名...',
+            forumPosts: [],
             forumBindings: { worldBookIds: [], charIds: [], userPersonaIds: [] },
+            forumUserProfile: { username: '', avatar: 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg', bio: '', joinDate: 0 },
+            forumSettings: { postsPerGeneration: 8, commentsPerPost: { min: 4, max: 8 } },
+            forumMessages: [],
             pomodoroTasks: [],
             pomodoroSettings: { boundCharId: null, userPersona: '', focusBackground: '', taskCardBackground: '', encouragementMinutes: 25, pokeLimit: 5, globalWorldBookIds: [] },
             insWidgetSettings: { avatar1: 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg', bubble1: 'love u.', avatar2: 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg', bubble2: 'miss u.' },
@@ -576,13 +615,20 @@ const loadData = async () => {
             soundPresets: [],
             galleryPresets: [],
             iconPresets: [],
+            homeWidgetPresets: [],
             cotSettings: { enabled: false, activePresetId: 'default' },
             cotPresets: JSON.parse(JSON.stringify(DEFAULT_COT_PRESETS)),
             hasSeenVideoCallDisclaimer: false,
-            hasSeenVideoCallAvatarHint: false
+            hasSeenVideoCallAvatarHint: false,
+            favorites: [],
+            piggyBank: { balance: 520, transactions: [] }
         };
         db[key] = settings[key] !== undefined ? settings[key] : (defaultValue[key] !== undefined ? JSON.parse(JSON.stringify(defaultValue[key])) : undefined);
     });
+
+    if (!db.piggyBank) db.piggyBank = { balance: 520, transactions: [] };
+    if (typeof db.piggyBank.balance !== 'number') db.piggyBank.balance = 520;
+    if (!Array.isArray(db.piggyBank.transactions)) db.piggyBank.transactions = [];
 
     // Data integrity checks
     db.characters.forEach(c => {

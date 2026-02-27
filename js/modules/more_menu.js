@@ -28,7 +28,8 @@ function initMoreMenu() {
         } else if (action === 'calendar') {
             showToast('日历功能开发中...');
         } else if (action === 'star') {
-            showToast('收藏功能开发中...');
+            if (typeof openFavoritesScreen === 'function') openFavoritesScreen();
+            else showToast('收藏功能加载中…');
         }
     });
 
@@ -53,6 +54,8 @@ function initMoreMenu() {
 
 // 初始化编辑器预览逻辑
 initStatusBarPreview();
+
+    if (typeof initFavoritesScreen === 'function') initFavoritesScreen();
 }
 
 // 简单的 HTML 转义函数

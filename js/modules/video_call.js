@@ -16,7 +16,8 @@ const VideoCallModule = {
         isGenerating: false, // 标记是否正在请求AI生成
         initialAiResponse: null, // 存储开场白
         incomingChat: null, // 暂存来电对象
-        isMinimized: false // 是否处于悬浮窗模式
+        isMinimized: false, // 是否处于悬浮窗模式
+        hasEnteredCallScene: false // 是否已进入通话界面（区分「等待中」与「已接通」）
     },
 
     init: function() {
@@ -62,6 +63,12 @@ const VideoCallModule = {
         const loadingHangupBtn = document.getElementById('vc-loading-hangup-btn');
         if (loadingHangupBtn) {
             loadingHangupBtn.addEventListener('click', () => this.endCall(true));
+        }
+
+        // 绑定加载场景最小化按钮（一拨出即可最小化）
+        const loadingMinimizeBtn = document.getElementById('vc-loading-minimize-btn');
+        if (loadingMinimizeBtn) {
+            loadingMinimizeBtn.addEventListener('click', () => this.minimizeCall());
         }
 
         const callHangupBtn = document.getElementById('vc-call-hangup-btn');
@@ -175,58 +182,71 @@ const VideoCallModule = {
 
     minimizeCall: function() {
         if (!this.state.isCallActive) return;
-        
+
         this.state.isMinimized = true;
-        
-        // 隐藏全屏界面
-        const callScene = document.getElementById('vc-scene-call');
-        callScene.classList.add('vc-hidden');
-        callScene.style.display = 'none';
-        
-        // 显示悬浮窗
+
         const floatWindow = document.getElementById('vc-floating-window');
         const floatAvatar = document.getElementById('vc-float-avatar');
-        
+        const floatStatus = document.getElementById('vc-float-status');
+
         // 同步头像
-        if (this.state.currentChat) {
+        if (this.state.currentChat && floatAvatar) {
             const avatarUrl = this.state.currentChat.avatar || 'https://i.postimg.cc/1zsGZ85M/Camera_1040g3k831o3b7f1bkq105oaltnigkev8gp3kia8.jpg';
             floatAvatar.style.backgroundImage = `url('${avatarUrl}')`;
         }
-        
-        floatWindow.style.display = 'block';
-        
-        // 恢复到底层页面 (如果需要的话，其实隐藏了全屏层自然就漏出底下的了)
+
+        if (!this.state.hasEnteredCallScene) {
+            // 拨出后等待中：隐藏加载场景，显示悬浮窗「正在连线…」
+            const loadingScene = document.getElementById('vc-scene-loading');
+            loadingScene.classList.add('vc-hidden');
+            loadingScene.style.display = 'none';
+            if (floatStatus) floatStatus.textContent = '正在连线...';
+            if (floatWindow) {
+                floatWindow.classList.remove('vc-float-connected');
+                floatWindow.style.display = 'block';
+            }
+        } else {
+            // 已接通：隐藏全屏通话界面，显示悬浮窗（计时）
+            const callScene = document.getElementById('vc-scene-call');
+            callScene.classList.add('vc-hidden');
+            callScene.style.display = 'none';
+            if (floatWindow) {
+                floatWindow.classList.add('vc-float-connected');
+                floatWindow.style.display = 'block';
+            }
+        }
     },
 
     maximizeCall: function() {
         if (!this.state.isCallActive) return;
-        
-        // 检查是否需要切换回聊天室
-        if (this.state.currentChat && typeof currentChatId !== 'undefined') {
-            if (currentChatId !== this.state.currentChat.id) {
-                // 需要切换
-                if (typeof openChatRoom === 'function') {
-                    // 假设 currentChatType 可以从 currentChat 对象推断，或者在 startCall 时记录
-                    // 这里简单尝试推断：如果有 members 则是群聊，否则是私聊
-                    let type = 'private';
-                    if (this.state.currentChat.members) type = 'group';
-                    
-                    openChatRoom(this.state.currentChat.id, type);
-                }
-            }
-        }
 
         this.state.isMinimized = false;
-        
-        // 隐藏悬浮窗
+
         const floatWindow = document.getElementById('vc-floating-window');
-        floatWindow.style.display = 'none';
-        
-        // 显示全屏界面
-        const callScene = document.getElementById('vc-scene-call');
-        callScene.style.display = 'flex';
-        callScene.classList.remove('vc-hidden');
-        callScene.style.opacity = 1;
+        if (floatWindow) floatWindow.style.display = 'none';
+
+        if (!this.state.hasEnteredCallScene) {
+            // 等待中：恢复显示加载场景
+            const loadingScene = document.getElementById('vc-scene-loading');
+            loadingScene.style.display = 'flex';
+            loadingScene.classList.remove('vc-hidden');
+            loadingScene.style.opacity = 1;
+        } else {
+            // 已接通：检查是否需要切换回聊天室并显示通话界面
+            if (this.state.currentChat && typeof currentChatId !== 'undefined') {
+                if (currentChatId !== this.state.currentChat.id) {
+                    if (typeof openChatRoom === 'function') {
+                        let type = 'private';
+                        if (this.state.currentChat.members) type = 'group';
+                        openChatRoom(this.state.currentChat.id, type);
+                    }
+                }
+            }
+            const callScene = document.getElementById('vc-scene-call');
+            callScene.style.display = 'flex';
+            callScene.classList.remove('vc-hidden');
+            callScene.style.opacity = 1;
+        }
     },
 
     initDraggable: function(el) {
@@ -452,6 +472,7 @@ const VideoCallModule = {
         this.hideCallTypeModal();
         this.state.callType = type;
         this.state.isCallActive = true;
+        this.state.hasEnteredCallScene = false;
         this.state.seconds = 0;
         this.state.currentCallContext = [];
         this.state.startTime = Date.now();
@@ -613,28 +634,40 @@ const VideoCallModule = {
     transitionToCallScene: function() {
         if (!this.state.isCallActive) return;
 
+        this.state.hasEnteredCallScene = true;
+
         const loadingScene = document.getElementById('vc-scene-loading');
         const callScene = document.getElementById('vc-scene-call');
+        const floatWindow = document.getElementById('vc-floating-window');
 
-        // 1. 先显示通话界面 (位于 loading 界面之下)
         document.getElementById('vc-chat-container').innerHTML = '';
+
+        if (this.state.isMinimized) {
+            // 已处于悬浮窗：不展开全屏，只隐藏 loading、启动计时并更新悬浮窗为「已接通」
+            loadingScene.style.opacity = 0;
+            setTimeout(() => {
+                loadingScene.classList.add('vc-hidden');
+                loadingScene.style.display = 'none';
+            }, 300);
+            if (floatWindow) floatWindow.classList.add('vc-float-connected');
+            this.startTimer();
+            this.sendInitialMessage();
+            return;
+        }
+
+        // 未最小化：先显示通话界面，再淡出 loading
         callScene.style.display = 'flex';
         callScene.classList.remove('vc-hidden');
         callScene.style.opacity = 1;
 
-        // 2. 淡出 loading 界面
-        // 稍微延迟以确保 DOM 更新
         requestAnimationFrame(() => {
             loadingScene.style.opacity = 0;
-            
-            // 3. 动画结束后清理
             setTimeout(() => {
                 loadingScene.classList.add('vc-hidden');
                 loadingScene.style.display = 'none';
-                
                 this.startTimer();
                 this.sendInitialMessage();
-            }, 500); // CSS transition 是 0.3s，这里给 0.5s 缓冲
+            }, 500);
         });
     },
 
@@ -980,7 +1013,8 @@ const VideoCallModule = {
     endCall: async function(isLoading = false) {
         this.state.isCallActive = false;
         this.state.isMinimized = false;
-        
+        this.state.hasEnteredCallScene = false;
+
         if (this.state.timerInterval) {
             clearInterval(this.state.timerInterval);
             this.state.timerInterval = null;

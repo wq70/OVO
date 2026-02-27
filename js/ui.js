@@ -73,6 +73,9 @@ const switchScreen = (targetId) => {
     if (targetId === 'more-screen') {
         renderMoreScreen();
     }
+    if (targetId === 'piggy-bank-screen' && typeof renderPiggyBankScreen === 'function') {
+        renderPiggyBankScreen();
+    }
     if (targetId === 'contacts-screen') {
         if (typeof renderContactList === 'function') renderContactList();
         if (typeof renderMyProfile === 'function') renderMyProfile();
@@ -409,6 +412,14 @@ function setupHomeScreen() {
                     <img src="${getIcon('forum-screen')}" alt="论坛" class="icon-img">
                     <span class="app-name">${defaultIcons['forum-screen'].name}</span>
                 </a>
+                <a href="#" class="app-icon" data-target="piggy-bank-screen">
+                    <img src="${getIcon('piggy-bank-screen')}" alt="存钱罐" class="icon-img">
+                    <span class="app-name">${defaultIcons['piggy-bank-screen'].name}</span>
+                </a>
+                <a href="#" class="app-icon" data-target="music-screen">
+                    <img src="${getIcon('music-screen')}" alt="音乐" class="icon-img">
+                    <span class="app-name">${defaultIcons['music-screen'].name}</span>
+                </a>
              </div>
         </div>
 
@@ -445,6 +456,7 @@ function setupHomeScreen() {
     document.querySelector('[data-target="world-book-screen"]').addEventListener('click', renderWorldBookList);
     document.querySelector('[data-target="customize-screen"]').addEventListener('click', renderCustomizeForm);
     document.querySelector('[data-target="tutorial-screen"]').addEventListener('click', renderTutorialContent);
+    if (typeof setupPiggyBankApp === 'function') setupPiggyBankApp();
     updateBatteryStatus();
 
     const homeWidgetContainer = homeScreen.querySelector('.home-widget-container');
@@ -831,6 +843,7 @@ function setupFunctionPanelSwiper() {
 
         const dot = document.createElement('span');
         dot.className = `dot ${i === 0 ? 'active' : ''}`;
+        dot.dataset.page = String(i);
         pagination.appendChild(dot);
     }
 
@@ -853,5 +866,13 @@ function setupFunctionPanelSwiper() {
             const dots = pagination.querySelectorAll('.dot');
             dots.forEach((d, i) => d.classList.toggle('active', i === index));
         }
+    });
+
+    // 点击圆点切换页
+    pagination.querySelectorAll('.dot').forEach((dot, i) => {
+        dot.addEventListener('click', () => {
+            const width = wrapper.offsetWidth;
+            wrapper.scrollTo({ left: i * width, behavior: 'smooth' });
+        });
     });
 }

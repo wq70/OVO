@@ -84,6 +84,56 @@
     gap: 15px;
 }
 
+/* 论坛筛选标签 */
+.forum-filter-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.forum-filter-tab {
+    flex: 1;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.forum-filter-tab:hover {
+    background: rgba(255, 192, 203, 0.1);
+    color: var(--primary-color);
+}
+
+.forum-filter-tab.active {
+    background: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(255, 128, 171, 0.3);
+}
+
+.forum-filter-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid var(--primary-color);
+}
+
 .forum-post-card {
     background-color: #ffffff;
     border-radius: 12px;
@@ -348,6 +398,20 @@
     font-size: 14px;
     font-weight: 600;
     color: #555;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.author-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 .comment-content {
@@ -440,4 +504,224 @@
     color: var(--text-color);
     flex-grow: 1;
     cursor: pointer;
+}
+
+/* 私信列表右上角删除按钮：纯 SVG，无背景无边框 */
+#forum-dm-list-screen .app-header-icon-only {
+    background: none !important;
+    border: none !important;
+    padding: 0;
+    margin: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--func-icon-color, #333);
+}
+
+#forum-dm-list-screen .app-header-icon-only:hover {
+    opacity: 0.8;
+}
+
+#forum-dm-list-screen .app-header-icon-only:active {
+    opacity: 0.6;
+}
+
+#forum-dm-list-screen .forum-dm-header-actions .app-header-icon-only {
+    margin: 0;
+}
+
+/* 私信列表样式 */
+.forum-dm-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    background: #fff;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    gap: 12px;
+}
+
+.forum-dm-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    background: #fafafa;
+}
+
+.forum-dm-item:active {
+    transform: translateY(0);
+}
+
+.dm-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dm-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+}
+
+.dm-last-message {
+    font-size: 13px;
+    color: #888;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dm-unread-badge {
+    background: #ff4757;
+    color: #fff;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+/* 私信列表删除模式工具栏 */
+.forum-dm-delete-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 15px;
+    background: #f5f5f5;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+}
+
+.forum-dm-item.dm-delete-mode {
+    padding-left: 12px;
+}
+
+.forum-dm-item .dm-select-checkbox {
+    width: 22px;
+    height: 22px;
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    margin-right: 10px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+}
+
+.forum-dm-item.dm-selected .dm-select-checkbox {
+    background: var(--accent-color, #007aff);
+    border-color: var(--accent-color, #007aff);
+}
+
+.forum-dm-item.dm-selected .dm-select-checkbox::after {
+    content: '';
+    width: 6px;
+    height: 11px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin-bottom: 3px;
+}
+
+/* 私信对话样式 */
+#forum-dm-message-area {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dm-message {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.dm-message-user {
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+}
+
+.dm-message-npc {
+    flex-direction: row;
+    justify-content: flex-start;
+}
+
+.dm-message-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.dm-npc-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.dm-message-bubble {
+    max-width: 70%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    font-size: 15px;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.dm-message-user .dm-message-bubble {
+    background: var(--primary-color);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+
+.dm-message-npc .dm-message-bubble {
+    background: #f0f0f0;
+    color: #333;
+    border-bottom-left-radius: 4px;
+}
+
+/* AI回复按钮样式 */
+.ai-reply-btn {
+    background: #f0f0f0;
+    color: #666;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: none;
+}
+
+.ai-reply-btn:hover {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.ai-reply-btn:active {
+    background: #d0d0d0;
+    transform: scale(0.95);
+}
+
+.ai-reply-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }

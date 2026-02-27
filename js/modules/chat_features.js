@@ -155,13 +155,27 @@ function setupWalletSystem() {
     });
     sendTransferForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const amount = transferAmountInput.value;
+        const amountStr = (transferAmountInput.value || '').trim().replace(',', '.');
+        const amount = parseFloat(amountStr);
         const remark = transferRemarkInput.value.trim();
-        if (amount > 0) {
-            sendMyTransfer(amount, remark);
-        } else {
+        if (isNaN(amount) || amount <= 0) {
             showToast('请输入有效的金额');
+            return;
         }
+        let totalDeduct = amount;
+        if (currentChatType === 'group' && typeof currentGroupAction !== 'undefined' && currentGroupAction.recipients && currentGroupAction.recipients.length > 1) {
+            totalDeduct = amount * currentGroupAction.recipients.length;
+        }
+        if (typeof getPiggyBalance === 'function' && getPiggyBalance() < totalDeduct) {
+            showToast('存钱罐余额不足，无法转账');
+            return;
+        }
+        if (typeof addPiggyTransaction === 'function') {
+            const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
+            const toName = currentChatType === 'private' ? (chat && chat.realName) : (chat && chat.me && chat.me.nickname);
+            addPiggyTransaction({ type: 'expense', amount: totalDeduct, remark: remark || '转账', source: '转账', charName: toName || '' });
+        }
+        sendMyTransfer(amountStr, remark);
     });
     acceptTransferBtn.addEventListener('click', () => respondToTransfer('received'));
     returnTransferBtn.addEventListener('click', () => respondToTransfer('returned'));
@@ -213,6 +227,12 @@ function handleReceivedTransferClick(messageId) {
     document.getElementById('receive-transfer-actionsheet').classList.add('visible');
 }
 
+function parseTransferAmountFromContent(content) {
+    if (!content || typeof content !== 'string') return 0;
+    const m = content.match(/转账[：:]\s*([\d.,]+)\s*元/);
+    return m ? parseFloat(m[1].replace(/,/g, '.')) || 0 : 0;
+}
+
 async function respondToTransfer(action) {
     if (!currentTransferMessageId) return;
     const character = db.characters.find(c => c.id === currentChatId);
@@ -225,6 +245,18 @@ async function respondToTransfer(action) {
             cardOnScreen.classList.add(action);
             cardOnScreen.querySelector('.transfer-status').textContent = action === 'received' ? '已收款' : '已退回';
             cardOnScreen.style.cursor = 'default';
+        }
+        if (typeof addPiggyTransaction === 'function') {
+            const amount = parseTransferAmountFromContent(message.content);
+            if (amount > 0) {
+                addPiggyTransaction({
+                    type: 'income',
+                    amount,
+                    remark: action === 'received' ? '收款' : '转账退回',
+                    source: '聊天',
+                    charName: character.realName || ''
+                });
+            }
         }
         let contextMessageContent = (action === 'received') ? `[${character.myName}接收${character.realName}的转账]` : `[${character.myName}退回${character.realName}的转账]`;
         const contextMessage = {

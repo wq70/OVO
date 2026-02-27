@@ -1,0 +1,221 @@
+/* 记忆存档库样式 */
+
+#archive-screen {
+    background-color: #f2f2f2;
+}
+
+#archive-screen .content {
+    padding: 12px;
+    overflow-y: auto;
+}
+
+#archive-screen .action-btn-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+#archive-screen .action-btn-group .action-btn {
+    width: auto;
+    min-width: auto;
+    height: 36px;
+    padding: 0 12px;
+    font-size: 14px;
+    border: none;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    color: var(--title-color, #333);
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#archive-screen .action-btn:active {
+    opacity: 0.8;
+}
+
+/* 多选操作栏 */
+.archive-multi-select-bar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #fff;
+    border-bottom: 1px solid #eee;
+    gap: 10px;
+}
+
+.archive-multi-select-bar.visible {
+    display: flex;
+}
+
+.archive-multi-select-bar .btn {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+/* 存档列表 */
+.archive-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.archive-item {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s ease;
+}
+
+.archive-item.selectable {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.archive-item.selectable:active {
+    background: #f8f8f8;
+}
+
+.archive-checkbox {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    margin-top: 2px;
+    transition: all 0.2s;
+}
+
+.archive-checkbox.checked {
+    background: var(--primary-color, #007aff);
+    border-color: var(--primary-color, #007aff);
+}
+
+.archive-checkbox.checked::after {
+    content: "✓";
+    display: block;
+    text-align: center;
+    line-height: 18px;
+    font-size: 14px;
+    color: #fff;
+}
+
+.archive-item-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.archive-item-header {
+    margin-bottom: 4px;
+}
+
+.archive-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--title-color, #333);
+    word-break: break-word;
+}
+
+.archive-timestamp {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 6px;
+}
+
+.archive-stats {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.archive-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.archive-btn {
+    flex: 1;
+    min-width: 70px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.archive-btn:active {
+    opacity: 0.85;
+}
+
+.archive-btn-load {
+    background: #34c759;
+    color: #fff;
+}
+
+.archive-btn-rename {
+    background: #007aff;
+    color: #fff;
+}
+
+.archive-btn-delete {
+    background: #ff3b30;
+    color: #fff;
+}
+
+#no-archives-placeholder.placeholder-text {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+    font-size: 14px;
+}
+
+#no-archives-placeholder.placeholder-text p {
+    margin: 8px 0;
+}
+
+/* 创建存档弹窗 */
+#create-archive-modal .modal-window {
+    max-width: 320px;
+}
+
+#create-archive-modal .form-group {
+    margin-bottom: 12px;
+}
+
+#create-archive-modal .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #333;
+}
+
+#create-archive-modal #archive-name-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    font-size: 15px;
+    box-sizing: border-box;
+}
+
+.archive-info {
+    font-size: 13px;
+    color: #666;
+    margin: 8px 0 0;
+}
+
+#create-archive-modal .modal-actions {
+    justify-content: flex-end;
+}

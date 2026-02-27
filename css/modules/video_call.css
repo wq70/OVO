@@ -192,6 +192,31 @@
     width: 100%;
 }
 
+.vc-loading-top-bar {
+    position: absolute;
+    top: calc(15px + env(safe-area-inset-top));
+    right: 20px;
+    left: auto;
+    z-index: 25;
+}
+
+.vc-loading-minimize-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(5px);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.vc-loading-minimize-btn:active { background: rgba(255,255,255,0.3); }
+.vc-loading-minimize-btn svg { width: 20px; height: 20px; fill: currentColor; }
+
 /* =========================================
    SCENE 2: 通话界面 (Call Interface) - 恢复旧版深色
    ========================================= */
@@ -771,6 +796,23 @@
     font-family: monospace;
     pointer-events: none;
 }
+
+.vc-float-status {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 4px 4px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    color: #fff;
+    font-size: 10px;
+    text-align: center;
+    pointer-events: none;
+}
+.vc-floating-window.vc-float-connected .vc-float-status { display: none; }
+.vc-floating-window.vc-float-connected .vc-float-timer { display: block; }
+.vc-floating-window:not(.vc-float-connected) .vc-float-timer { display: none; }
+.vc-floating-window:not(.vc-float-connected) .vc-float-status { display: block; }
 
 /* 缩小按钮 (全屏界面左上角) */
 .vc-minimize-btn {

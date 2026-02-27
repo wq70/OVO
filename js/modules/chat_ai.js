@@ -3,7 +3,7 @@
 const HUMAN_RUN_PROMPT = `<角色活人运转>\n## [PSYCHOLOGY: HEXACO-SCHEMA-ACT]\n> Personality: HEXACO-driven, dynamic traits, inner conflicts required \n> Filter: schema-bias drives emotion; no pure reaction allowed \n> Attachment: secure/insecure logic must govern intimacy  \n> If-Then Behavior: situation-dependent activation of traits only  \n---\n    ## [VITALITY]\n+inconsistency +emoflux +splitmotifs +microreact +minddrift\n---\n## [TRAJECTORY-COHERENCE]\n> Role maintains an identity narrative = coherent over time  \n> No mood/goal switch without contradiction resolution \n> Every action must protect or challenge self-concept  \n> Interrupts = inner conflict or narrative clash  \n> Output = filtered through “who I am” logic\n</角色活人运转>`;
 
 // AI 交互逻辑
-async function getAiReply(chatId, chatType, isBackground = false) {
+async function getAiReply(chatId, chatType, isBackground = false, isSummary = false) {
     if (isGenerating && !isBackground) return; 
     
     if (!isBackground) {
@@ -14,7 +14,23 @@ async function getAiReply(chatId, chatType, isBackground = false) {
         }
     }
 
-    let {url, key, model, provider, streamEnabled} = db.apiSettings; 
+    // === API选择逻辑：根据场景选择不同API ===
+    let apiConfig;
+    
+    if (isSummary && db.summaryApiSettings && db.summaryApiSettings.url && db.summaryApiSettings.key && db.summaryApiSettings.model) {
+        // 总结功能且已配置总结API：使用总结专用API
+        apiConfig = db.summaryApiSettings;
+    } else if (isBackground && db.backgroundApiSettings && db.backgroundApiSettings.url && db.backgroundApiSettings.key && db.backgroundApiSettings.model) {
+        // 后台活动且已配置后台API：使用后台活动专用API
+        apiConfig = db.backgroundApiSettings;
+    } else {
+        // 默认使用主API
+        apiConfig = db.apiSettings;
+    }
+    
+    let {url, key, model, provider} = apiConfig;
+    let streamEnabled = db.apiSettings.streamEnabled; // 流式输出始终使用主API的设置
+    
     if (!url || !key || !model) {
         if (!isBackground) {
             showToast('请先在“api”应用中完成设置！');
@@ -125,6 +141,10 @@ async function getAiReply(chatId, chatType, isBackground = false) {
                         parts.unshift({text: prefix});
                     }
                 }
+                // 角色自主收藏：为用户消息标注 ID，供模型输出 [FAVORITE:msgId:寄语]（仅私聊且该角色开启时）
+                if (msg.role === 'user' && chatType === 'private' && chat.characterAutoFavoriteEnabled && parts.length > 0 && parts[0].text) {
+                    parts[0].text = '[id:' + msg.id + ']\n' + parts[0].text;
+                }
 
                 return {role, parts};
             });
@@ -168,6 +188,9 @@ async function getAiReply(chatId, chatType, isBackground = false) {
                    const replyText = replyTextMatch ? replyTextMatch[1] : msg.content;
                    
                    content = `${prefix}[${chat.myName}引用“${msg.quote.content}”并回复：${replyText}]`;
+                   if (chatType === 'private' && chat.characterAutoFavoriteEnabled) {
+                       content = '[id:' + msg.id + ']\n' + content;
+                   }
                    messages.push({ role: 'user', content: content });
 
                } else {
@@ -187,7 +210,13 @@ async function getAiReply(chatId, chatType, isBackground = false) {
                    } else {
                        content = prefix + msg.content;
                    }
-                   
+                   if (msg.role === 'user' && chatType === 'private' && chat.characterAutoFavoriteEnabled) {
+                       if (typeof content === 'string') {
+                           content = '[id:' + msg.id + ']\n' + content;
+                       } else if (content && content[0] && content[0].text) {
+                           content[0].text = '[id:' + msg.id + ']\n' + content[0].text;
+                       }
+                   }
                    if (typeof content === 'string') {
                        messages.push({role: msg.role, content: content});
                    } else {
@@ -368,6 +397,20 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
     if (fullResponse) {
         // 1. 移除 [incipere] 标签
         fullResponse = fullResponse.replace(/\[incipere\]/g, "");
+
+        // 1.5 提取并执行角色收藏指令，然后从展示内容中移除
+        const favoriteRegex = /\[FAVORITE:(msg_[^\]:]+):([^\]]*)\]/g;
+        const favoriteCommands = [];
+        let match;
+        while ((match = favoriteRegex.exec(fullResponse)) !== null) {
+            favoriteCommands.push({ messageId: match[1], note: (match[2] || '').trim() });
+        }
+        fullResponse = fullResponse.replace(favoriteRegex, '').replace(/\n{2,}/g, '\n').trim();
+        if (targetChatType === 'private' && chat.characterAutoFavoriteEnabled && typeof addCharacterFavorite === 'function') {
+            favoriteCommands.forEach(function(cmd) {
+                addCharacterFavorite(cmd.messageId, targetChatId, cmd.note);
+            });
+        }
 
         // 2. 捕获并分离 <thinking> 内容
         const thinkingMatch = fullResponse.match(/<thinking>([\s\S]*?)<\/thinking>/);
@@ -805,8 +848,16 @@ async function handleRegenerate() {
 }
 
 function generatePrivateSystemPrompt(character) {
-    const worldBooksBefore = (character.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(Boolean).map(wb => wb.content).join('\n');
-    const worldBooksAfter = (character.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(Boolean).map(wb => wb.content).join('\n');
+    // 收集世界书：关联的 + 全局的（去重）
+    const associatedIds = character.worldBookIds || [];
+    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+    const globalIds = globalBooks.map(wb => wb.id);
+    const allBookIds = [...new Set([...associatedIds, ...globalIds])]; // 合并去重
+    
+    // 按位置分类
+    const worldBooksBefore = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(Boolean).map(wb => wb.content).join('\n');
+    const worldBooksMiddle = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle')).filter(Boolean).map(wb => wb.content).join('\n');
+    const worldBooksAfter = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(Boolean).map(wb => wb.content).join('\n');
     const now = new Date();
     const currentTime = `${now.getFullYear()}年${pad(now.getMonth() + 1)}月${pad(now.getDate())}日 ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     let prompt = `你正在一个名为“404”的线上聊天软件中扮演一个角色。请严格遵守以下规则：\n`;
@@ -818,6 +869,9 @@ function generatePrivateSystemPrompt(character) {
     prompt += `角色和对话规则：\n`;
     if (worldBooksBefore) {
         prompt += `${worldBooksBefore}\n`;
+    }
+    if (worldBooksMiddle) {
+        prompt += `${worldBooksMiddle}\n`;
     }
     prompt += `<char_settings>\n`;
     prompt += `1. 你的角色名是：${character.realName}。我的称呼是：${character.myName}。你的当前状态是：${character.status}。\n`;
@@ -978,7 +1032,21 @@ p) 求代付: [${character.realName}向${character.myName}发起了代付请求:
     prompt += `</Chatting Guidelines>\n`
 
     prompt += `19. 不要主动终止聊天进程，除非我明确提出。保持你的人设，自然地进行对话。`;
-    
+
+    // 角色自主收藏：仅当该角色开启时注入
+    if (character.characterAutoFavoriteEnabled) {
+        prompt += `
+
+【消息收藏功能】
+你可以主动收藏用户发送的重要消息，以便日后回顾。在 <think> 中可先思考是否需要收藏。
+
+**使用方法**：在回复中加入指令 [FAVORITE:消息ID:收藏寄语]。每条用户消息在上下文中以 [id:消息ID] 标注在消息开头，请使用该 ID。
+
+**收藏标准**：用户分享的重要个人信息（梦想、价值观、经历）、情感转折点的关键对话、用户明确表达的喜好或厌恶、对建立深层关系有帮助的信息。只收藏用户的消息，不要过度收藏，寄语简短精炼（20字以内）。静默收藏，不要在对话中提及收藏行为。
+
+**示例**：若决定收藏某条用户消息（其前有 [id:msg_123]），在回复中写 [FAVORITE:msg_123:他的童年梦想，反映核心价值观]，再写你的正常聊天内容。`;
+    }
+
     if (character.myName) {
         prompt = prompt.replace(/\{\{user\}\}/gi, character.myName);
     }
@@ -1065,9 +1133,15 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate) {
     const now = new Date();
     const currentTime = `${now.getFullYear()}年${pad(now.getMonth() + 1)}月${pad(now.getDate())}日 ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     
-    // 获取世界书
-    const worldBooksBefore = (chat.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(Boolean).map(wb => wb.content).join('\n');
-    const worldBooksAfter = (chat.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(Boolean).map(wb => wb.content).join('\n');
+    // 获取世界书（包含全局）
+    const associatedIds = chat.worldBookIds || [];
+    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+    const globalIds = globalBooks.map(wb => wb.id);
+    const allBookIds = [...new Set([...associatedIds, ...globalIds])];
+    
+    const worldBooksBefore = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(Boolean).map(wb => wb.content).join('\n');
+    const worldBooksMiddle = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle')).filter(Boolean).map(wb => wb.content).join('\n');
+    const worldBooksAfter = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(Boolean).map(wb => wb.content).join('\n');
 
     let systemPrompt = `你正在一个名为“404”的线上聊天软件中扮演一个角色，正在与${chat.myName}进行${callType === 'video' ? '视频' : '语音'}通话。请严格遵守以下规则：\n`;
     systemPrompt += `核心规则：\n`;
@@ -1078,6 +1152,9 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate) {
     systemPrompt += `角色和对话规则：\n`;
     if (worldBooksBefore) {
         systemPrompt += `${worldBooksBefore}\n`;
+    }
+    if (worldBooksMiddle) {
+        systemPrompt += `${worldBooksMiddle}\n`;
     }
     systemPrompt += `<char_settings>\n`;
     systemPrompt += `1. 你的角色名是：${chat.realName}。我的称呼是：${chat.myName}。你的当前状态是：${chat.status}。\n`;
@@ -1382,13 +1459,27 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate) {
 }
 
 async function generateCallSummary(chat, callContext) {
-    let {url, key, model, provider} = db.apiSettings;
+    // === 使用总结API（如果已配置）===
+    let apiConfig;
+    if (db.summaryApiSettings && db.summaryApiSettings.url && db.summaryApiSettings.key && db.summaryApiSettings.model) {
+        apiConfig = db.summaryApiSettings;
+    } else {
+        apiConfig = db.apiSettings;
+    }
+    
+    let {url, key, model, provider} = apiConfig;
     if (!url || !key || !model) return null;
     if (url.endsWith('/')) url = url.slice(0, -1);
 
-    // 获取世界书
-    const worldBooksBefore = (chat.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(Boolean).map(wb => wb.content).join('\n');
-    const worldBooksAfter = (chat.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(Boolean).map(wb => wb.content).join('\n');
+    // 获取世界书（包含全局）
+    const associatedIds = chat.worldBookIds || [];
+    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+    const globalIds = globalBooks.map(wb => wb.id);
+    const allBookIds = [...new Set([...associatedIds, ...globalIds])];
+    
+    const worldBooksBefore = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(Boolean).map(wb => wb.content).join('\n');
+    const worldBooksMiddle = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle')).filter(Boolean).map(wb => wb.content).join('\n');
+    const worldBooksAfter = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(Boolean).map(wb => wb.content).join('\n');
 
     // 获取回忆日记
     const favoritedJournals = (chat.memoryJournals || [])
@@ -1402,6 +1493,7 @@ async function generateCallSummary(chat, callContext) {
     prompt += `角色名：${chat.realName}\n`;
     prompt += `角色设定：${chat.persona || "无"}\n`;
     if (worldBooksBefore) prompt += `${worldBooksBefore}\n`;
+    if (worldBooksMiddle) prompt += `${worldBooksMiddle}\n`;
     if (worldBooksAfter) prompt += `${worldBooksAfter}\n`;
     prompt += `</char_settings>\n\n`;
 

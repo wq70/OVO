@@ -87,6 +87,7 @@ function setupWorldBookApp() {
         currentEditingWorldBookId = null;
         editWorldBookForm.reset();
         document.querySelector('input[name="world-book-position"][value="before"]').checked = true;
+        document.getElementById('world-book-global').checked = false;
         switchScreen('edit-world-book-screen');
     });
     
@@ -96,6 +97,7 @@ function setupWorldBookApp() {
         const content = worldBookContentInput.value.trim();
         const category = document.getElementById('world-book-category').value.trim();
         const position = document.querySelector('input[name="world-book-position"]:checked').value;
+        const isGlobal = document.getElementById('world-book-global').checked;
         if (!name || !content) return showToast('名称和内容不能为空');
         if (currentEditingWorldBookId) {
             const book = db.worldBooks.find(wb => wb.id === currentEditingWorldBookId);
@@ -104,9 +106,10 @@ function setupWorldBookApp() {
                 book.content = content;
                 book.position = position;
                 book.category = category;
+                book.isGlobal = isGlobal;
             }
         } else {
-            db.worldBooks.push({id: `wb_${Date.now()}`, name, content, position, category});
+            db.worldBooks.push({id: `wb_${Date.now()}`, name, content, position, category, isGlobal});
         }
         await saveData();
         showToast('世界书条目已保存');
@@ -163,6 +166,7 @@ function setupWorldBookApp() {
                     worldBookContentInput.value = book.content;
                     document.getElementById('world-book-category').value = book.category || '';
                     document.querySelector(`input[name="world-book-position"][value="${book.position}"]`).checked = true;
+                    document.getElementById('world-book-global').checked = book.isGlobal || false;
                     switchScreen('edit-world-book-screen');
                 }
             }
@@ -262,7 +266,7 @@ function renderWorldBookList(expandedCategory = null) {
                 }
             }
 
-            li.innerHTML = `<div class="item-details" style="padding-left: 0;"><div class="item-name">${book.name}</div><div class="item-preview">${book.content}</div></div>`;
+            li.innerHTML = `<div class="item-details" style="padding-left: 0;"><div class="item-name">${book.name}${book.isGlobal ? ' <span style="display:inline-block;background:#4CAF50;color:white;font-size:10px;padding:2px 6px;border-radius:3px;margin-left:6px;">全局</span>' : ''}</div><div class="item-preview">${book.content}</div></div>`;
             
             if (!isWorldBookMultiSelectMode) {
                 const delBtn = document.createElement('button');

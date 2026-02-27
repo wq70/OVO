@@ -171,6 +171,66 @@
     fill: #8e8e8e;
 }
 
+.unlock-post-card[data-has-comments="true"] {
+    cursor: pointer;
+}
+
+.unlock-comments-section {
+    border-top: 1px solid #eee;
+    padding-top: 12px;
+}
+
+.unlock-comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.unlock-comment-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.unlock-comment-item:last-child {
+    border-bottom: none;
+}
+
+.unlock-comment-author {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.unlock-comment-content {
+    font-size: 14px;
+    color: #555;
+    line-height: 1.5;
+}
+
+.unlock-comment-time {
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+}
+
+.unlock-comment-item-reply {
+    margin-left: 8px;
+    padding-left: 12px;
+    border-left: 3px solid #c8e6f5;
+    background: rgba(200, 230, 245, 0.2);
+    border-radius: 0 8px 8px 0;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-right: 10px;
+}
+
+.unlock-comment-reply-to {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 4px;
+}
+
 /* Peek Album Styles */
 .album-grid {
     display: grid;
@@ -771,4 +831,603 @@
     color: #b0b0b0;
     font-size: 14px;
     font-weight: bold;
+}
+
+/* === 时光想说 - 便签墙样式 === */
+#peek-time-thoughts-screen {
+    background: #ffffff;
+    overflow-y: auto;
+}
+
+#peek-time-thoughts-screen .app-header {
+    background: #fff;
+}
+
+#peek-time-thoughts-screen .app-header .title,
+#peek-time-thoughts-screen .app-header .back-btn,
+#peek-time-thoughts-screen .app-header .action-btn {
+    color: #333;
+}
+
+.time-thoughts-container {
+    padding: 16px 12px;
+    min-height: calc(100vh - 60px);
+    position: relative;
+}
+
+.time-thoughts-wall {
+    position: relative;
+    width: 100%;
+    min-height: 200px;
+    padding: 10px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+/* 正方形便签，不要太大 */
+.time-thought-note {
+    position: relative;
+    width: calc(50% - 6px);
+    max-width: 140px;
+    aspect-ratio: 1;
+    background: #feffcc;
+    border-radius: 3px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.time-thought-note::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 28px;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 0 0 2px 2px;
+    z-index: 1;
+}
+
+.time-thought-note:hover {
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+    z-index: 10;
+}
+
+.time-thought-note:nth-child(6n+1) {
+    transform: rotate(-2deg);
+    background: #feffcc;
+}
+
+.time-thought-note:nth-child(6n+2) {
+    transform: rotate(1.5deg);
+    background: #ffe4e1;
+}
+
+.time-thought-note:nth-child(6n+3) {
+    transform: rotate(-1deg);
+    background: #e0f7fa;
+}
+
+.time-thought-note:nth-child(6n+4) {
+    transform: rotate(2deg);
+    background: #f3e5f5;
+}
+
+.time-thought-note:nth-child(6n+5) {
+    transform: rotate(-1.5deg);
+    background: #fff9c4;
+}
+
+.time-thought-note:nth-child(6n) {
+    transform: rotate(1deg);
+    background: #ffe0b2;
+}
+
+.time-thought-note:hover {
+    transform: rotate(0deg) translateY(-4px) scale(1.03) !important;
+}
+
+.time-thought-note-inner {
+    position: absolute;
+    inset: 0;
+    padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.note-age-tag {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.08);
+    color: #666;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+}
+
+.note-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.note-preview {
+    font-size: 11px;
+    color: #555;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+}
+
+.note-emotion-tag {
+    display: inline-block;
+    font-size: 10px;
+    color: #999;
+    font-style: italic;
+    margin-top: 4px;
+    flex-shrink: 0;
+}
+
+/* 便签详情弹窗 */
+.time-thought-detail-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.time-thought-detail-modal.visible {
+    display: flex;
+}
+
+.detail-modal-content {
+    background: #fff;
+    border-radius: 16px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.detail-modal-header {
+    padding: 20px 20px 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.detail-modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    flex: 1;
+}
+
+.detail-modal-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #f5f5f5;
+    border: none;
+    font-size: 20px;
+    color: #666;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.detail-modal-close:hover {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.detail-modal-body {
+    padding: 20px;
+}
+
+.detail-section {
+    margin-bottom: 25px;
+}
+
+.detail-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+.detail-section-content {
+    font-size: 15px;
+    color: #333;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.detail-age-info {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.detail-age-badge {
+    background: #5a5a5a;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.placeholder-text-thoughts {
+    text-align: center;
+    color: #666;
+    font-size: 15px;
+    padding: 60px 20px;
+    background: #f5f5f5;
+    border-radius: 12px;
+}
+
+/* --- Peek Wallet (钱包) 样式 --- */
+#peek-wallet-screen {
+    background: linear-gradient(180deg, #fff5f8 0%, #fafafa 100%);
+    color: #333;
+}
+
+#peek-wallet-screen .app-header .title,
+#peek-wallet-screen .app-header .back-btn,
+#peek-wallet-screen .app-header .action-btn {
+    color: #333;
+}
+
+#peek-wallet-screen .wallet-header-icon {
+    display: block;
+    flex-shrink: 0;
+}
+
+#peek-wallet-screen .wallet-content {
+    padding: 16px;
+    padding-bottom: 24px;
+}
+
+.wallet-summary-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.wallet-summary-card {
+    background: linear-gradient(135deg, rgba(255, 240, 245, 0.95) 0%, rgba(255, 250, 252, 0.98) 100%);
+    border: 1px solid rgba(255, 182, 193, 0.35);
+    border-radius: 16px;
+    padding: 16px 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.wallet-summary-card.balance {
+    background: linear-gradient(135deg, rgba(255, 228, 235, 0.95) 0%, rgba(255, 240, 245, 0.98) 100%);
+    border-color: rgba(255, 182, 193, 0.5);
+}
+
+.wallet-summary-label {
+    font-size: 12px;
+    color: #b76e79;
+    margin-bottom: 4px;
+}
+
+.wallet-summary-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: #333;
+}
+
+.wallet-summary-value.income {
+    color: #2e7d5e;
+}
+
+.wallet-summary-value.expense {
+    color: #c62828;
+}
+
+.wallet-tabs {
+    display: flex;
+    padding: 0 4px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.wallet-tab {
+    flex: 1;
+    padding: 10px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #999;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.wallet-tab.active {
+    color: #e91e63;
+    border-bottom-color: #e91e63;
+    font-weight: 500;
+}
+
+.wallet-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.wallet-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: #fff;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f5f5f5;
+}
+
+.wallet-list-item .left {
+    flex: 1;
+    min-width: 0;
+}
+
+.wallet-list-item .remark {
+    font-size: 15px;
+    color: #333;
+    margin-bottom: 2px;
+}
+
+.wallet-list-item .meta {
+    font-size: 12px;
+    color: #999;
+}
+
+.wallet-list-item .amount {
+    font-size: 16px;
+    font-weight: 600;
+    margin-left: 12px;
+}
+
+.wallet-list-item .amount.income {
+    color: #2e7d5e;
+}
+
+.wallet-list-item .amount.expense {
+    color: #c62828;
+}
+
+.wallet-empty-hint {
+    text-align: center;
+    color: #999;
+    font-size: 14px;
+    padding: 30px 20px;
+}
+
+/* ---------- 钱包 INS 风黑白简约样式（仅 UI，内容不变） ---------- */
+#peek-wallet-screen[data-wallet-theme="ins"] .app-header .title,
+#peek-wallet-screen[data-wallet-theme="ins"] .app-header .back-btn,
+#peek-wallet-screen[data-wallet-theme="ins"] .app-header .action-btn {
+    color: #111;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-content {
+    padding: 24px 20px 32px;
+    background: #fff;
+    min-height: calc(100vh - 56px);
+}
+
+/* INS：重新排版 - 顶部大余额 + 单行收支摘要 */
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-cards {
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 28px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 12px 0;
+    box-shadow: none;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-card.balance {
+    background: transparent;
+    border: none;
+    order: -1;
+    padding: 0 0 20px;
+    margin-bottom: 8px;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-card.balance .wallet-summary-label {
+    font-size: 11px;
+    color: #999;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-card.balance .wallet-summary-value {
+    font-size: 36px;
+    font-weight: 300;
+    color: #111;
+    letter-spacing: -0.02em;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-card:not(.balance) {
+    display: inline-block;
+    width: auto;
+    padding: 0 16px 0 0;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-cards {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-card:not(.balance) .wallet-summary-label {
+    font-size: 10px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 2px;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-card:not(.balance) .wallet-summary-value {
+    font-size: 16px;
+    font-weight: 500;
+    color: #111;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-card:not(.balance) .wallet-summary-value.income {
+    color: #111;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-card:not(.balance) .wallet-summary-value.expense {
+    color: #111;
+}
+
+/* INS：收入/支出两栏并排放在余额下方一行 */
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-cards {
+    flex-wrap: wrap;
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-card.balance {
+    width: 100%;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-card:nth-child(2),
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-summary-card:nth-child(3) {
+    flex: 1;
+    min-width: 0;
+}
+
+/* INS：Tab 简约 */
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-tabs {
+    padding: 0;
+    margin-bottom: 0;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-tab {
+    padding: 14px 0;
+    color: #999;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-tab.active {
+    color: #111;
+    border-bottom-color: #111;
+    font-weight: 500;
+}
+
+/* INS：列表无卡片，仅底部分割线 */
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-list {
+    margin-top: 0;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-list-item {
+    background: transparent;
+    border-radius: 0;
+    margin-bottom: 0;
+    box-shadow: none;
+    border: none;
+    border-bottom: 1px solid #eee;
+    padding: 18px 0;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-list-item .remark {
+    font-size: 15px;
+    color: #111;
+    font-weight: 400;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-list-item .meta {
+    font-size: 11px;
+    color: #999;
+    letter-spacing: 0.02em;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-list-item .amount {
+    font-size: 15px;
+    font-weight: 500;
+    color: #111;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-list-item .amount.income {
+    color: #111;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-list-item .amount.expense {
+    color: #333;
+}
+
+#peek-wallet-screen[data-wallet-theme="ins"] .wallet-empty-hint {
+    color: #999;
+    font-size: 13px;
+    padding: 40px 20px;
 }

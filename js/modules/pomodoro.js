@@ -300,13 +300,23 @@ function setupPomodoroApp() {
                 url = url.slice(0, -1);
             }
 
-            const globalWorldBookIds = db.pomodoroSettings?.globalWorldBookIds || [];
-            const globalWorldBooksBefore = globalWorldBookIds
+            // 收集全局世界书 + 真正的全局世界书（isGlobal）
+            const configuredGlobalIds = db.pomodoroSettings?.globalWorldBookIds || [];
+            const isGlobalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+            const isGlobalIds = isGlobalBooks.map(wb => wb.id);
+            const allGlobalIds = [...new Set([...configuredGlobalIds, ...isGlobalIds])];
+            
+            const globalWorldBooksBefore = allGlobalIds
                 .map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before'))
                 .filter(Boolean)
                 .map(wb => wb.content)
                 .join('\n\n');
-            const globalWorldBooksAfter = globalWorldBookIds
+            const globalWorldBooksMiddle = allGlobalIds
+                .map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle'))
+                .filter(Boolean)
+                .map(wb => wb.content)
+                .join('\n\n');
+            const globalWorldBooksAfter = allGlobalIds
                 .map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after'))
                 .filter(Boolean)
                 .map(wb => wb.content)
@@ -315,6 +325,9 @@ function setupPomodoroApp() {
             let systemPromptContent = `你正在扮演角色。你的名字是${character.realName}。`;
             if (globalWorldBooksBefore) {
                 systemPromptContent += `\n\n【全局世界观设定】\n${globalWorldBooksBefore}`;
+            }
+            if (globalWorldBooksMiddle) {
+                systemPromptContent += `\n\n【全局世界观设定】\n${globalWorldBooksMiddle}`;
             }
             systemPromptContent += `\n\n【你的角色设定】\n人设: ${character.persona}`;
             if (globalWorldBooksAfter) {

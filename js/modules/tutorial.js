@@ -539,6 +539,117 @@ function renderTutorialContent() {
 
     })
 
+    const cleanRedundantDataBtn = document.createElement('button');
+    cleanRedundantDataBtn.className = 'btn btn-neutral';
+    cleanRedundantDataBtn.textContent = '清除冗余/无用数据';
+    cleanRedundantDataBtn.style.marginTop = '15px';
+    cleanRedundantDataBtn.style.display = 'block';
+    cleanRedundantDataBtn.disabled = loadingBtn;
+
+    cleanRedundantDataBtn.addEventListener('click', async () => {
+        if (loadingBtn) return;
+
+        const msg = '此操作将清除以下无用数据：\n\n' +
+            '• 无聊天记录的角色\n' +
+            '• 无聊天记录的群聊\n' +
+            '• 未被任何角色/群聊使用的世界书\n' +
+            '• 无效的表情包（无链接等）\n\n' +
+            '⚠️ 不会影响有聊天记录的角色和正在使用的数据。\n\n确定继续吗？';
+
+        if (!confirm(msg)) return;
+
+        loadingBtn = true;
+        cleanRedundantDataBtn.disabled = true;
+
+        try {
+            showToast('正在扫描冗余数据...');
+
+            let cleanCount = 0;
+            const report = [];
+
+            if (db.characters && Array.isArray(db.characters)) {
+                const beforeCount = db.characters.length;
+                db.characters = db.characters.filter(char => {
+                    if (!char.history || char.history.length === 0) return false;
+                    return true;
+                });
+                const removed = beforeCount - db.characters.length;
+                if (removed > 0) {
+                    report.push(`清理了 ${removed} 个无聊天记录的角色`);
+                    cleanCount += removed;
+                }
+            }
+
+            if (db.groups && Array.isArray(db.groups)) {
+                const beforeCount = db.groups.length;
+                db.groups = db.groups.filter(group => {
+                    if (!group.history || group.history.length === 0) return false;
+                    return true;
+                });
+                const removed = beforeCount - db.groups.length;
+                if (removed > 0) {
+                    report.push(`清理了 ${removed} 个无聊天记录的群聊`);
+                    cleanCount += removed;
+                }
+            }
+
+            if (db.worldBooks && Array.isArray(db.worldBooks)) {
+                const usedWorldBookIds = new Set();
+                if (db.characters) {
+                    db.characters.forEach(char => {
+                        if (char.worldBookIds && Array.isArray(char.worldBookIds)) {
+                            char.worldBookIds.forEach(id => usedWorldBookIds.add(id));
+                        }
+                    });
+                }
+                if (db.groups) {
+                    db.groups.forEach(group => {
+                        if (group.worldBookIds && Array.isArray(group.worldBookIds)) {
+                            group.worldBookIds.forEach(id => usedWorldBookIds.add(id));
+                        }
+                    });
+                }
+                const beforeCount = db.worldBooks.length;
+                db.worldBooks = db.worldBooks.filter(wb => usedWorldBookIds.has(wb.id));
+                const removed = beforeCount - db.worldBooks.length;
+                if (removed > 0) {
+                    report.push(`清理了 ${removed} 个未使用的世界书`);
+                    cleanCount += removed;
+                }
+            }
+
+            if (db.myStickers && Array.isArray(db.myStickers)) {
+                const beforeCount = db.myStickers.length;
+                db.myStickers = db.myStickers.filter(sticker => {
+                    return sticker && sticker.url && String(sticker.url).trim() !== '';
+                });
+                const removed = beforeCount - db.myStickers.length;
+                if (removed > 0) {
+                    report.push(`清理了 ${removed} 个无效的表情包`);
+                    cleanCount += removed;
+                }
+            }
+
+            if (cleanCount > 0) {
+                showToast('正在保存清理结果...');
+                await saveData(db);
+                const summary = report.join('\n');
+                showToast(`清理完成！共清理 ${cleanCount} 项冗余数据`);
+                alert(`清理完成！\n\n${summary}\n\n共清理了 ${cleanCount} 项冗余数据。`);
+            } else {
+                showToast('没有发现需要清理的冗余数据');
+                alert('检查完成！\n\n未发现需要清理的冗余数据，您的数据很健康。');
+            }
+        } catch (e) {
+            console.error('清理失败:', e);
+            showToast('清理失败: ' + e.message);
+            alert('清理过程中发生错误：\n' + e.message);
+        } finally {
+            loadingBtn = false;
+            cleanRedundantDataBtn.disabled = false;
+        }
+    });
+
     const clearDataBtn = document.createElement('button');
     clearDataBtn.className = 'btn btn-danger';
     clearDataBtn.textContent = '清除所有数据';
@@ -633,6 +744,7 @@ function renderTutorialContent() {
         });
     }
     tutorialContentArea.appendChild(importPartialDataBtn);
+    tutorialContentArea.appendChild(cleanRedundantDataBtn);
     tutorialContentArea.appendChild(clearDataBtn);
 
     // GitHub Backup UI
