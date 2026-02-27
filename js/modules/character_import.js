@@ -49,6 +49,7 @@ function setupAddCharModal() {
         db.characters.push(newChar);
         await saveData();
         renderChatList();
+        if (typeof renderContactList === 'function') renderContactList();
         document.getElementById('add-char-modal').classList.remove('visible');
         // 重置表单并清除导入提示
         document.getElementById('add-char-form').reset();
@@ -333,6 +334,7 @@ async function createCharacterFromData(data, avatar) {
     db.characters.push(newChar);
     await saveData();
     renderChatList();
+    if (typeof renderContactList === 'function') renderContactList();
     showToast(`角色“${newChar.remarkName}”导入成功！`);
 }
 

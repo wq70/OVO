@@ -73,6 +73,10 @@ const switchScreen = (targetId) => {
     if (targetId === 'more-screen') {
         renderMoreScreen();
     }
+    if (targetId === 'contacts-screen') {
+        if (typeof renderContactList === 'function') renderContactList();
+        if (typeof renderMyProfile === 'function') renderMyProfile();
+    }
 };
 
 function renderMoreScreen() {

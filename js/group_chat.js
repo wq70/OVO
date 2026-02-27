@@ -99,7 +99,7 @@ function setupGroupChatSystem() {
     // --- 自动保存逻辑 (Group Chat) ---
     const groupAutoSaveInputs = [
         'setting-group-name', 'setting-group-my-nickname', 'setting-group-my-persona',
-        'setting-group-max-memory', 'setting-group-custom-bubble-css', 'setting-group-notice'
+        'setting-group-max-memory', 'setting-group-auto-journal-interval', 'setting-group-custom-bubble-css', 'setting-group-notice'
     ];
     groupAutoSaveInputs.forEach(id => {
         const el = document.getElementById(id);
@@ -109,7 +109,7 @@ function setupGroupChatSystem() {
     const groupAutoSaveChanges = [
         'setting-group-theme-color', 'setting-group-use-custom-css', 'setting-group-show-timestamp',
         'setting-group-show-notice', 'setting-group-allow-gossip', 'setting-group-avatar-radius',
-        'setting-group-bilingual-mode', 'setting-group-bilingual-style'
+        'setting-group-bilingual-mode', 'setting-group-bilingual-style', 'setting-group-auto-journal-enabled'
     ];
     groupAutoSaveChanges.forEach(id => {
         const el = document.getElementById(id);
@@ -913,7 +913,26 @@ function loadGroupSettingsToSidebar() {
     document.getElementById('setting-group-my-persona').value = group.me.persona;
     themeSelect.value = group.theme || 'white_pink';
     document.getElementById('setting-group-max-memory').value = group.maxMemory;
-    
+
+    const autoJournalIntervalContainer = document.getElementById('setting-group-auto-journal-interval-container');
+    const autoJournalIntervalInput = document.getElementById('setting-group-auto-journal-interval');
+    let autoJournalSwitch = document.getElementById('setting-group-auto-journal-enabled');
+    if (autoJournalSwitch) {
+        autoJournalSwitch.checked = group.autoJournalEnabled || false;
+        const parent = autoJournalSwitch.parentNode;
+        const clone = autoJournalSwitch.cloneNode(true);
+        parent.replaceChild(clone, autoJournalSwitch);
+        autoJournalSwitch = clone;
+        if (autoJournalIntervalContainer) {
+            autoJournalIntervalContainer.style.display = group.autoJournalEnabled ? 'flex' : 'none';
+            autoJournalSwitch.addEventListener('change', (e) => {
+                autoJournalIntervalContainer.style.display = e.target.checked ? 'flex' : 'none';
+                saveGroupSettingsFromSidebar(false);
+            });
+        }
+    }
+    if (autoJournalIntervalInput) autoJournalIntervalInput.value = group.autoJournalInterval || 100;
+
     document.getElementById('setting-group-title-layout').value = group.titleLayout || 'left';
     document.getElementById('setting-group-show-timestamp').checked = group.showTimestamp || false;
     document.getElementById('setting-group-timestamp-style').value = group.timestampStyle || 'bubble';
@@ -1070,6 +1089,9 @@ async function saveGroupSettingsFromSidebar(showToastFlag = true) {
 
     group.theme = document.getElementById('setting-group-theme-color').value;
     group.maxMemory = document.getElementById('setting-group-max-memory').value;
+    group.autoJournalEnabled = document.getElementById('setting-group-auto-journal-enabled').checked;
+    const autoJournalIntervalInput = parseInt(document.getElementById('setting-group-auto-journal-interval').value, 10);
+    group.autoJournalInterval = (isNaN(autoJournalIntervalInput) || autoJournalIntervalInput < 10) ? 100 : autoJournalIntervalInput;
     group.useCustomBubbleCss = document.getElementById('setting-group-use-custom-css').checked;
     group.customBubbleCss = document.getElementById('setting-group-custom-bubble-css').value;
     

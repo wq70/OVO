@@ -208,6 +208,17 @@ function setupChatSettings() {
             }
         });
     }
+
+    const autoJournalSwitch = document.getElementById('setting-auto-journal-enabled');
+    if (autoJournalSwitch) {
+        autoJournalSwitch.addEventListener('change', (e) => {
+            triggerHapticFeedback('light');
+            const container = document.getElementById('setting-auto-journal-interval-container');
+            if (container) {
+                container.style.display = e.target.checked ? 'flex' : 'none';
+            }
+        });
+    }
 }
 
 function loadSettingsToSidebar() {
@@ -258,6 +269,13 @@ function loadSettingsToSidebar() {
         }
         document.getElementById('setting-reply-count-min').value = e.replyCountMin || 3;
         document.getElementById('setting-reply-count-max').value = e.replyCountMax || 8;
+
+        document.getElementById('setting-auto-journal-enabled').checked = e.autoJournalEnabled || false;
+        const autoJournalIntervalContainer = document.getElementById('setting-auto-journal-interval-container');
+        if (autoJournalIntervalContainer) {
+            autoJournalIntervalContainer.style.display = e.autoJournalEnabled ? 'flex' : 'none';
+        }
+        document.getElementById('setting-auto-journal-interval').value = e.autoJournalInterval || 100;
 
         document.getElementById('setting-bilingual-mode').checked = e.bilingualModeEnabled || false;
         document.getElementById('setting-bilingual-style').value = e.bilingualBubbleStyle || 'under';
@@ -350,6 +368,9 @@ async function saveSettingsFromSidebar() {
         e.replyCountEnabled = document.getElementById('setting-reply-count-enabled').checked;
         e.replyCountMin = parseInt(document.getElementById('setting-reply-count-min').value, 10) || 3;
         e.replyCountMax = parseInt(document.getElementById('setting-reply-count-max').value, 10) || 8;
+        e.autoJournalEnabled = document.getElementById('setting-auto-journal-enabled').checked;
+        const autoJournalIntervalInput = parseInt(document.getElementById('setting-auto-journal-interval').value, 10);
+        e.autoJournalInterval = (isNaN(autoJournalIntervalInput) || autoJournalIntervalInput < 10) ? 100 : autoJournalIntervalInput;
         e.useCustomBubbleCss = document.getElementById('setting-use-custom-css').checked;
         e.customBubbleCss = document.getElementById('setting-custom-bubble-css').value;
         e.bilingualModeEnabled = document.getElementById('setting-bilingual-mode').checked;
@@ -1646,6 +1667,11 @@ function setupCustomizeApp() {
             showToast('全局样式已应用');
         }
         
+        if (target.matches('#global-css-import-doc-btn')) {
+            document.getElementById('global-css-import-file').click();
+            return;
+        }
+        
         if (target.matches('#reset-global-css-btn')) {
             const textarea = document.getElementById('global-beautification-css');
             textarea.value = '';
@@ -1822,6 +1848,40 @@ function setupCustomizeApp() {
     });
 
     customizeForm.addEventListener('change', async (e) => {
+        if (e.target.id === 'global-css-import-file') {
+            const file = e.target.files && e.target.files[0];
+            e.target.value = '';
+            if (!file) return;
+            const ext = (file.name.split('.').pop() || '').toLowerCase();
+            const textarea = document.getElementById('global-beautification-css');
+            if (!textarea) return;
+            try {
+                let content = '';
+                if (ext === 'txt') {
+                    content = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => resolve(ev.target.result || '');
+                        reader.onerror = () => reject(new Error('读取TXT失败'));
+                        reader.readAsText(file, 'UTF-8');
+                    });
+                } else if (ext === 'docx') {
+                    if (typeof mammoth === 'undefined') {
+                        showToast('mammoth.js 未加载，无法解析 DOCX');
+                        return;
+                    }
+                    content = await parseDocxFile(file);
+                } else {
+                    showToast('仅支持 .txt 或 .docx 文件');
+                    return;
+                }
+                textarea.value = (content || '').trim();
+                showToast('已导入文档内容');
+            } catch (err) {
+                console.error('导入文档失败', err);
+                showToast('导入失败：' + (err.message || '未知错误'));
+            }
+            return;
+        }
         if (e.target.matches('.icon-upload-input')) {
             const file = e.target.files[0];
             if (!file) return;
@@ -1971,13 +2031,15 @@ function renderCustomizeForm() {
         <div class="collapsible-content">
             <div class="kkt-item" style="display:block; padding: 15px;">
                 <div class="form-group" style="margin-bottom: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <label for="global-beautification-css" style="font-weight: bold; font-size: 14px; color: var(--primary-color); margin-bottom: 0;">CSS代码</label>
                         <div style="display: flex; gap: 8px;">
+                            <button type="button" id="global-css-import-doc-btn" class="btn btn-small" style="width:auto;">导入文档</button>
                             <button type="button" id="apply-global-css-now-btn" class="btn btn-primary btn-small" style="width:auto;">立即应用</button>
                             <button type="button" id="reset-global-css-btn" class="btn btn-small" style="width:auto;">重置</button>
                         </div>
                     </div>
+                    <input type="file" id="global-css-import-file" accept=".txt,.docx" style="display:none;">
                     <textarea id="global-beautification-css" class="form-group" rows="8" placeholder="在此输入CSS代码..." style="width:100%; border:1px solid #eee; border-radius:8px; padding:10px;"></textarea>
                 </div>
                 

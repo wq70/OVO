@@ -1716,12 +1716,53 @@
                         <input type="text" id="batch-sticker-group" placeholder="如：通用组">
                     </div>
                     <div class="form-group">
-                        <label for="sticker-urls-textarea">数据格式：名称:URL (英文冒号，每行一个)</label>
+                        <label for="sticker-urls-textarea">数据格式：名称:URL（支持宽泛格式，如 名称：URL、名称 URL、名称URL 等）</label>
                         <textarea id="sticker-urls-textarea" rows="8"
                             placeholder="例如：&#10;开心:https://example.com/happy.gif&#10;哭泣:https://example.com/cry.png"></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary">开始导入</button>
+                    <p style="text-align:center; color:#888; margin: 12px 0 0;">或</p>
+                    <button type="button" id="sticker-doc-import-open-btn" class="btn btn-secondary" style="width:100%; margin-top:8px;">从文档导入 (TXT / DOCX / ZIP)</button>
                 </form>
+            </div>
+        </div>
+        <!-- Sticker Doc Import: file select -->
+        <div id="sticker-doc-import-modal" class="modal-overlay">
+            <div class="modal-window" style="max-width: 95%; width: 420px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h3 style="margin: 0;">导入文档表情包</h3>
+                    <button id="sticker-doc-import-close-btn"
+                        style="background:none; border:none; font-size:20px; cursor:pointer; color:#999;">×</button>
+                </div>
+                <p style="font-size:13px; color:#888; margin-bottom:15px;">支持 TXT、DOCX、ZIP（ZIP 内仅解析 TXT/DOCX），每行一条：名称+URL，格式宽泛</p>
+                <div id="sticker-doc-import-drop-zone"
+                    style="border: 2px dashed #ddd; border-radius: 12px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 15px;">
+                    <div style="font-size: 32px; margin-bottom: 6px;">📂</div>
+                    <div style="color: #666; font-size: 14px;">点击选择文件 或 拖拽到此处</div>
+                    <div style="color: #bbb; font-size: 12px; margin-top: 4px;">支持多选，可混合格式</div>
+                </div>
+                <input type="file" id="sticker-doc-import-file-input" multiple accept=".txt,.docx,.zip" style="display:none;">
+                <div id="sticker-doc-import-file-list" style="max-height: 180px; overflow-y: auto; margin-bottom: 15px;"></div>
+                <div style="display:flex; gap:10px;">
+                    <button id="sticker-doc-import-start-btn" class="btn btn-primary" style="flex:1;" disabled>开始解析</button>
+                    <button id="sticker-doc-import-cancel-btn" class="btn btn-neutral" style="flex:1;">取消</button>
+                </div>
+            </div>
+        </div>
+        <!-- Sticker Doc Import: parse result preview -->
+        <div id="sticker-doc-preview-modal" class="modal-overlay">
+            <div class="modal-window" style="max-width: 95%; width: 480px; max-height: 85vh; display: flex; flex-direction: column;">
+                <h3 style="margin: 0 0 10px 0;">解析结果预览</h3>
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <label for="sticker-doc-preview-group">分组名称（本批次归入此组）</label>
+                    <input type="text" id="sticker-doc-preview-group" placeholder="如：通用组">
+                </div>
+                <div style="font-size: 12px; color: #888; margin-bottom: 8px;">共 <span id="sticker-doc-preview-count">0</span> 条，确认后将加入表情包</div>
+                <div id="sticker-doc-preview-list" style="flex:1; overflow-y: auto; max-height: 320px; border: 1px solid #eee; border-radius: 8px; padding: 8px; background: #fafafa;"></div>
+                <div style="display:flex; gap:8px; margin-top: 15px;">
+                    <button id="sticker-doc-preview-confirm-btn" class="btn btn-primary" style="flex:2;">确认导入</button>
+                    <button id="sticker-doc-preview-cancel-btn" class="btn btn-neutral" style="flex:1;">取消</button>
+                </div>
             </div>
         </div>
         <div id="send-voice-modal" class="modal-overlay">
@@ -2001,6 +2042,23 @@
                                         <span style="color:#999;">-</span>
                                         <input type="number" id="setting-reply-count-max" value="8" min="1"
                                             style="width:30px; text-align:center; border:none; background: rgba(0,0,0,0.05); border-radius: 4px;">
+                                    </div>
+                                </div>
+
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">自动生成日记总结</div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                            <input type="checkbox" id="setting-auto-journal-enabled">
+                                            <span class="kkt-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="kkt-item" id="setting-auto-journal-interval-container" style="display: none;">
+                                    <div class="kkt-item-label">自动总结间隔(条)</div>
+                                    <div class="kkt-item-control">
+                                        <input type="number" id="setting-auto-journal-interval" value="100" min="10"
+                                            style="width:60px; text-align:right; border:none; background: rgba(0,0,0,0.05); border-radius: 4px;">
                                     </div>
                                 </div>
                             </div>
@@ -2544,6 +2602,22 @@
                                 <div class="kkt-item-control">
                                     <input type="number" id="setting-group-max-memory" value="100" min="1"
                                         style="width:50px; text-align:right; border:none;">
+                                </div>
+                            </div>
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">自动生成总结</div>
+                                <div class="kkt-item-control">
+                                    <label class="kkt-switch">
+                                        <input type="checkbox" id="setting-group-auto-journal-enabled">
+                                        <span class="kkt-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="kkt-item" id="setting-group-auto-journal-interval-container" style="display: none;">
+                                <div class="kkt-item-label">自动总结间隔(条)</div>
+                                <div class="kkt-item-control">
+                                    <input type="number" id="setting-group-auto-journal-interval" value="100" min="10"
+                                        style="width:60px; text-align:right; border:none; background: rgba(0,0,0,0.05); border-radius: 4px;">
                                 </div>
                             </div>
                             <div class="kkt-item">

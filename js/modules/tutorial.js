@@ -165,6 +165,13 @@ const GuideSystem = {
                     parent: '.kkt-item'
                 };
                 break;
+            case 'guide_token_distribution':
+                config = {
+                    target: '#pc-stat-token-click',
+                    text: '点击这里可查看 Token 分布，了解当前对话的 token 使用情况！',
+                    position: 'top'
+                };
+                break;
         }
 
         if (config) {

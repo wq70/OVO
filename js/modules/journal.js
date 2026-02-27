@@ -507,9 +507,11 @@ function renderJournalList() {
     });
 }
 
-async function generateJournal(start, end, includeFavorited = false) {
-    showToast('正在生成日记，请稍候...');
-    
+async function generateJournal(start, end, includeFavorited = false, silent = false) {
+    if (!silent) {
+        showToast('正在生成日记，请稍候...');
+    }
+
     // 显示列表占位卡片
     const container = document.getElementById('journal-list-container');
     const placeholder = document.getElementById('no-journals-placeholder');
@@ -778,7 +780,7 @@ Strictly output in JSON format only. Do not speak outside the JSON object.
         await saveData();
 
         renderJournalList();
-        showToast('新日记已生成！');
+        showToast(silent ? `日记总结已生成 (第${start}-${end}条)` : '新日记已生成！');
 
     } catch (error) {
         // 移除生成卡片
@@ -835,4 +837,40 @@ function migrateJournalSettings(chat) {
         return migrationMsg;
     }
     return null;
+}
+
+/**
+ * 在 AI 回复完成后调用：若开启自动总结且达到间隔，则静默总结到最近一个完整区间（如 1-100），不包含超出部分。
+ * @param {Object} chat - 当前聊天对象（character 或 group）
+ */
+async function checkAndTriggerAutoJournal(chat) {
+    if (!chat || !chat.autoJournalEnabled) return;
+    if (typeof isGenerating !== 'undefined' && isGenerating) return;
+
+    const currentCount = (chat.history || []).length;
+    const lastIndex = chat.lastAutoJournalIndex || 0;
+    const interval = Math.max(10, parseInt(chat.autoJournalInterval, 10) || 100);
+    const passedCount = currentCount - lastIndex;
+
+    if (passedCount < interval) return;
+
+    const completedIntervals = Math.floor(passedCount / interval);
+    const endIndex = lastIndex + completedIntervals * interval;
+    const startIndex = lastIndex + 1;
+
+    const savedChatId = currentChatId;
+    const savedChatType = currentChatType;
+    currentChatId = chat.id;
+    currentChatType = db.characters.some(c => c.id === chat.id) ? 'private' : 'group';
+
+    try {
+        await generateJournal(startIndex, endIndex, false, true);
+        chat.lastAutoJournalIndex = endIndex;
+        await saveData();
+    } catch (err) {
+        console.error('自动总结失败:', err);
+    } finally {
+        currentChatId = savedChatId;
+        currentChatType = savedChatType;
+    }
 }

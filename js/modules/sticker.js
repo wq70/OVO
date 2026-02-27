@@ -1,5 +1,43 @@
 // --- 表情包管理 (js/modules/sticker.js) ---
 
+/**
+ * 宽泛格式解析单行：支持 名称:URL、名称：URL、名称 URL、名称URL 等
+ * 通过识别 http(s):// 提取 URL，其前为名称（自动去除末尾分隔符）
+ */
+function parseStickerLine(line) {
+    const trimmed = line.trim();
+    if (!trimmed) return null;
+    // 注释行
+    if (/^\s*[#\/\/]/.test(trimmed)) return null;
+    const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/);
+    if (!urlMatch) return null;
+    const url = urlMatch[0].replace(/[.,;:：，、]+$/, '').trim();
+    if (!url.startsWith('http')) return null;
+    const urlIndex = trimmed.indexOf(url);
+    let name = trimmed.substring(0, urlIndex).trim();
+    name = name.replace(/[:：\-|,，、\s]+$/, '').trim();
+    if (!name) return null;
+    return { name, url };
+}
+
+/**
+ * 从整段文本解析出所有表情条（每行一条，宽泛格式）
+ */
+function parseStickerText(text) {
+    if (!text || typeof text !== 'string') return [];
+    const lines = text.split(/\r?\n/);
+    const result = [];
+    const seen = new Set();
+    for (const line of lines) {
+        const item = parseStickerLine(line);
+        if (item && !seen.has(item.url)) {
+            seen.add(item.url);
+            result.push(item);
+        }
+    }
+    return result;
+}
+
 async function setupStickerSystem() {
     const stickerMenuBtn = document.getElementById('sticker-menu-btn');
     const stickerMenuActionSheet = document.getElementById('sticker-menu-actionsheet');
@@ -82,6 +120,14 @@ async function setupStickerSystem() {
         stickerUrlsTextarea.value = '';
         batchStickerGroupInput.value = '';
     });
+
+    document.getElementById('sticker-doc-import-open-btn').addEventListener('click', () => {
+        batchAddStickerModal.classList.remove('visible');
+        openStickerDocImportModal();
+    });
+
+    setupStickerDocImportModal();
+    setupStickerDocPreviewModal();
 
     menuAddNewBtn.addEventListener('click', () => {
         stickerMenuActionSheet.classList.remove('visible');
@@ -177,35 +223,21 @@ async function setupStickerSystem() {
         const textInput = stickerUrlsTextarea.value.trim();
         const groupName = batchStickerGroupInput.value.trim();
         if (!textInput) return showToast('请输入数据');
-        const lines = textInput.split('\n');
-        const newStickers = [];
-        for (const line of lines) {
-            let trimmedLine = line.trim().replace('：', ':');
-            if (!trimmedLine) continue;
-            const colonIndex = trimmedLine.indexOf(':');
-            if (colonIndex <= 0) continue;
-            const name = trimmedLine.substring(0, colonIndex).trim();
-            const url = trimmedLine.substring(colonIndex + 1).trim();
-            if (name && url.startsWith('http')) {
-                newStickers.push({
-                    id: `sticker_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    name: name,
-                    data: url,
-                    group: groupName,
-                    lastUsedTime: Date.now() 
-                });
-            }
-        }
-        if (newStickers.length > 0) {
-            db.myStickers.push(...newStickers);
-            await saveData();
-            batchAddStickerModal.classList.remove('visible');
-            showToast(`导入 ${newStickers.length} 个表情`);
-            renderStickerCategories();
-            renderStickerGrid();
-        } else {
-            showToast('格式错误');
-        }
+        const parsed = parseStickerText(textInput);
+        if (parsed.length === 0) return showToast('未解析到有效表情（需包含名称+http链接）');
+        const newStickers = parsed.map(({ name, url }) => ({
+            id: `sticker_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name,
+            data: url,
+            group: groupName,
+            lastUsedTime: Date.now()
+        }));
+        db.myStickers.push(...newStickers);
+        await saveData();
+        batchAddStickerModal.classList.remove('visible');
+        showToast(`导入 ${newStickers.length} 个表情`);
+        renderStickerCategories();
+        renderStickerGrid();
     });
 
     addStickerForm.addEventListener('submit', async (e) => {
@@ -467,4 +499,233 @@ async function sendSticker(sticker) {
     renderChatList();
     
     showPanel('none');
+}
+
+// --- 文档导入表情包（TXT/DOCX/ZIP）---
+let stickerDocParsedList = []; // 解析结果，供预览弹窗使用
+
+function openStickerDocImportModal() {
+    const modal = document.getElementById('sticker-doc-import-modal');
+    const fileList = document.getElementById('sticker-doc-import-file-list');
+    const startBtn = document.getElementById('sticker-doc-import-start-btn');
+    const fileInput = document.getElementById('sticker-doc-import-file-input');
+    if (!modal) return;
+    fileList.innerHTML = '';
+    startBtn.disabled = true;
+    fileInput.value = '';
+    modal.classList.add('visible');
+}
+
+function setupStickerDocImportModal() {
+    const modal = document.getElementById('sticker-doc-import-modal');
+    if (!modal) return;
+    const fileInput = document.getElementById('sticker-doc-import-file-input');
+    const dropZone = document.getElementById('sticker-doc-import-drop-zone');
+    const fileListEl = document.getElementById('sticker-doc-import-file-list');
+    const startBtn = document.getElementById('sticker-doc-import-start-btn');
+    const cancelBtn = document.getElementById('sticker-doc-import-cancel-btn');
+    const closeBtn = document.getElementById('sticker-doc-import-close-btn');
+    let selectedFiles = [];
+
+    function renderFileList() {
+        fileListEl.innerHTML = '';
+        if (selectedFiles.length === 0) {
+            startBtn.disabled = true;
+            return;
+        }
+        startBtn.disabled = false;
+        selectedFiles.forEach((file, idx) => {
+            const ext = file.name.split('.').pop().toLowerCase();
+            const icon = ext === 'zip' ? '🗜️' : ext === 'docx' ? '📝' : '📄';
+            const item = document.createElement('div');
+            item.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; background:#f8f8f8; margin-bottom:6px;';
+            item.innerHTML = `
+                <span style="font-size:18px;">${icon}</span>
+                <span style="flex:1; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${file.name}</span>
+                <button type="button" style="background:none; border:none; color:#ff4d4f; cursor:pointer; font-size:16px; padding:2px 6px;">×</button>
+            `;
+            const removeBtn = item.querySelector('button');
+            removeBtn.addEventListener('click', () => {
+                selectedFiles.splice(idx, 1);
+                renderFileList();
+            });
+            fileListEl.appendChild(item);
+        });
+    }
+
+    function handleFiles(files) {
+        const validExts = ['txt', 'docx', 'zip'];
+        const newFiles = Array.from(files).filter(f => {
+            const ext = f.name.split('.').pop().toLowerCase();
+            return validExts.includes(ext);
+        });
+        if (newFiles.length < Array.from(files).length) {
+            showToast('部分文件格式不支持，已过滤（仅支持 TXT/DOCX/ZIP）');
+        }
+        selectedFiles = [...selectedFiles, ...newFiles];
+        const seen = new Set();
+        selectedFiles = selectedFiles.filter(f => {
+            if (seen.has(f.name)) return false;
+            seen.add(f.name);
+            return true;
+        });
+        renderFileList();
+    }
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+        e.target.value = '';
+    });
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#4a90e2';
+        dropZone.style.background = '#f0f7ff';
+    });
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.style.borderColor = '#ddd';
+        dropZone.style.background = '';
+    });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#ddd';
+        dropZone.style.background = '';
+        handleFiles(e.dataTransfer.files);
+    });
+
+    [cancelBtn, closeBtn].forEach(btn => {
+        btn.addEventListener('click', () => {
+            modal.classList.remove('visible');
+            selectedFiles = [];
+        });
+    });
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('visible');
+            selectedFiles = [];
+        }
+    });
+
+    startBtn.addEventListener('click', async () => {
+        if (selectedFiles.length === 0) return;
+        modal.classList.remove('visible');
+        startBtn.disabled = true;
+        showToast('正在解析文档…');
+        const allParsed = [];
+        const seenUrls = new Set();
+        try {
+            for (const file of selectedFiles) {
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (ext === 'txt') {
+                    const content = await readFileAsText(file);
+                    const items = parseStickerText(content);
+                    items.forEach(it => {
+                        if (!seenUrls.has(it.url)) {
+                            seenUrls.add(it.url);
+                            allParsed.push(it);
+                        }
+                    });
+                } else if (ext === 'docx') {
+                    const content = await parseDocxFile(file);
+                    const items = parseStickerText(content);
+                    items.forEach(it => {
+                        if (!seenUrls.has(it.url)) {
+                            seenUrls.add(it.url);
+                            allParsed.push(it);
+                        }
+                    });
+                } else if (ext === 'zip') {
+                    const extracted = await parseZipFile(file);
+                    for (const { content } of extracted) {
+                        const items = parseStickerText(content);
+                        items.forEach(it => {
+                            if (!seenUrls.has(it.url)) {
+                                seenUrls.add(it.url);
+                                allParsed.push(it);
+                            }
+                        });
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('文档解析失败:', err);
+            showToast('解析失败: ' + (err.message || '未知错误'));
+            startBtn.disabled = false;
+            return;
+        }
+        selectedFiles = [];
+        startBtn.disabled = false;
+        if (allParsed.length === 0) {
+            showToast('未从文档中解析到有效表情（需每行包含名称+http链接）');
+            return;
+        }
+        stickerDocParsedList = allParsed;
+        showStickerDocPreviewModal();
+    });
+}
+
+function showStickerDocPreviewModal() {
+    const modal = document.getElementById('sticker-doc-preview-modal');
+    const listEl = document.getElementById('sticker-doc-preview-list');
+    const countEl = document.getElementById('sticker-doc-preview-count');
+    const groupInput = document.getElementById('sticker-doc-preview-group');
+    if (!modal || !listEl) return;
+    countEl.textContent = stickerDocParsedList.length;
+    groupInput.value = '';
+    listEl.innerHTML = '';
+    stickerDocParsedList.forEach((it, i) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:6px; background:#fff; margin-bottom:4px; border:1px solid #eee;';
+        row.innerHTML = `
+            <img src="${it.url}" alt="" style="width:40px; height:40px; object-fit:contain; border-radius:4px; flex-shrink:0;" onerror="this.style.background='#f0f0f0';this.src='';">
+            <div style="flex:1; min-width:0;">
+                <div style="font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(it.name)}</div>
+                <div style="font-size:11px; color:#888; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(it.url)}</div>
+            </div>
+        `;
+        listEl.appendChild(row);
+    });
+    modal.classList.add('visible');
+}
+
+function setupStickerDocPreviewModal() {
+    const modal = document.getElementById('sticker-doc-preview-modal');
+    if (!modal) return;
+    const confirmBtn = document.getElementById('sticker-doc-preview-confirm-btn');
+    const cancelBtn = document.getElementById('sticker-doc-preview-cancel-btn');
+    const groupInput = document.getElementById('sticker-doc-preview-group');
+    cancelBtn.addEventListener('click', () => {
+        modal.classList.remove('visible');
+        stickerDocParsedList = [];
+    });
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('visible');
+            stickerDocParsedList = [];
+        }
+    });
+    confirmBtn.addEventListener('click', async () => {
+        const groupName = groupInput.value.trim();
+        const newStickers = stickerDocParsedList.map(({ name, url }) => ({
+            id: `sticker_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name,
+            data: url,
+            group: groupName,
+            lastUsedTime: Date.now()
+        }));
+        db.myStickers.push(...newStickers);
+        await saveData();
+        modal.classList.remove('visible');
+        stickerDocParsedList = [];
+        showToast(`已导入 ${newStickers.length} 个表情`);
+        renderStickerCategories();
+        renderStickerGrid();
+    });
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }

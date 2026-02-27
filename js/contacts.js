@@ -265,6 +265,10 @@ function openProfileCard(charId) {
     messageBtn.dataset.charId = charId;
 
     document.getElementById('profile-card-modal').classList.add('visible');
+
+    if (window.GuideSystem) {
+        setTimeout(() => window.GuideSystem.check('guide_token_distribution'), 300);
+    }
 }
 
 // 打开 Token 分布弹窗（饼图 + 可点击详情 + 汇总）

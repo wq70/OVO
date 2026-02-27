@@ -757,6 +757,11 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
         if (window.BatteryInteraction && typeof window.BatteryInteraction.triggerIndependentCheck === 'function') {
             window.BatteryInteraction.triggerIndependentCheck(chat);
         }
+
+        // 回复全部结束后检查是否达到自动总结间隔，若达到则静默总结到完整区间（如 1-100）
+        if (typeof checkAndTriggerAutoJournal === 'function') {
+            setTimeout(() => checkAndTriggerAutoJournal(chat), 500);
+        }
     }
 }
 
