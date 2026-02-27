@@ -76,6 +76,10 @@ const switchScreen = (targetId) => {
     if (targetId === 'piggy-bank-screen' && typeof renderPiggyBankScreen === 'function') {
         renderPiggyBankScreen();
     }
+    if (targetId === 'music-screen') {
+        if (typeof initMusicPlayer === 'function') initMusicPlayer();
+        if (typeof onShowMusicScreen === 'function') onShowMusicScreen();
+    }
     if (targetId === 'contacts-screen') {
         if (typeof renderContactList === 'function') renderContactList();
         if (typeof renderMyProfile === 'function') renderMyProfile();

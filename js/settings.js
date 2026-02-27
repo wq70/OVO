@@ -2106,6 +2106,14 @@ function setupCustomizeApp() {
             document.getElementById('global-css-import-file').click();
             return;
         }
+        if (target.matches('#bubble-css-import-doc-btn')) {
+            document.getElementById('bubble-css-import-file').click();
+            return;
+        }
+        if (target.matches('#group-bubble-css-import-doc-btn')) {
+            document.getElementById('group-bubble-css-import-file').click();
+            return;
+        }
         
         if (target.matches('#reset-global-css-btn')) {
             const textarea = document.getElementById('global-beautification-css');
@@ -2306,6 +2314,74 @@ function setupCustomizeApp() {
             if (!file) return;
             const ext = (file.name.split('.').pop() || '').toLowerCase();
             const textarea = document.getElementById('global-beautification-css');
+            if (!textarea) return;
+            try {
+                let content = '';
+                if (ext === 'txt') {
+                    content = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => resolve(ev.target.result || '');
+                        reader.onerror = () => reject(new Error('读取TXT失败'));
+                        reader.readAsText(file, 'UTF-8');
+                    });
+                } else if (ext === 'docx') {
+                    if (typeof mammoth === 'undefined') {
+                        showToast('mammoth.js 未加载，无法解析 DOCX');
+                        return;
+                    }
+                    content = await parseDocxFile(file);
+                } else {
+                    showToast('仅支持 .txt 或 .docx 文件');
+                    return;
+                }
+                textarea.value = (content || '').trim();
+                showToast('已导入文档内容');
+            } catch (err) {
+                console.error('导入文档失败', err);
+                showToast('导入失败：' + (err.message || '未知错误'));
+            }
+            return;
+        }
+        if (e.target.id === 'bubble-css-import-file') {
+            const file = e.target.files && e.target.files[0];
+            e.target.value = '';
+            if (!file) return;
+            const ext = (file.name.split('.').pop() || '').toLowerCase();
+            const textarea = document.getElementById('setting-custom-bubble-css');
+            if (!textarea) return;
+            try {
+                let content = '';
+                if (ext === 'txt') {
+                    content = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => resolve(ev.target.result || '');
+                        reader.onerror = () => reject(new Error('读取TXT失败'));
+                        reader.readAsText(file, 'UTF-8');
+                    });
+                } else if (ext === 'docx') {
+                    if (typeof mammoth === 'undefined') {
+                        showToast('mammoth.js 未加载，无法解析 DOCX');
+                        return;
+                    }
+                    content = await parseDocxFile(file);
+                } else {
+                    showToast('仅支持 .txt 或 .docx 文件');
+                    return;
+                }
+                textarea.value = (content || '').trim();
+                showToast('已导入文档内容');
+            } catch (err) {
+                console.error('导入文档失败', err);
+                showToast('导入失败：' + (err.message || '未知错误'));
+            }
+            return;
+        }
+        if (e.target.id === 'group-bubble-css-import-file') {
+            const file = e.target.files && e.target.files[0];
+            e.target.value = '';
+            if (!file) return;
+            const ext = (file.name.split('.').pop() || '').toLowerCase();
+            const textarea = document.getElementById('setting-group-custom-bubble-css');
             if (!textarea) return;
             try {
                 let content = '';
@@ -2848,9 +2924,55 @@ function exportTTSPresets() {
     showToast('TTS 预设已导出');
 }
 
-// 在页面加载时填充 TTS 预设列表
+// 在页面加载时填充 TTS 预设列表，并绑定气泡样式「导入文档」（委托到 document，因按钮在 chat/group-settings-form 内）
 document.addEventListener('DOMContentLoaded', () => {
     populateTTSPresetSelect();
+
+    document.addEventListener('click', (e) => {
+        if (e.target.matches('#bubble-css-import-doc-btn')) {
+            const el = document.getElementById('bubble-css-import-file');
+            if (el) el.click();
+        } else if (e.target.matches('#group-bubble-css-import-doc-btn')) {
+            const el = document.getElementById('group-bubble-css-import-file');
+            if (el) el.click();
+        }
+    });
+    document.addEventListener('change', async (e) => {
+        if (e.target.id === 'bubble-css-import-file' || e.target.id === 'group-bubble-css-import-file') {
+            const file = e.target.files && e.target.files[0];
+            e.target.value = '';
+            const textareaId = e.target.id === 'bubble-css-import-file' ? 'setting-custom-bubble-css' : 'setting-group-custom-bubble-css';
+            if (!file) return;
+            const ext = (file.name.split('.').pop() || '').toLowerCase();
+            const textarea = document.getElementById(textareaId);
+            if (!textarea) return;
+            try {
+                let content = '';
+                if (ext === 'txt') {
+                    content = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => resolve(ev.target.result || '');
+                        reader.onerror = () => reject(new Error('读取TXT失败'));
+                        reader.readAsText(file, 'UTF-8');
+                    });
+                } else if (ext === 'docx') {
+                    if (typeof mammoth === 'undefined') {
+                        showToast('mammoth.js 未加载，无法解析 DOCX');
+                        return;
+                    }
+                    content = await parseDocxFile(file);
+                } else {
+                    showToast('仅支持 .txt 或 .docx 文件');
+                    return;
+                }
+                textarea.value = (content || '').trim();
+                showToast('已导入文档内容');
+            } catch (err) {
+                console.error('导入文档失败', err);
+                showToast('导入失败：' + (err.message || '未知错误'));
+            }
+        }
+    });
 });
 
 

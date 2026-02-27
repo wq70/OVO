@@ -109,7 +109,8 @@ function renderPostDetail(post) {
         post.comments.forEach(comment => {
             const firstChar = (comment.username || '').charAt(0).toUpperCase() || '?';
             const isUserComment = comment.authorId === 'user';
-            const isAuthor = comment.authorId === post.authorId;
+            // 只有用户发的帖子里，用户在自己帖子下的回复才显示楼主
+            const isAuthor = (post.authorId === 'user') && (comment.authorId === post.authorId);
             const userAvatarUrl = comment.avatar || (db.forumUserProfile && db.forumUserProfile.avatar) || defaultAvatarUrl;
             const avatarHtml = isUserComment
                 ? `<img src="${userAvatarUrl}" class="comment-author-avatar" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">`

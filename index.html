@@ -50,6 +50,7 @@
     <link rel="stylesheet" href="css/modules/video_call.css">
     <link rel="stylesheet" href="css/modules/archive.css">
     <link rel="stylesheet" href="css/modules/favorites.css">
+    <link rel="stylesheet" href="css/modules/music_player.css">
 
     <!-- Other Styles -->
     <link rel="stylesheet" href="contacts.css">
@@ -610,9 +611,6 @@
                 </div>
             </div>
 
-            <div id="music-screen" class="screen"></div>
-
-
             <div id="multi-select-bar"><span id="select-count">已选择 0 项</span>
                 <button class="btn btn-danger" id="delete-selected-btn" style="width: auto; padding: 8px 16px;">删除已选</button>
                 <button class="btn btn-primary" id="favorite-selected-btn" style="display: none; width: auto; padding: 8px 16px;">收藏选中</button>
@@ -624,6 +622,77 @@
             </div>
         </div> <!-- 这里是 chat-room-screen 的结束标签 -->
 
+        <!-- 后台保活 · 音乐播放器 -->
+        <div id="music-screen" class="screen">
+            <header class="app-header">
+                <button class="back-btn" data-target="home-screen" type="button">‹</button>
+                <div class="title-container">
+                    <h1 class="title">音乐</h1>
+                </div>
+                <div class="placeholder"></div>
+            </header>
+            <main class="content music-player-content">
+                <div class="music-hero">
+                    <button type="button" class="music-cover-wrap" id="music-cover-wrap">
+                        <div class="music-cover-placeholder" id="music-cover-placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13M9 9l12-2"/></svg>
+                            <span class="music-cover-hint">点击选择音频来源</span>
+                        </div>
+                        <img class="music-cover-img" id="music-cover-img" src="" alt="" style="display:none;">
+                    </button>
+                    <h2 class="music-title" id="music-title">未选择音频</h2>
+                    <p class="music-meta" id="music-meta">循环播放 · 后台保活</p>
+                </div>
+                <div class="music-source-btns">
+                    <button type="button" class="music-source-btn" id="music-btn-local">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                        <span>本地上传</span>
+                    </button>
+                    <button type="button" class="music-source-btn" id="music-btn-url">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        <span>URL</span>
+                    </button>
+                </div>
+                <input type="file" id="music-file-input" accept="audio/*" hidden>
+                <div class="music-url-row" id="music-url-row">
+                    <input type="text" id="music-url-input" class="music-url-input" placeholder="输入音频链接 (http/https)">
+                    <button type="button" class="music-url-apply-btn" id="music-url-apply-btn">使用</button>
+                </div>
+                <div class="music-controls">
+                    <div class="music-progress-wrap">
+                        <span class="music-time-current" id="music-time-current">0:00</span>
+                        <input type="range" class="music-progress" id="music-progress" min="0" max="100" value="0" step="0.1">
+                        <span class="music-time-total" id="music-time-total">0:00</span>
+                    </div>
+                    <div class="music-buttons">
+                        <button type="button" class="music-btn music-btn-prev" id="music-btn-prev" title="上一首" disabled><svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M6 5h2v14H6V5zm4 4v6l8-3-8-3z"/></svg></button>
+                        <button type="button" class="music-btn music-btn-play" id="music-btn-play" title="播放"><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="40" height="40"><path d="M8 5v14l11-7L8 5z"/></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="40" height="40" style="display:none;"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg></button>
+                        <button type="button" class="music-btn music-btn-next" id="music-btn-next" title="下一首" disabled><svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M14 5v14l8-7-8-7zm-8 5h2v9H6v-9z"/></svg></button>
+                    </div>
+                    <label class="music-loop-wrap">
+                        <input type="checkbox" id="music-loop-check" checked>
+                        <span>循环播放</span>
+                    </label>
+                </div>
+                <button type="button" class="music-lyrics-toggle" id="music-lyrics-toggle">歌词</button>
+                <div class="music-lyrics-wrap" id="music-lyrics-wrap">
+                    <div class="music-lyrics-inner" id="music-lyrics-inner">
+                        <button type="button" class="music-lyrics-edit-link" id="music-lyrics-edit-link">编辑歌词</button>
+                        <p class="music-lyrics-empty" id="music-lyrics-empty">暂无歌词，点击「编辑歌词」粘贴 LRC</p>
+                        <textarea class="music-lyrics-edit" id="music-lyrics-edit" placeholder="粘贴 LRC 歌词（可选）" style="display:none;"></textarea>
+                    </div>
+                </div>
+            </main>
+        </div>
+        <!-- 封面点击：选择音频来源 -->
+        <div id="music-source-sheet" class="action-sheet-overlay">
+            <div class="action-sheet music-source-sheet">
+                <div class="action-sheet-title">选择音频来源</div>
+                <button type="button" class="action-sheet-button" id="music-sheet-local">本地上传</button>
+                <button type="button" class="action-sheet-button" id="music-sheet-url">输入 URL</button>
+                <button type="button" class="action-sheet-button music-sheet-cancel">取消</button>
+            </div>
+        </div>
 
         <!-- 新增：管理菜单 (点击右上角菜单键出现) -->
         <div id="sticker-menu-actionsheet" class="action-sheet-overlay">
@@ -2560,6 +2629,8 @@
                                         style="width:100%; border:1px solid #eee; border-radius:8px; padding:5px;"
                                         disabled></textarea>
                                     <div style="display:flex; justify-content:flex-end; gap:5px; margin-top:5px;">
+                                        <button type="button" id="bubble-css-import-doc-btn" class="btn btn-small" style="padding:4px 8px;">导入文档</button>
+                                        <input type="file" id="bubble-css-import-file" accept=".txt,.docx" style="display:none;">
                                         <select id="bubble-preset-select" style="width:100px;">
                                             <option value="">预设</option>
                                         </select>
@@ -2987,6 +3058,8 @@
                                     style="width:100%; border:1px solid #eee; border-radius:8px; padding:5px;"
                                     disabled></textarea>
                                 <div style="display:flex; justify-content:flex-end; gap:5px; margin-top:5px;">
+                                    <button type="button" id="group-bubble-css-import-doc-btn" class="btn btn-small" style="padding:4px 8px;">导入文档</button>
+                                    <input type="file" id="group-bubble-css-import-file" accept=".txt,.docx" style="display:none;">
                                     <select id="group-bubble-preset-select" style="width:100px;">
                                         <option value="">预设</option>
                                     </select>
@@ -5081,6 +5154,7 @@
     <script src="js/modules/video_call.js"></script> <!-- 视频通话模块 -->
     <script src="js/modules/archive.js"></script> <!-- 记忆存档库模块 -->
     <script src="js/modules/piggy_bank.js"></script> <!-- 存钱罐（钱包）模块 -->
+    <script src="js/modules/music_player.js"></script> <!-- 音乐播放器（后台保活） -->
 
     <!-- [4. 程序入口] -->
     <script src="js/main.js"></script> <!-- 主入口：初始化(init)、全局事件监听 -->
