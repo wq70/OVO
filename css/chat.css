@@ -518,9 +518,11 @@
 .pv-card .message-time,
 .transfer-card .message-time,
 .gift-card .message-time,
+.location-card .message-time,
 .pomodoro-record-card .message-time,
 .forum-share-card .message-time,
-.shop-order-card .message-time {
+.shop-order-card .message-time,
+.theater-share-card-bubble .message-time {
     font-size: 10px;
     color: #aaa;
     position: absolute;
@@ -540,7 +542,8 @@
 #chat-room-screen.show-timestamp .gift-card .message-time,
 #chat-room-screen.show-timestamp .pomodoro-record-card .message-time,
 #chat-room-screen.show-timestamp .forum-share-card .message-time,
-#chat-room-screen.show-timestamp .shop-order-card .message-time {
+#chat-room-screen.show-timestamp .shop-order-card .message-time,
+#chat-room-screen.show-timestamp .theater-share-card-bubble .message-time {
     display: block;
 }
 
@@ -553,7 +556,8 @@
 .message-wrapper.received .gift-card .message-time,
 .message-wrapper.received .pomodoro-record-card .message-time,
 .message-wrapper.received .forum-share-card .message-time,
-.message-wrapper.received .shop-order-card .message-time {
+.message-wrapper.received .shop-order-card .message-time,
+.message-wrapper.received .theater-share-card-bubble .message-time {
     left: 100%;
     margin-left: 6px;
 }
@@ -567,7 +571,8 @@
 .message-wrapper.sent .gift-card .message-time,
 .message-wrapper.sent .pomodoro-record-card .message-time,
 .message-wrapper.sent .forum-share-card .message-time,
-.message-wrapper.sent .shop-order-card .message-time {
+.message-wrapper.sent .shop-order-card .message-time,
+.message-wrapper.sent .theater-share-card-bubble .message-time {
     right: 100%;
     margin-right: 6px;
 }
@@ -1010,6 +1015,127 @@
     color: #999;
 }
 
+/* 发送定位弹窗：距你约 一行 — 数字 60%，单位 40% */
+.location-distance-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+.location-distance-row .location-distance-num {
+    width: 60%;
+    flex: 0 0 60%;
+    min-width: 0;
+    box-sizing: border-box;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.location-distance-row .location-unit-select {
+    width: 40%;
+    flex: 0 0 40%;
+    min-width: 0;
+    box-sizing: border-box;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+/* 定位卡片 - 对齐转账/小票风格，更精致 */
+.location-card {
+    width: 200px;
+    min-height: 116px;
+    background-color: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06);
+    color: #333;
+    margin: 0 8px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.message-wrapper.sent .location-card { border-bottom-right-radius: 5px; }
+.message-wrapper.received .location-card { border-bottom-left-radius: 5px; }
+
+.location-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background-color: #8e8e93;
+}
+
+.location-content {
+    padding: 10px 12px 8px 12px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-shadow: none;
+}
+
+.location-title {
+    font-size: 11px;
+    color: #999;
+    margin: 4px 0 0 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.location-title::before {
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    background-color: #8e8e93;
+    border-radius: 3px;
+    flex-shrink: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z'/%3E%3C/svg%3E");
+    background-size: 10px 10px;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.location-place {
+    font-size: 18px;
+    font-weight: 700;
+    color: #191919;
+    line-height: 1.3;
+    margin: 4px 0 0 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+}
+
+.location-distance {
+    font-size: 11px;
+    color: #666;
+    margin: 2px 0 0 0;
+    line-height: 1.3;
+    flex-shrink: 0;
+}
+
+.location-status {
+    font-size: 10px;
+    color: #e5e5e5;
+    background-color: #333;
+    padding: 4px 0;
+    text-align: center;
+    border-radius: 4px;
+    font-weight: 500;
+    margin-top: 6px;
+    flex-shrink: 0;
+}
+
 /* 礼物卡片 */
 .gift-card {
     width: 230px;
@@ -1360,6 +1486,64 @@
     cursor: pointer;
     padding: 5px;
     line-height: 1;
+}
+
+/* 表情包智能匹配栏（输入框上方） */
+.sticker-smart-match-bar {
+    padding: 8px 12px;
+    background-color: rgba(248, 248, 248, 0.98);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.sticker-smart-match-list {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 0;
+    -webkit-overflow-scrolling: touch;
+}
+
+.sticker-smart-match-list::-webkit-scrollbar {
+    height: 4px;
+}
+
+.sticker-smart-match-list::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 2px;
+}
+
+.sticker-smart-match-item {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sticker-smart-match-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.sticker-smart-match-item:active {
+    transform: scale(0.98);
+}
+
+.sticker-smart-match-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 /* 扩展面板 */
@@ -2101,4 +2285,68 @@
     object-fit: cover;
     display: inline-block;
     vertical-align: middle;
+}
+
+/* 开场白左右切换：消息在上，左右按钮在底部 */
+.greeting-switcher-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+    max-width: 75%;
+    margin-bottom: 2px;
+}
+.greeting-switcher-body {
+    width: 100%;
+    min-width: 0;
+    border-radius: 12px;
+}
+.greeting-switcher-body .message-wrapper {
+    margin: 0;
+}
+.greeting-switcher-body .message-bubble-row {
+    width: 100%;
+}
+.greeting-switcher-body .message-bubble {
+    font-size: 0.92em;
+    line-height: 1.5;
+    max-width: 100%;
+}
+.greeting-switcher-btns {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+.greeting-switcher-btn {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.06);
+    border: none;
+    border-radius: 12px;
+    font-size: 20px;
+    line-height: 1;
+    color: #666;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+.greeting-switcher-btn:hover {
+    background: rgba(0,0,0,0.1);
+    color: #333;
+}
+.greeting-switcher-btn:active {
+    background: rgba(0,0,0,0.12);
+}
+/* 仅一条开场白时：首条角色消息与普通消息同宽，高度自然往下长 */
+.message-wrapper.is-first-greeting {
+    max-width: 75%;
+}
+.message-wrapper.is-first-greeting .message-bubble {
+    font-size: 0.92em;
+    line-height: 1.5;
 }

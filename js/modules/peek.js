@@ -88,6 +88,34 @@ function setupPeekFeature() {
                 showToast('已重置为默认图标');
             }
         }
+        // 微博小号头像：重置为默认
+        if (e.target.classList.contains('peek-unlock-avatar-reset-btn')) {
+            const urlInput = document.getElementById('peek-unlock-avatar-url');
+            if (urlInput) {
+                urlInput.value = '';
+                showToast('已重置为默认头像');
+            }
+        }
+    });
+
+    // 微博小号头像：本地上传
+    document.addEventListener('change', async (e) => {
+        if (e.target.classList.contains('peek-unlock-avatar-file-upload')) {
+            const file = e.target.files[0];
+            if (file) {
+                try {
+                    const compressedUrl = await compressImage(file, { quality: 0.85, maxWidth: 512, maxHeight: 512 });
+                    const urlInput = document.getElementById('peek-unlock-avatar-url');
+                    if (urlInput) {
+                        urlInput.value = compressedUrl;
+                        showToast('头像已压缩并填入输入框');
+                    }
+                } catch (err) {
+                    showToast('头像压缩失败，请重试');
+                }
+            }
+            e.target.value = '';
+        }
     });
 
     document.getElementById('save-peek-settings-btn')?.addEventListener('click', async () => {
@@ -1217,23 +1245,65 @@ function renderPeekSteps(data) {
     annotationEl.textContent = data.annotation;
 }
 
-function extractTransfersFromHistory(history) {
+function extractTransfersFromHistory(history, realName, myName) {
     const privateReceivedTransferRegex = /\[.*?的转账[：:]([\d.,]+)元[；;]备注[：:](.*?)\]/;
     const privateSentTransferRegex = /\[.*?给你转账[：:]([\d.,]+)元[；;]备注[：:](.*?)\]/;
+    const orderRegex = /\[(.*?)为(.*?)下单了[：:](.*?)\|([\d.]+)\|(.*?)\]/;
     const income = [];
     const expense = [];
-    (history || []).forEach(m => {
+    const arr = history || [];
+    for (let i = 0; i < arr.length; i++) {
+        const m = arr[i];
         const content = m.content || '';
         const time = m.timestamp ? new Date(m.timestamp).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
         let match = content.match(privateReceivedTransferRegex);
-        if (match && m.role === 'char') {
+        if (match && (m.role === 'assistant' || m.role === 'char')) {
             expense.push({ amount: match[1], remark: (match[2] || '').trim(), time, source: '聊天记录' });
         }
         match = content.match(privateSentTransferRegex);
         if (match && m.role === 'user') {
             income.push({ amount: match[1], remark: (match[2] || '').trim(), time, source: '聊天记录' });
         }
-    });
+        // 商城：用户下单送给角色 → 角色收入
+        if (realName && myName) {
+            match = content.match(orderRegex);
+            if (match && m.role === 'user' && match[2].trim() === realName) {
+                income.push({ amount: match[4], remark: '用户下单赠送：' + (match[5] || '').trim(), time, source: '聊天记录' });
+            }
+            // 角色同意用户的代付请求 → 角色支出
+            if (m.role === 'assistant' && content.includes('同意了') && content.includes('的代付请求')) {
+                const agreedMatch = content.match(new RegExp(`\\[([^\\]]+?)同意了([^\\]]+?)的代付请求\\]`));
+                if (agreedMatch && agreedMatch[1].trim() === realName && agreedMatch[2].trim() === myName) {
+                    for (let j = i - 1; j >= 0; j--) {
+                        const prev = arr[j];
+                        if (prev.role === 'user' && prev.content && prev.content.includes('发起了代付请求')) {
+                            const amtMatch = prev.content.match(/发起了代付请求[：:]([\d.]+)\|/);
+                            if (amtMatch) {
+                                expense.push({ amount: amtMatch[1], remark: '代付给用户', time, source: '聊天记录' });
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            // 用户同意角色的代付请求 → 角色收入
+            if (m.role === 'user' && content.includes('同意了') && content.includes('的代付请求')) {
+                const agreedMatch = content.match(new RegExp(`\\[([^\\]]+?)同意了([^\\]]+?)的代付请求\\]`));
+                if (agreedMatch && agreedMatch[1].trim() === myName && agreedMatch[2].trim() === realName) {
+                    for (let j = i - 1; j >= 0; j--) {
+                        const prev = arr[j];
+                        if (prev.role === 'assistant' && prev.content && prev.content.includes('发起了代付请求')) {
+                            const amtMatch = prev.content.match(/发起了代付请求[：:]([\d.]+)\|/);
+                            if (amtMatch) {
+                                income.push({ amount: amtMatch[1], remark: '用户代付', time, source: '聊天记录' });
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
     return { income, expense };
 }
 
@@ -1253,10 +1323,10 @@ function generatePeekContentPrompt(char, appType, mainChatContext) {
 
     // 收集关联的 + 全局的世界书（去重）
     const associatedIds = char.worldBookIds || [];
-    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
     const globalIds = globalBooks.map(wb => wb.id);
     const allBookIds = [...new Set([...associatedIds, ...globalIds])];
-    const associatedWorldBooks = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
+    const associatedWorldBooks = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id)).filter(wb => wb && !wb.disabled);
     if (associatedWorldBooks.length > 0) {
         const worldBookContext = associatedWorldBooks.map(wb => `设定名: ${wb.name}\n内容: ${wb.content}`).join('\n\n');
         prompt += `\n为了更好地理解背景，请参考以下世界观设定：\n---\n${worldBookContext}\n---\n`;
@@ -1415,10 +1485,10 @@ ${diaryContext ? `- 长期记忆（日记总结）：\n${diaryContext}` : ''}
        }
         case 'wallet': {
             const associatedIds = char.worldBookIds || [];
-            const globalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+            const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
             const globalIds = globalBooks.map(wb => wb.id);
             const allBookIds = [...new Set([...associatedIds, ...globalIds])];
-            const worldBooks = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
+            const worldBooks = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id)).filter(wb => wb && !wb.disabled);
             const worldBookText = worldBooks.length
                 ? worldBooks.map(wb => `【${wb.name}】\n${wb.content}`).join('\n\n')
                 : '无';
@@ -1427,19 +1497,19 @@ ${diaryContext ? `- 长期记忆（日记总结）：\n${diaryContext}` : ''}
                 .map(j => `${j.title}\n${j.content}`)
                 .join('\n\n---\n\n');
             const memoirText = favoritedJournals || '无';
-            const realTransfers = extractTransfersFromHistory(char.history);
+            const realTransfers = extractTransfersFromHistory(char.history, char.realName, char.myName);
             let transferContext = '';
             if (realTransfers.income.length || realTransfers.expense.length) {
-                transferContext = '【角色收到的转账（收入）】\n';
+                transferContext = '【角色收到的转账/商城收入】\n';
                 realTransfers.income.forEach(t => {
                     transferContext += `- ${t.amount}元，备注：${t.remark}${t.time ? '，时间：' + t.time : ''}\n`;
                 });
-                transferContext += '\n【角色发出的转账（支出，如给用户的转账）】\n';
+                transferContext += '\n【角色发出的转账/商城代付等支出】\n';
                 realTransfers.expense.forEach(t => {
                     transferContext += `- ${t.amount}元，备注：${t.remark}${t.time ? '，时间：' + t.time : ''}\n`;
                 });
             } else {
-                transferContext = '（暂无从聊天/记忆中解析到的转账）';
+                transferContext = '（暂无从聊天/记忆中解析到的转账或商城收支）';
             }
             prompt += `你正在模拟角色「${char.realName}」的钱包账单。请根据以下信息生成一份合理、有沉浸感的账单。
 
@@ -1448,9 +1518,9 @@ ${diaryContext ? `- 长期记忆（日记总结）：\n${diaryContext}` : ''}
 【世界书/背景】\n${worldBookText.slice(0, 1500)}\n
 【长期记忆】\n${memoirText.slice(0, 1500)}\n
 【近期对话】\n${mainChatContext}\n
-【必须纳入账单的真实转账】\n${transferContext}\n
+【必须纳入账单的真实转账与商城/代付收支】\n${transferContext}\n
 
-要求：1）上方真实转账必须全部出现在 income 或 expense 中，且 amount、remark 一致；2）可再根据人设与记忆补充其他收支项（如工资、购物、红包等）；3）只输出一个 JSON，不要 markdown 或解释。格式如下，每条记录含 amount、remark、time、source（填"聊天记录"或"人设生成"）：
+要求：1）上方真实转账与商城/代付收支必须全部出现在 income 或 expense 中，且 amount、remark 一致；2）可再根据人设与记忆补充其他收支项（如工资、购物、红包等）；3）只输出一个 JSON，不要 markdown 或解释。格式如下，每条记录含 amount、remark、time、source（填"聊天记录"或"人设生成"）：
 {"summary":{"balance":"当前余额说明或数字","monthIncome":"本月收入合计","monthExpense":"本月支出合计"},"income":[{"amount":"","remark":"","time":"","source":""}],"expense":[{"amount":"","remark":"","time":"","source":""}]}`;
             break;
         }

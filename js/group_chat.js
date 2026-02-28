@@ -79,7 +79,11 @@ function setupGroupChatSystem() {
                 customBubbleCss: '',
                 worldBookIds: [],
                 allowGossip: false,
-                privateSessions: {}
+                privateSessions: {},
+                // 群聊 <- 私聊：是否允许群聊中的角色读取其私聊记忆（默认关闭）
+                syncPrivateMemory: false,
+                privateMemoryHistoryCount: 20,
+                privateMemorySummaryCount: 0
             };
             db.groups.push(newGroup);
             await saveData();
@@ -99,7 +103,8 @@ function setupGroupChatSystem() {
     // --- 自动保存逻辑 (Group Chat) ---
     const groupAutoSaveInputs = [
         'setting-group-name', 'setting-group-my-nickname', 'setting-group-my-persona',
-        'setting-group-max-memory', 'setting-group-auto-journal-interval', 'setting-group-custom-bubble-css', 'setting-group-notice'
+        'setting-group-max-memory', 'setting-group-auto-journal-interval', 'setting-group-custom-bubble-css', 'setting-group-notice',
+        'setting-group-private-memory-history-count', 'setting-group-private-memory-summary-count'
     ];
     groupAutoSaveInputs.forEach(id => {
         const el = document.getElementById(id);
@@ -115,6 +120,18 @@ function setupGroupChatSystem() {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', () => saveGroupSettingsFromSidebar(false));
     });
+
+    // 群聊角色私聊记忆互通（群聊 <- 私聊）
+    const syncPrivateMemorySwitch = document.getElementById('setting-group-sync-private-memory');
+    if (syncPrivateMemorySwitch) {
+        syncPrivateMemorySwitch.addEventListener('change', (e) => {
+            const historyContainer = document.getElementById('setting-group-private-memory-history-container');
+            const summaryContainer = document.getElementById('setting-group-private-memory-summary-container');
+            if (historyContainer) historyContainer.style.display = e.target.checked ? 'flex' : 'none';
+            if (summaryContainer) summaryContainer.style.display = e.target.checked ? 'flex' : 'none';
+            saveGroupSettingsFromSidebar(false);
+        });
+    }
 
     const showGroupNoticeCheckbox = document.getElementById('setting-group-show-notice');
     const groupNoticeTextarea = document.getElementById('setting-group-notice');
@@ -408,7 +425,9 @@ function setupGroupChatSystem() {
         linkGroupWorldBookBtn.addEventListener('click', () => {
             const group = db.groups.find(g => g.id === currentChatId);
             if (!group) return;
-            renderCategorizedWorldBookList(worldBookSelectionList, db.worldBooks, group.worldBookIds || [], 'wb-select-group');
+            const globalIds = (db.worldBooks || []).filter(wb => wb.isGlobal && !wb.disabled).map(wb => wb.id);
+            const displayIds = [...new Set([...(group.worldBookIds || []), ...globalIds])];
+            renderCategorizedWorldBookList(worldBookSelectionList, db.worldBooks, displayIds, 'wb-select-group');
             worldBookSelectionModal.classList.add('visible');
         });
     }
@@ -914,6 +933,36 @@ function loadGroupSettingsToSidebar() {
     themeSelect.value = group.theme || 'white_pink';
     document.getElementById('setting-group-max-memory').value = group.maxMemory;
 
+    // --- 群聊 <- 私聊：群成员私聊记忆互通 ---
+    const syncPrivateMemoryEl = document.getElementById('setting-group-sync-private-memory');
+    const privateHistoryContainer = document.getElementById('setting-group-private-memory-history-container');
+    const privateSummaryContainer = document.getElementById('setting-group-private-memory-summary-container');
+    const privateHistoryInput = document.getElementById('setting-group-private-memory-history-count');
+    const privateSummaryInput = document.getElementById('setting-group-private-memory-summary-count');
+
+    if (privateHistoryInput) privateHistoryInput.value = (group.privateMemoryHistoryCount !== undefined) ? group.privateMemoryHistoryCount : 20;
+    if (privateSummaryInput) privateSummaryInput.value = (group.privateMemorySummaryCount !== undefined) ? group.privateMemorySummaryCount : 0;
+
+    if (syncPrivateMemoryEl) {
+        syncPrivateMemoryEl.checked = group.syncPrivateMemory || false;
+        if (privateHistoryContainer) privateHistoryContainer.style.display = syncPrivateMemoryEl.checked ? 'flex' : 'none';
+        if (privateSummaryContainer) privateSummaryContainer.style.display = syncPrivateMemoryEl.checked ? 'flex' : 'none';
+
+        // 防止重复绑定：clone 一次
+        const parent = syncPrivateMemoryEl.parentNode;
+        const clone = syncPrivateMemoryEl.cloneNode(true);
+        parent.replaceChild(clone, syncPrivateMemoryEl);
+        clone.checked = group.syncPrivateMemory || false;
+        clone.addEventListener('change', (e) => {
+            if (privateHistoryContainer) privateHistoryContainer.style.display = e.target.checked ? 'flex' : 'none';
+            if (privateSummaryContainer) privateSummaryContainer.style.display = e.target.checked ? 'flex' : 'none';
+            saveGroupSettingsFromSidebar(false);
+        });
+    } else {
+        if (privateHistoryContainer) privateHistoryContainer.style.display = 'none';
+        if (privateSummaryContainer) privateSummaryContainer.style.display = 'none';
+    }
+
     const autoJournalIntervalContainer = document.getElementById('setting-group-auto-journal-interval-container');
     const autoJournalIntervalInput = document.getElementById('setting-group-auto-journal-interval');
     let autoJournalSwitch = document.getElementById('setting-group-auto-journal-enabled');
@@ -1089,6 +1138,17 @@ async function saveGroupSettingsFromSidebar(showToastFlag = true) {
 
     group.theme = document.getElementById('setting-group-theme-color').value;
     group.maxMemory = document.getElementById('setting-group-max-memory').value;
+
+    // --- 群聊 <- 私聊：群成员私聊记忆互通 ---
+    const syncPrivateMemoryEl = document.getElementById('setting-group-sync-private-memory');
+    group.syncPrivateMemory = syncPrivateMemoryEl ? !!syncPrivateMemoryEl.checked : false;
+    const privateHistoryEl = document.getElementById('setting-group-private-memory-history-count');
+    const privateHistoryCountInput = parseInt(privateHistoryEl ? privateHistoryEl.value : '', 10);
+    group.privateMemoryHistoryCount = (isNaN(privateHistoryCountInput) || privateHistoryCountInput < 0) ? 20 : privateHistoryCountInput;
+    const privateSummaryEl = document.getElementById('setting-group-private-memory-summary-count');
+    const privateSummaryCountInput = parseInt(privateSummaryEl ? privateSummaryEl.value : '', 10);
+    group.privateMemorySummaryCount = (isNaN(privateSummaryCountInput) || privateSummaryCountInput < 0) ? 0 : privateSummaryCountInput;
+
     group.autoJournalEnabled = document.getElementById('setting-group-auto-journal-enabled').checked;
     const autoJournalIntervalInput = parseInt(document.getElementById('setting-group-auto-journal-interval').value, 10);
     group.autoJournalInterval = (isNaN(autoJournalIntervalInput) || autoJournalIntervalInput < 10) ? 100 : autoJournalIntervalInput;
@@ -1220,13 +1280,13 @@ function sendRenameNotification(group, newName) {
 function generateGroupSystemPrompt(group) {
     // 收集关联的 + 全局的世界书（去重）
     const associatedIds = group.worldBookIds || [];
-    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
     const globalIds = globalBooks.map(wb => wb.id);
     const allBookIds = [...new Set([...associatedIds, ...globalIds])];
     
-    const worldBooksBefore = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(Boolean).map(wb => wb.content).join('\n');
-    const worldBooksMiddle = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle')).filter(Boolean).map(wb => wb.content).join('\n');
-    const worldBooksAfter = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(Boolean).map(wb => wb.content).join('\n');
+    const worldBooksBefore = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
+    const worldBooksMiddle = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
+    const worldBooksAfter = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
 
     let prompt = `你正在一个名为“404”的线上聊天软件中，在一个名为“${group.name}”的群聊里进行角色扮演。请严格遵守以下所有规则：\n\n`;
 
@@ -1244,6 +1304,83 @@ function generateGroupSystemPrompt(group) {
 
     if (favoritedJournals) {
         prompt += `【群聊重要回忆/总结】\n这是你需要记住的群聊往事背景：\n${favoritedJournals}\n\n`;
+    }
+
+    // --- 群聊 <- 私聊：让群成员读取各自私聊记忆（可选）---
+    if (group.syncPrivateMemory) {
+        const rawHistoryCount = parseInt(group.privateMemoryHistoryCount, 10);
+        const rawSummaryCount = parseInt(group.privateMemorySummaryCount, 10);
+        const perMemberHistoryCount = isNaN(rawHistoryCount) ? 20 : Math.max(0, Math.min(rawHistoryCount, 200));
+        const perMemberSummaryCount = isNaN(rawSummaryCount) ? 0 : Math.max(0, Math.min(rawSummaryCount, 50));
+
+        const formatMsgContent = (m) => {
+            if (m && Array.isArray(m.parts) && m.parts.length > 0) {
+                return m.parts.map(p => p.text || '[图片]').join('');
+            }
+            return (m && m.content) ? m.content : '';
+        };
+
+        let privateMemoryContext = '';
+
+        group.members.forEach(member => {
+            const char = db.characters.find(c => c.id === member.originalCharId);
+            if (!char) return;
+
+            // 私聊总结（收藏的记忆/日记）
+            let memberSummaryText = '';
+            if (perMemberSummaryCount > 0) {
+                let fav = (char.memoryJournals || []).filter(j => j.isFavorited);
+                if (fav.length > perMemberSummaryCount) {
+                    fav = fav
+                        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+                        .slice(0, perMemberSummaryCount);
+                }
+                memberSummaryText = fav
+                    .map(j => `标题：${j.title}\n内容：${j.content}`)
+                    .join('\n\n---\n\n');
+            }
+
+            // 私聊最近记录
+            let memberHistoryText = '';
+            if (perMemberHistoryCount > 0 && Array.isArray(char.history) && char.history.length > 0) {
+                let recent = char.history.slice(-perMemberHistoryCount);
+
+                // 过滤掉不应进入上下文的消息
+                if (typeof filterHistoryForAI === 'function') {
+                    recent = filterHistoryForAI(char, recent);
+                }
+                recent = recent
+                    .filter(m => !m.isContextDisabled)
+                    .filter(m => m.role === 'user' || m.role === 'assistant');
+
+                if (recent.length > 0) {
+                    memberHistoryText = recent.map(m => {
+                        const content = formatMsgContent(m);
+                        const sender = (m.role === 'user')
+                            ? ((group.me && group.me.nickname) ? group.me.nickname : '我')
+                            : (member.realName || member.groupNickname || '成员');
+                        return `${sender}: ${content}`;
+                    }).join('\n');
+                }
+            }
+
+            if (memberSummaryText || memberHistoryText) {
+                privateMemoryContext += `\n【${member.realName} 的私聊记忆（仅${member.realName}可见）】\n`;
+                if (memberSummaryText) {
+                    privateMemoryContext += `私聊总结（收藏）：\n${memberSummaryText}\n`;
+                }
+                if (memberHistoryText) {
+                    privateMemoryContext += `私聊最近记录：\n${memberHistoryText}\n`;
+                }
+            }
+        });
+
+        if (privateMemoryContext) {
+            prompt += `【群聊角色私聊记忆（重要规则）】\n`;
+            prompt += `- 以下“私聊记忆”是每个成员与用户之间在群聊之外的私聊背景。\n`;
+            prompt += `- 你在扮演群聊时，**只有对应成员本人**可以使用自己的私聊记忆来理解用户、调整语气与关系推进；其他成员**不得**引用或暗示这些私聊细节（除非这些细节曾在群里公开提到）。\n`;
+            prompt += `${privateMemoryContext}\n\n`;
+        }
     }
 
     prompt += `1. **核心任务**: 你需要同时扮演这个群聊中的 **所有** AI 成员。我会作为唯一的人类用户（“我”，昵称：${group.me.nickname}）与你们互动。\n\n`;

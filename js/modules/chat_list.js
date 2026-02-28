@@ -370,6 +370,7 @@ function renderChatList() {
                 const voiceRegex = /\[.*?的语音：.*?\]/;
                 const photoVideoRegex = /\[.*?发来的照片\/视频：.*?\]/;
                 const transferRegex = /\[.*?的转账：.*?元.*?\]|\[.*?给你转账：.*?元.*?\]|\[.*?向.*?转账：.*?元.*?\]/;
+                const locationRegex = /\[(.+?)的位置[：:].*?\]/;
                 const stickerRegex = /\[.*?的表情包：.*?\]|\[.*?发送的表情包：.*?\]/;
                 const giftRegex = /\[.*?送来的礼物：.*?\]|\[.*?向.*?送来了礼物：.*?\]/;
 
@@ -383,6 +384,8 @@ function renderChatList() {
                     lastMessageText = '[照片/视频]';
                 } else if (transferRegex.test(lastMsg.content)) {
                     lastMessageText = '[转账]';
+                } else if (locationRegex.test(lastMsg.content)) {
+                    lastMessageText = '[定位]';
                 } else if (imageRecogRegex.test(lastMsg.content) || (lastMsg.parts && lastMsg.parts.some(p => p.type === 'image'))) {
                     lastMessageText = '[图片]';
                 } else if ((lastMsg.parts && lastMsg.parts.some(p => p.type === 'html'))) {

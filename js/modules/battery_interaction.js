@@ -103,7 +103,7 @@ const BatteryInteraction = {
             if (chat.worldBookIds && chat.worldBookIds.length > 0 && window.db && window.db.worldBooks) {
                 worldBookContent = chat.worldBookIds
                     .map(id => window.db.worldBooks.find(wb => wb.id === id))
-                    .filter(Boolean)
+                    .filter(wb => wb && !wb.disabled)
                     .map(wb => wb.content)
                     .join('\n\n');
             }

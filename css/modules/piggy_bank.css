@@ -66,6 +66,46 @@
     font-weight: 500;
 }
 
+/* 删除模式工具栏 */
+.piggy-bank-delete-toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 0;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.piggy-bank-delete-toolbar .btn-small {
+    padding: 8px 14px;
+    font-size: 13px;
+}
+
+/* 删除模式下列表项左侧复选框 */
+#piggy-bank-screen.piggy-bank-delete-mode .piggy-bank-list-item {
+    padding-left: 12px;
+}
+
+.piggy-item-checkbox-wrap {
+    flex-shrink: 0;
+    margin-right: 12px;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.piggy-item-checkbox {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--primary-color, #007aff);
+    cursor: pointer;
+}
+
+#piggy-bank-screen:not(.piggy-bank-delete-mode) .piggy-item-checkbox-wrap {
+    display: none;
+}
+
 /* 全部/收入/支出 标签 */
 .piggy-bank-tabs {
     display: flex;

@@ -246,13 +246,13 @@ async function respondToTransfer(action) {
             cardOnScreen.querySelector('.transfer-status').textContent = action === 'received' ? '已收款' : '已退回';
             cardOnScreen.style.cursor = 'default';
         }
-        if (typeof addPiggyTransaction === 'function') {
+        if (typeof addPiggyTransaction === 'function' && action === 'received') {
             const amount = parseTransferAmountFromContent(message.content);
             if (amount > 0) {
                 addPiggyTransaction({
                     type: 'income',
                     amount,
-                    remark: action === 'received' ? '收款' : '转账退回',
+                    remark: '收款',
                     source: '聊天',
                     charName: character.realName || ''
                 });
@@ -341,6 +341,63 @@ function sendMyGift(description) {
     }, 100);
 }
 
+function setupLocationSystem() {
+    const locationBtn = document.getElementById('location-btn');
+    const sendLocationModal = document.getElementById('send-location-modal');
+    const sendLocationForm = document.getElementById('send-location-form');
+    const locationPlaceInput = document.getElementById('location-place-input');
+    const locationDistanceInput = document.getElementById('location-distance-input');
+    const locationUnitSelect = document.getElementById('location-unit-select');
+
+    if (!locationBtn || !sendLocationForm) return;
+
+    locationBtn.addEventListener('click', () => {
+        sendLocationForm.reset();
+        sendLocationModal.classList.add('visible');
+    });
+    sendLocationModal.addEventListener('click', (e) => {
+        if (e.target === sendLocationModal) sendLocationModal.classList.remove('visible');
+    });
+    sendLocationForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const place = (locationPlaceInput.value || '').trim();
+        if (!place) {
+            if (typeof showToast === 'function') showToast('请输入当前位置');
+            return;
+        }
+        const distanceNum = (locationDistanceInput.value || '').trim();
+        const unit = (locationUnitSelect && locationUnitSelect.value) || '千米';
+        let content = `[我的位置：${place}`;
+        if (distanceNum && !isNaN(parseFloat(distanceNum))) {
+            content += `；距你约 ${distanceNum}${unit}`;
+        }
+        content += ']';
+        sendMyLocation(content);
+    });
+}
+
+function sendMyLocation(content) {
+    document.getElementById('send-location-modal').classList.remove('visible');
+    setTimeout(() => {
+        const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
+        if (!chat) return;
+        const message = {
+            id: `msg_${Date.now()}`,
+            role: 'user',
+            content: content,
+            parts: [{ type: 'text', text: content }],
+            timestamp: Date.now()
+        };
+        if (currentChatType === 'group') {
+            message.senderId = 'user_me';
+        }
+        chat.history.push(message);
+        addMessageBubble(message, currentChatId, currentChatType);
+        saveData();
+        renderChatList();
+    }, 100);
+}
+
 function setupTimeSkipSystem() {
     const timeSkipBtn = document.getElementById('time-skip-btn');
     const timeSkipModal = document.getElementById('time-skip-modal');
@@ -399,7 +456,9 @@ const AudioManager = {
         if (!this._audio) {
             this._audio = new Audio();
             this._audio.addEventListener('ended', () => {
-                // 可选：播放结束后的清理工作
+                if (typeof window.resumeMusicPlayback === 'function') {
+                    window.resumeMusicPlayback();
+                }
             });
             this._audio.addEventListener('error', (e) => {
                 console.warn('Audio Object Error:', e);

@@ -400,6 +400,8 @@ function setupChatRoom() {
         document.getElementById('capture-result-modal').classList.remove('visible');
     });
     document.getElementById('cancel-reply-btn').addEventListener('click', cancelQuoteReply);
+
+    if (typeof setupLocationSystem === 'function') setupLocationSystem();
 }
 
 function openChatRoom(chatId, type) {

@@ -161,20 +161,31 @@ function setupChatSettings() {
     });
     
     document.getElementById('link-world-book-btn').addEventListener('click', () => {
-        const character = db.characters.find(c => c.id === currentChatId);
-        if (!character) return;
-        renderCategorizedWorldBookList(document.getElementById('world-book-selection-list'), db.worldBooks, character.worldBookIds || [], 'wb-select');
+        const globalIds = (db.worldBooks || []).filter(wb => wb.isGlobal && !wb.disabled).map(wb => wb.id);
+        let displayIds = [];
+        if (currentChatType === 'private') {
+            const character = db.characters.find(c => c.id === currentChatId);
+            if (!character) return;
+            displayIds = [...new Set([...(character.worldBookIds || []), ...globalIds])];
+        } else if (currentChatType === 'group') {
+            const group = db.groups.find(g => g.id === currentChatId);
+            if (!group) return;
+            displayIds = [...new Set([...(group.worldBookIds || []), ...globalIds])];
+        }
+        renderCategorizedWorldBookList(document.getElementById('world-book-selection-list'), db.worldBooks, displayIds, 'wb-select');
         document.getElementById('world-book-selection-modal').classList.add('visible');
     });
 
     document.getElementById('save-world-book-selection-btn').addEventListener('click', async () => {
+        const globalIds = (db.worldBooks || []).filter(wb => wb.isGlobal && !wb.disabled).map(wb => wb.id);
         const selectedIds = Array.from(document.getElementById('world-book-selection-list').querySelectorAll('.item-checkbox:checked')).map(input => input.value);
+        const toSave = selectedIds.filter(id => !globalIds.includes(id));
         if (currentChatType === 'private') {
             const character = db.characters.find(c => c.id === currentChatId);
-            if (character) character.worldBookIds = selectedIds;
+            if (character) character.worldBookIds = toSave;
         } else if (currentChatType === 'group') {
             const group = db.groups.find(g => g.id === currentChatId);
-            if (group) group.worldBookIds = selectedIds;
+            if (group) group.worldBookIds = toSave;
         }
         await saveData();
         document.getElementById('world-book-selection-modal').classList.remove('visible');
@@ -219,6 +230,104 @@ function setupChatSettings() {
             }
         });
     }
+
+    const syncGroupMemorySwitch = document.getElementById('setting-sync-group-memory');
+    if (syncGroupMemorySwitch) {
+        syncGroupMemorySwitch.addEventListener('change', (e) => {
+            triggerHapticFeedback('light');
+            const historyContainer = document.getElementById('setting-group-memory-container');
+            const summaryContainer = document.getElementById('setting-group-summary-container');
+            const syncGroupListContainer = document.getElementById('setting-sync-group-list');
+            if (historyContainer) {
+                historyContainer.style.display = e.target.checked ? 'flex' : 'none';
+            }
+            if (summaryContainer) {
+                summaryContainer.style.display = e.target.checked ? 'flex' : 'none';
+            }
+            if (syncGroupListContainer) {
+                syncGroupListContainer.style.display = e.target.checked ? 'block' : 'none';
+                // 如果开关打开，渲染群聊列表
+                if (e.target.checked) {
+                    const character = db.characters.find(c => c.id === currentChatId);
+                    if (character) {
+                        renderSyncGroupList(character);
+                    }
+                }
+            }
+        });
+    }
+}
+
+function renderSyncGroupList(character) {
+    const syncGroupListContainer = document.getElementById('setting-sync-group-list');
+    if (!syncGroupListContainer) {
+        console.warn('setting-sync-group-list container not found');
+        return;
+    }
+    
+    // 如果角色不存在，清空并隐藏
+    if (!character) {
+        syncGroupListContainer.innerHTML = '';
+        syncGroupListContainer.style.display = 'none';
+        return;
+    }
+    
+    // 如果开关未打开，清空内容但保持容器存在（显示状态由调用者控制）
+    if (!character.syncGroupMemory) {
+        syncGroupListContainer.innerHTML = '';
+        return;
+    }
+    
+    // 确保容器显示
+    syncGroupListContainer.style.display = 'block';
+    syncGroupListContainer.innerHTML = '';
+    
+    // 获取角色所在的所有群聊
+    const groupsWithCharacter = db.groups.filter(group => 
+        group.members && group.members.some(member => member.originalCharId === character.id)
+    );
+    
+    if (groupsWithCharacter.length === 0) {
+        syncGroupListContainer.innerHTML = '<div style="padding: 10px; color: #999; font-size: 12px;">该角色未加入任何群聊</div>';
+    } else {
+        // 添加标题
+        const title = document.createElement('div');
+        title.style.fontSize = '13px';
+        title.style.color = '#666';
+        title.style.marginBottom = '10px';
+        title.style.fontWeight = '500';
+        title.textContent = '选择要互通的群聊：';
+        syncGroupListContainer.appendChild(title);
+        
+        const syncGroupIds = character.syncGroupIds || [];
+        groupsWithCharacter.forEach(group => {
+            const checkbox = document.createElement('label');
+            checkbox.style.display = 'flex';
+            checkbox.style.alignItems = 'center';
+            checkbox.style.padding = '8px 0';
+            checkbox.style.cursor = 'pointer';
+            checkbox.style.userSelect = 'none';
+            
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.value = group.id;
+            input.checked = syncGroupIds.includes(group.id);
+            input.style.marginRight = '10px';
+            input.style.width = '18px';
+            input.style.height = '18px';
+            input.style.cursor = 'pointer';
+            
+            const label = document.createElement('span');
+            label.textContent = group.name || '未命名群聊';
+            label.style.fontSize = '14px';
+            label.style.color = '#333';
+            label.style.flex = '1';
+            
+            checkbox.appendChild(input);
+            checkbox.appendChild(label);
+            syncGroupListContainer.appendChild(checkbox);
+        });
+    }
 }
 
 function loadSettingsToSidebar() {
@@ -227,8 +336,53 @@ function loadSettingsToSidebar() {
         document.getElementById('setting-char-avatar-preview').src = e.avatar;
         const nameDisplay = document.getElementById('setting-char-name-display');
         if(nameDisplay) nameDisplay.textContent = e.remarkName;
+        const realNameEl = document.getElementById('setting-char-real-name');
+        if (realNameEl) realNameEl.value = e.realName || '';
         document.getElementById('setting-char-remark').value = e.remarkName;
         document.getElementById('setting-char-persona').value = e.persona;
+        
+        if (e.source === 'forum' && db.forumUserProfile) {
+            const fp = db.forumUserProfile;
+            const defaultAvatar = (fp.avatar && fp.avatar.trim()) ? fp.avatar : 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg';
+            document.getElementById('setting-my-avatar-preview').src = (e.myAvatar && e.myAvatar.trim()) ? e.myAvatar : defaultAvatar;
+            document.getElementById('setting-my-name').value = (e.myName && String(e.myName).trim()) ? e.myName : (fp.username || '用户');
+            document.getElementById('setting-my-persona').value = (e.myPersona && String(e.myPersona).trim()) ? e.myPersona : (fp.bio || '');
+        }
+        
+        const forumSupplementContainer = document.getElementById('setting-forum-supplement-container');
+        if (forumSupplementContainer) {
+            if (e.source === 'forum') {
+                forumSupplementContainer.style.display = 'block';
+                const supplementCb = document.getElementById('setting-forum-supplement-persona-enabled');
+                const supplementAiCb = document.getElementById('setting-forum-supplement-persona-ai-enabled');
+                const supplementTextEl = document.getElementById('setting-forum-supplement-persona-text');
+                var manualOn = !!e.supplementPersonaEnabled;
+                var aiOn = !!e.supplementPersonaAiEnabled;
+                if (manualOn && aiOn) {
+                    aiOn = false;
+                    e.supplementPersonaAiEnabled = false;
+                }
+                if (supplementCb) supplementCb.checked = manualOn;
+                if (supplementAiCb) supplementAiCb.checked = aiOn;
+                if (supplementTextEl) {
+                    supplementTextEl.value = e.supplementPersonaText || '';
+                    supplementTextEl.style.display = (manualOn || aiOn) ? 'block' : 'none';
+                }
+                function updateSupplementTextareaVisibility() {
+                    if (supplementTextEl) supplementTextEl.style.display = (supplementCb && supplementCb.checked) || (supplementAiCb && supplementAiCb.checked) ? 'block' : 'none';
+                }
+                if (supplementCb) supplementCb.onchange = function() {
+                    if (supplementCb.checked && supplementAiCb) { supplementAiCb.checked = false; }
+                    updateSupplementTextareaVisibility();
+                };
+                if (supplementAiCb) supplementAiCb.onchange = function() {
+                    if (supplementAiCb.checked && supplementCb) { supplementCb.checked = false; }
+                    updateSupplementTextareaVisibility();
+                };
+            } else {
+                forumSupplementContainer.style.display = 'none';
+            }
+        }
         
         const stickerGroupsContainer = document.getElementById('setting-char-sticker-groups-container');
         stickerGroupsContainer.innerHTML = '';
@@ -256,11 +410,40 @@ function loadSettingsToSidebar() {
             });
         }
         
-        document.getElementById('setting-my-avatar-preview').src = e.myAvatar;
-        document.getElementById('setting-my-name').value = e.myName;
-        document.getElementById('setting-my-persona').value = e.myPersona;
+        if (e.source !== 'forum') {
+            document.getElementById('setting-my-avatar-preview').src = e.myAvatar || 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg';
+            document.getElementById('setting-my-name').value = e.myName || '';
+            document.getElementById('setting-my-persona').value = e.myPersona || '';
+        }
         document.getElementById('setting-theme-color').value = e.theme || 'white_pink';
         document.getElementById('setting-max-memory').value = e.maxMemory;
+        document.getElementById('setting-sync-group-memory').checked = e.syncGroupMemory || false;
+        
+        // 群聊记忆互通相关设置
+        const groupMemoryHistoryCount = e.groupMemoryHistoryCount !== undefined ? e.groupMemoryHistoryCount : 20;
+        const groupMemorySummaryCount = e.groupMemorySummaryCount !== undefined ? e.groupMemorySummaryCount : 0;
+        document.getElementById('setting-group-memory-history-count').value = groupMemoryHistoryCount;
+        document.getElementById('setting-group-memory-summary-count').value = groupMemorySummaryCount;
+        
+        // 根据开关状态显示/隐藏设置项
+        const historyContainer = document.getElementById('setting-group-memory-container');
+        const summaryContainer = document.getElementById('setting-group-summary-container');
+        const syncGroupListContainer = document.getElementById('setting-sync-group-list');
+        
+        if (historyContainer) {
+            historyContainer.style.display = e.syncGroupMemory ? 'flex' : 'none';
+        }
+        if (summaryContainer) {
+            summaryContainer.style.display = e.syncGroupMemory ? 'flex' : 'none';
+        }
+        
+        // 渲染群聊选择列表（函数内部会根据开关状态控制显示）
+        renderSyncGroupList(e);
+        
+        // 确保容器显示状态正确（在渲染后再次确认）
+        if (syncGroupListContainer) {
+            syncGroupListContainer.style.display = e.syncGroupMemory ? 'block' : 'none';
+        }
         
         document.getElementById('setting-reply-count-enabled').checked = e.replyCountEnabled || false;
         const replyCountContainer = document.getElementById('setting-reply-count-container');
@@ -269,6 +452,9 @@ function loadSettingsToSidebar() {
         }
         document.getElementById('setting-reply-count-min').value = e.replyCountMin || 3;
         document.getElementById('setting-reply-count-max').value = e.replyCountMax || 8;
+
+        const stickerSmartMatchEl = document.getElementById('setting-sticker-smart-match');
+        if (stickerSmartMatchEl) stickerSmartMatchEl.checked = e.stickerSmartMatchEnabled || false;
 
         document.getElementById('setting-auto-journal-enabled').checked = e.autoJournalEnabled || false;
         const autoJournalIntervalContainer = document.getElementById('setting-auto-journal-interval-container');
@@ -355,8 +541,19 @@ async function saveSettingsFromSidebar() {
     const e = db.characters.find(e => e.id === currentChatId);
     if (e) {
         e.avatar = document.getElementById('setting-char-avatar-preview').src;
+        const realNameInput = document.getElementById('setting-char-real-name');
+        if (realNameInput) e.realName = (realNameInput.value || '').trim();
         e.remarkName = document.getElementById('setting-char-remark').value;
         e.persona = document.getElementById('setting-char-persona').value;
+        
+        if (e.source === 'forum') {
+            const supplementEnabledEl = document.getElementById('setting-forum-supplement-persona-enabled');
+            const supplementAiEl = document.getElementById('setting-forum-supplement-persona-ai-enabled');
+            const supplementTextEl = document.getElementById('setting-forum-supplement-persona-text');
+            if (supplementEnabledEl) e.supplementPersonaEnabled = supplementEnabledEl.checked;
+            if (supplementAiEl) e.supplementPersonaAiEnabled = supplementAiEl.checked;
+            if (supplementTextEl) e.supplementPersonaText = supplementTextEl.value || '';
+        }
         
         const selectedGroups = Array.from(document.querySelectorAll('#setting-char-sticker-groups-container .sticker-group-tag.selected'))
             .map(tag => tag.dataset.group)
@@ -368,9 +565,24 @@ async function saveSettingsFromSidebar() {
         e.myPersona = document.getElementById('setting-my-persona').value;
         e.theme = document.getElementById('setting-theme-color').value;
         e.maxMemory = document.getElementById('setting-max-memory').value;
+        e.syncGroupMemory = document.getElementById('setting-sync-group-memory').checked;
+        e.groupMemoryHistoryCount = parseInt(document.getElementById('setting-group-memory-history-count').value, 10) || 20;
+        e.groupMemorySummaryCount = parseInt(document.getElementById('setting-group-memory-summary-count').value, 10) || 0;
+        
+        // 保存选中的群聊ID列表
+        const syncGroupListContainer = document.getElementById('setting-sync-group-list');
+        if (syncGroupListContainer && e.syncGroupMemory) {
+            const selectedCheckboxes = syncGroupListContainer.querySelectorAll('input[type="checkbox"]:checked');
+            e.syncGroupIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+        } else {
+            e.syncGroupIds = [];
+        }
+
         e.replyCountEnabled = document.getElementById('setting-reply-count-enabled').checked;
         e.replyCountMin = parseInt(document.getElementById('setting-reply-count-min').value, 10) || 3;
         e.replyCountMax = parseInt(document.getElementById('setting-reply-count-max').value, 10) || 8;
+        const stickerSmartMatchCb = document.getElementById('setting-sticker-smart-match');
+        e.stickerSmartMatchEnabled = stickerSmartMatchCb ? stickerSmartMatchCb.checked : false;
         e.autoJournalEnabled = document.getElementById('setting-auto-journal-enabled').checked;
         const autoJournalIntervalInput = parseInt(document.getElementById('setting-auto-journal-interval').value, 10);
         e.autoJournalInterval = (isNaN(autoJournalIntervalInput) || autoJournalIntervalInput < 10) ? 100 : autoJournalIntervalInput;
@@ -591,6 +803,9 @@ function setupApiSettingsApp() {
     
     // === 副API设置：后台活动API ===
     setupSubApiSettings('background', 'backgroundApiSettings', 'backgroundApiPresets');
+    
+    // === 副API设置：补齐人设API ===
+    setupSubApiSettings('supplementPersona', 'supplementPersonaApiSettings', 'supplementPersonaApiPresets');
 }
 
 // --- 预设管理 ---
@@ -743,7 +958,9 @@ function importApiPresets() {
 }
 
 // === 副API通用设置函数 ===
+var subApiDisplayNames = { summary: '总结', background: '后台活动', supplementPersona: '补齐人设' };
 function setupSubApiSettings(prefix, dbKey, presetsKey) {
+    const displayName = subApiDisplayNames[prefix] || prefix;
     const providerEl = document.getElementById(`${prefix}-api-provider`);
     const urlEl = document.getElementById(`${prefix}-api-url`);
     const keyEl = document.getElementById(`${prefix}-api-key`);
@@ -854,7 +1071,7 @@ function setupSubApiSettings(prefix, dbKey, presetsKey) {
         if (!urlEl.value.trim() && !keyEl.value.trim() && !modelEl.value) {
             db[dbKey] = {};
             await saveData();
-            showToast(`${prefix === 'summary' ? '总结' : '后台活动'}API设置已清空！`);
+            showToast(displayName + 'API设置已清空！');
             return;
         }
         
@@ -865,7 +1082,7 @@ function setupSubApiSettings(prefix, dbKey, presetsKey) {
             model: modelEl.value
         };
         await saveData();
-        showToast(`${prefix === 'summary' ? '总结' : '后台活动'}API设置已保存！`);
+        showToast(displayName + 'API设置已保存！');
     });
     
     // 预设管理
@@ -1575,6 +1792,11 @@ function setupPresetFeatures() {
     if (iconPresetModalClose) iconPresetModalClose.addEventListener('click', () => {
         document.getElementById('icon-presets-modal').style.display = 'none';
     });
+
+    const widgetWallpaperModalClose = document.getElementById('widget-wallpaper-presets-close-modal');
+    if (widgetWallpaperModalClose) widgetWallpaperModalClose.addEventListener('click', () => {
+        document.getElementById('widget-wallpaper-presets-modal').style.display = 'none';
+    });
 }
 
 const DEFAULT_WALLPAPER_URL = 'https://i.postimg.cc/W4Z9R9x4/ins-1.jpg';
@@ -1715,15 +1937,16 @@ function populateSoundPresetSelect() {
 function saveCurrentSoundAsPreset() {
     const sendUrl = document.getElementById('global-send-sound-url').value.trim();
     const receiveUrl = document.getElementById('global-receive-sound-url').value.trim();
+    const incomingCallUrl = (document.getElementById('global-incoming-call-sound-url')?.value || '').trim();
     
-    if (!sendUrl && !receiveUrl) return showToast('提示音配置为空，无法保存');
+    if (!sendUrl && !receiveUrl && !incomingCallUrl) return showToast('提示音配置为空，无法保存');
     
     let name = prompt('请输入预设名称（将覆盖同名预设）：');
     if (!name) return;
     
     const presets = _getSoundPresets();
     const idx = presets.findIndex(p => p.name === name);
-    const preset = { name, sendSound: sendUrl, receiveSound: receiveUrl };
+    const preset = { name, sendSound: sendUrl, receiveSound: receiveUrl, incomingCallSound: incomingCallUrl };
     
     if (idx >= 0) presets[idx] = preset; 
     else presets.push(preset);
@@ -1740,12 +1963,15 @@ function applySoundPreset(name) {
     
     const sendInput = document.getElementById('global-send-sound-url');
     const receiveInput = document.getElementById('global-receive-sound-url');
+    const incomingCallInput = document.getElementById('global-incoming-call-sound-url');
     
     if (sendInput) sendInput.value = p.sendSound || '';
     if (receiveInput) receiveInput.value = p.receiveSound || '';
+    if (incomingCallInput) incomingCallInput.value = p.incomingCallSound || '';
     
     db.globalSendSound = p.sendSound || '';
     db.globalReceiveSound = p.receiveSound || '';
+    db.globalIncomingCallSound = p.incomingCallSound || '';
     saveData();
     
     showToast('已应用提示音预设');
@@ -1927,6 +2153,204 @@ function openWidgetManageModal() {
         list.appendChild(row);
     });
     modal.style.display = 'flex';
+}
+
+// ---------- 小组件和壁纸方案 ----------
+const DEFAULT_HOME_SIGNATURE = '编辑个性签名...';
+const DEFAULT_INS_WIDGET = { avatar1: 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg', bubble1: 'love u.', avatar2: 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg', bubble2: 'miss u.' };
+
+function _getWidgetWallpaperPresets() {
+    return db.widgetWallpaperPresets || [];
+}
+function _saveWidgetWallpaperPresets(arr) {
+    db.widgetWallpaperPresets = arr || [];
+    saveData();
+}
+
+function _captureCurrentWidgetWallpaperScheme() {
+    return {
+        wallpaper: db.wallpaper || DEFAULT_WALLPAPER_URL,
+        homeWidgetSettings: JSON.parse(JSON.stringify(db.homeWidgetSettings || {})),
+        homeSignature: db.homeSignature !== undefined ? db.homeSignature : DEFAULT_HOME_SIGNATURE,
+        insWidgetSettings: JSON.parse(JSON.stringify(db.insWidgetSettings || DEFAULT_INS_WIDGET))
+    };
+}
+
+function populateWidgetWallpaperPresetSelect() {
+    const sel = document.getElementById('widget-wallpaper-preset-select');
+    if (!sel) return;
+    const presets = _getWidgetWallpaperPresets();
+    sel.innerHTML = '<option value="">— 选择方案 —</option>';
+    presets.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+    });
+}
+
+function saveCurrentWidgetWallpaperAsPreset() {
+    const scheme = _captureCurrentWidgetWallpaperScheme();
+    const name = prompt('请输入方案名称（将覆盖同名方案）：');
+    if (!name || !name.trim()) return;
+    const presets = _getWidgetWallpaperPresets();
+    const idx = presets.findIndex(p => p.name === name.trim());
+    const preset = { name: name.trim(), ...scheme };
+    if (idx >= 0) presets[idx] = preset;
+    else presets.push(preset);
+    _saveWidgetWallpaperPresets(presets);
+    populateWidgetWallpaperPresetSelect();
+    showToast('方案已保存到预设库');
+}
+
+function applyWidgetWallpaperPreset(name) {
+    const presets = _getWidgetWallpaperPresets();
+    const p = presets.find(x => x.name === name);
+    if (!p) return showToast('未找到该方案');
+    db.wallpaper = p.wallpaper || DEFAULT_WALLPAPER_URL;
+    if (typeof applyWallpaper === 'function') applyWallpaper(db.wallpaper);
+    db.homeWidgetSettings = JSON.parse(JSON.stringify(p.homeWidgetSettings || {}));
+    db.homeSignature = p.homeSignature !== undefined ? p.homeSignature : DEFAULT_HOME_SIGNATURE;
+    db.insWidgetSettings = JSON.parse(JSON.stringify(p.insWidgetSettings || DEFAULT_INS_WIDGET));
+    saveData();
+    if (typeof setupHomeScreen === 'function') setupHomeScreen();
+    if (typeof updatePolaroidImage === 'function' && db.homeWidgetSettings.polaroidImage) {
+        updatePolaroidImage(db.homeWidgetSettings.polaroidImage);
+    }
+    const preview = document.getElementById('wallpaper-preview');
+    if (preview) {
+        preview.style.backgroundImage = `url(${db.wallpaper})`;
+        preview.textContent = '';
+    }
+    showToast('已应用方案');
+}
+
+function openWidgetWallpaperManageModal() {
+    const modal = document.getElementById('widget-wallpaper-presets-modal');
+    const list = document.getElementById('widget-wallpaper-presets-list');
+    if (!modal || !list) return;
+    list.innerHTML = '';
+    const presets = _getWidgetWallpaperPresets();
+    if (!presets.length) {
+        list.innerHTML = '<p style="color:#888;margin:6px 0;">暂无方案</p>';
+    }
+    presets.forEach((p, idx) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;';
+        const nameDiv = document.createElement('div');
+        nameDiv.style.cssText = 'flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+        nameDiv.textContent = p.name;
+        row.appendChild(nameDiv);
+        const btnWrap = document.createElement('div');
+        btnWrap.style.cssText = 'display:flex;gap:8px;';
+        const applyBtn = document.createElement('button');
+        applyBtn.className = 'btn btn-primary';
+        applyBtn.style.cssText = 'padding:6px 8px;border-radius:8px;';
+        applyBtn.textContent = '应用';
+        applyBtn.onclick = function () { applyWidgetWallpaperPreset(p.name); modal.style.display = 'none'; };
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'btn';
+        renameBtn.style.cssText = 'padding:6px 8px;border-radius:8px;';
+        renameBtn.textContent = '重命名';
+        renameBtn.onclick = function () {
+            const newName = prompt('输入新名称：', p.name);
+            if (!newName || !newName.trim()) return;
+            const all = _getWidgetWallpaperPresets();
+            all[idx].name = newName.trim();
+            _saveWidgetWallpaperPresets(all);
+            openWidgetWallpaperManageModal();
+            populateWidgetWallpaperPresetSelect();
+        };
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn';
+        deleteBtn.style.cssText = 'padding:6px 8px;border-radius:8px;color:#e53935;';
+        deleteBtn.textContent = '删除';
+        deleteBtn.onclick = function () {
+            if (!confirm('确认删除该方案？')) return;
+            const all = _getWidgetWallpaperPresets();
+            all.splice(idx, 1);
+            _saveWidgetWallpaperPresets(all);
+            openWidgetWallpaperManageModal();
+            populateWidgetWallpaperPresetSelect();
+        };
+        btnWrap.appendChild(applyBtn);
+        btnWrap.appendChild(renameBtn);
+        btnWrap.appendChild(deleteBtn);
+        row.appendChild(btnWrap);
+        list.appendChild(row);
+    });
+    modal.style.display = 'flex';
+}
+
+function exportWidgetWallpaperScheme() {
+    const presets = _getWidgetWallpaperPresets();
+    const sel = document.getElementById('widget-wallpaper-preset-select');
+    const chosen = sel && sel.value;
+    let payload;
+    if (chosen) {
+        const p = presets.find(x => x.name === chosen);
+        if (!p) return showToast('未找到所选方案');
+        payload = { type: 'widget-wallpaper-scheme', version: 1, preset: p };
+    } else {
+        const current = _captureCurrentWidgetWallpaperScheme();
+        payload = { type: 'widget-wallpaper-scheme', version: 1, preset: { name: '当前主屏', ...current } };
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '小组件壁纸方案.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('方案已导出');
+}
+
+function importWidgetWallpaperScheme(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function () {
+        try {
+            const data = JSON.parse(reader.result);
+            if (!data || data.type !== 'widget-wallpaper-scheme' || !data.preset) {
+                showToast('不是有效的小组件壁纸方案文件');
+                return;
+            }
+            const preset = data.preset;
+            const name = preset.name || '导入的方案';
+            const presets = _getWidgetWallpaperPresets();
+            const existingIdx = presets.findIndex(p => p.name === name);
+            const toAdd = { name, wallpaper: preset.wallpaper, homeWidgetSettings: preset.homeWidgetSettings || {}, homeSignature: preset.homeSignature, insWidgetSettings: preset.insWidgetSettings || {} };
+            if (existingIdx >= 0) presets[existingIdx] = toAdd;
+            else presets.push(toAdd);
+            _saveWidgetWallpaperPresets(presets);
+            populateWidgetWallpaperPresetSelect();
+            if (confirm('已加入预设库。是否立即应用该方案？')) {
+                applyWidgetWallpaperPreset(name);
+            } else {
+                showToast('方案已导入到预设库');
+            }
+        } catch (e) {
+            showToast('导入失败：' + (e.message || '文件格式错误'));
+        }
+    };
+    reader.readAsText(file);
+}
+
+function resetWidgetWallpaperToDefault() {
+    if (!confirm('确定要恢复默认吗？将清除当前所有小组件和壁纸设置。')) return;
+    db.wallpaper = DEFAULT_WALLPAPER_URL;
+    if (typeof applyWallpaper === 'function') applyWallpaper(DEFAULT_WALLPAPER_URL);
+    db.homeWidgetSettings = JSON.parse(JSON.stringify(defaultWidgetSettings));
+    db.homeSignature = DEFAULT_HOME_SIGNATURE;
+    db.insWidgetSettings = JSON.parse(JSON.stringify(DEFAULT_INS_WIDGET));
+    saveData();
+    if (typeof setupHomeScreen === 'function') setupHomeScreen();
+    const preview = document.getElementById('wallpaper-preview');
+    if (preview) {
+        preview.style.backgroundImage = `url(${DEFAULT_WALLPAPER_URL})`;
+        preview.textContent = '';
+    }
+    renderCustomizeForm();
+    showToast('已恢复默认（小组件+壁纸）');
 }
 
 function _getIconPresets() {
@@ -2224,6 +2648,33 @@ function setupCustomizeApp() {
             if (m) m.style.display = 'none';
         }
 
+        if (target.matches('#widget-wallpaper-apply-preset')) {
+            const select = document.getElementById('widget-wallpaper-preset-select');
+            const presetName = select && select.value;
+            if (!presetName) return showToast('请选择一个方案');
+            applyWidgetWallpaperPreset(presetName);
+        }
+        if (target.matches('#widget-wallpaper-save-preset')) {
+            saveCurrentWidgetWallpaperAsPreset();
+        }
+        if (target.matches('#widget-wallpaper-manage-presets')) {
+            openWidgetWallpaperManageModal();
+        }
+        if (target.matches('#widget-wallpaper-export-btn')) {
+            exportWidgetWallpaperScheme();
+        }
+        if (target.matches('#widget-wallpaper-import-btn')) {
+            const input = document.getElementById('widget-wallpaper-import-file');
+            if (input) input.click();
+        }
+        if (target.matches('#widget-wallpaper-reset-btn')) {
+            resetWidgetWallpaperToDefault();
+        }
+        if (target.matches('#widget-wallpaper-presets-close-modal')) {
+            const m = document.getElementById('widget-wallpaper-presets-modal');
+            if (m) m.style.display = 'none';
+        }
+
         if (target.matches('#icon-apply-preset-btn')) {
             const select = document.getElementById('icon-preset-select');
             const presetName = select && select.value;
@@ -2275,6 +2726,27 @@ function setupCustomizeApp() {
             saveData();
             showToast('已重置');
         }
+        if (target.matches('#test-incoming-call-sound-btn')) {
+            const url = document.getElementById('global-incoming-call-sound-url').value;
+            if (url) {
+                try {
+                    const audio = new Audio(url);
+                    audio.loop = true;
+                    audio.play().catch(e => showToast('播放失败: ' + e.message));
+                    setTimeout(() => audio.pause(), 3000);
+                } catch (e) {
+                    showToast('无效的音频地址');
+                }
+            } else {
+                showToast('未设置提示音');
+            }
+        }
+        if (target.matches('#reset-incoming-call-sound-btn')) {
+            document.getElementById('global-incoming-call-sound-url').value = '';
+            db.globalIncomingCallSound = '';
+            saveData();
+            showToast('已重置');
+        }
     });
 
     customizeForm.addEventListener('input', async (e) => {
@@ -2308,6 +2780,12 @@ function setupCustomizeApp() {
     });
 
     customizeForm.addEventListener('change', async (e) => {
+        if (e.target.id === 'widget-wallpaper-import-file') {
+            const file = e.target.files && e.target.files[0];
+            e.target.value = '';
+            if (file) importWidgetWallpaperScheme(file);
+            return;
+        }
         if (e.target.id === 'global-css-import-file') {
             const file = e.target.files && e.target.files[0];
             e.target.value = '';
@@ -2447,11 +2925,15 @@ function setupCustomizeApp() {
             db.globalReceiveSound = e.target.value.trim();
             saveData();
         }
+        if (e.target.id === 'global-incoming-call-sound-url') {
+            db.globalIncomingCallSound = e.target.value.trim();
+            saveData();
+        }
         if (e.target.id === 'multi-msg-sound-switch') {
             db.multiMsgSoundEnabled = e.target.checked;
             saveData();
         }
-        if (e.target.id === 'global-send-sound-upload' || e.target.id === 'global-receive-sound-upload') {
+        if (e.target.id === 'global-send-sound-upload' || e.target.id === 'global-receive-sound-upload' || e.target.id === 'global-incoming-call-sound-upload') {
             const file = e.target.files[0];
             if (!file) return;
             if (file.size > 2 * 1024 * 1024) {
@@ -2465,9 +2947,12 @@ function setupCustomizeApp() {
                 if (e.target.id === 'global-send-sound-upload') {
                     db.globalSendSound = base64;
                     document.getElementById('global-send-sound-url').value = base64;
-                } else {
+                } else if (e.target.id === 'global-receive-sound-upload') {
                     db.globalReceiveSound = base64;
                     document.getElementById('global-receive-sound-url').value = base64;
+                } else {
+                    db.globalIncomingCallSound = base64;
+                    document.getElementById('global-incoming-call-sound-url').value = base64;
                 }
                 await saveData();
                 showToast('提示音已上传');
@@ -2488,7 +2973,7 @@ function renderCustomizeForm() {
     const iconOrder = [
         'chat-list-screen', 'api-settings-screen', 'wallpaper-screen',
         'world-book-screen', 'customize-screen', 'tutorial-screen',
-        'day-mode-btn', 'night-mode-btn', 'forum-screen', 'music-screen', 'diary-screen', 'piggy-bank-screen', 'pomodoro-screen', 'storage-analysis-screen'
+        'day-mode-btn', 'night-mode-btn', 'forum-screen', 'music-screen', 'diary-screen', 'piggy-bank-screen', 'pomodoro-screen', 'storage-analysis-screen', 'theater-screen'
     ];
 
     let iconsContentHTML = '';
@@ -2556,6 +3041,39 @@ function renderCustomizeForm() {
                 <div style="display: flex; justify-content: flex-end;">
                      <button type="button" id="reset-widget-btn" class="btn btn-neutral btn-small" style="width: auto;">恢复默认</button>
                 </div>
+            </div>
+        </div>
+    </div>
+    `;
+
+    const widgetWallpaperSectionHTML = `
+    <div class="kkt-group collapsible-section" style="background-color: #fff; border: none; margin-bottom: 15px;">
+        <div class="kkt-item collapsible-header" style="background-color: #fff; border-bottom: 1px solid #f5f5f5; cursor: pointer; padding: 15px;">
+            <div class="kkt-item-label" style="font-weight:bold; color:#333; font-size: 15px;">小组件和壁纸</div>
+            <span class="collapsible-arrow">▼</span>
+        </div>
+        <div class="collapsible-content">
+            <div class="kkt-item" style="display:block; padding: 15px;">
+                <p style="font-size: 13px; color: #888; margin-bottom: 12px; line-height: 1.5;">将当前主屏幕的「所有小组件 + 壁纸」保存为方案，可导出分享或导入他人方案；一键恢复默认。</p>
+                <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:12px; border: 1px solid #f0f0f0;">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                        <label for="widget-wallpaper-preset-select" style="width:auto;color:#666;font-size:13px;">方案预设库</label>
+                        <select id="widget-wallpaper-preset-select" style="flex:1;padding:6px;border-radius:6px;border:1px solid #ddd;font-size:13px; background: transparent;"><option value="">— 选择方案 —</option></select>
+                    </div>
+                    <div style="display:flex;gap:8px;justify-content: flex-end; flex-wrap: wrap;">
+                        <button type="button" id="widget-wallpaper-apply-preset" class="btn btn-small btn-primary" style="padding:4px 8px;">应用</button>
+                        <button type="button" id="widget-wallpaper-save-preset" class="btn btn-small" style="padding:4px 8px;">保存为方案</button>
+                        <button type="button" id="widget-wallpaper-manage-presets" class="btn btn-small" style="padding:4px 8px;">管理</button>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;justify-content: flex-end; flex-wrap: wrap; margin-bottom: 12px;">
+                    <button type="button" id="widget-wallpaper-export-btn" class="btn btn-small btn-neutral" style="padding:4px 8px;">导出方案</button>
+                    <button type="button" id="widget-wallpaper-import-btn" class="btn btn-small btn-neutral" style="padding:4px 8px;">导入方案</button>
+                </div>
+                <div style="display: flex; justify-content: flex-end;">
+                    <button type="button" id="widget-wallpaper-reset-btn" class="btn btn-neutral btn-small" style="width: auto;">恢复默认（小组件+壁纸）</button>
+                </div>
+                <input type="file" id="widget-wallpaper-import-file" accept=".json,.ee" style="display:none;">
             </div>
         </div>
     </div>
@@ -2713,6 +3231,17 @@ margin-left: auto !important;
                         <button type="button" id="reset-receive-sound-btn" class="btn btn-danger btn-small" style="margin: 0;">×</button>
                     </div>
                 </div>
+                <div class="form-group">
+                    <label style="font-weight: bold; font-size: 14px; color: var(--primary-color);">来电提示音</label>
+                    <div style="display: flex; gap: 8px; margin-top: 5px;">
+                        <input type="url" id="global-incoming-call-sound-url" placeholder="音频URL" value="${db.globalIncomingCallSound || ''}" style="flex: 1; border: 1px solid #eee; border-radius: 8px; padding: 8px;">
+                        <input type="file" id="global-incoming-call-sound-upload" accept="audio/*" style="display: none;">
+                        <label for="global-incoming-call-sound-upload" class="btn btn-secondary btn-small" style="margin: 0; display: flex; align-items: center; cursor: pointer;">📂</label>
+                        <button type="button" id="test-incoming-call-sound-btn" class="btn btn-primary btn-small" style="margin: 0;">▶</button>
+                        <button type="button" id="reset-incoming-call-sound-btn" class="btn btn-danger btn-small" style="margin: 0;">×</button>
+                    </div>
+                    <p style="font-size: 12px; color: #999; margin-top: 5px;">角色主动发起通话时循环播放，接听或拒绝后停止。不设置则来电时不播放任何声音。</p>
+                </div>
                 
                 <div class="form-group" style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
                     <label for="multi-msg-sound-switch" style="font-weight: bold; font-size: 14px; color: var(--primary-color); margin-bottom: 0;">多条消息连续提示音</label>
@@ -2742,13 +3271,14 @@ margin-left: auto !important;
     </div>
     `;
     
-    container.innerHTML = iconsSectionHTML + widgetSectionHTML + fontsSectionHTML + soundSectionHTML + globalCssSectionHTML;
+    container.innerHTML = iconsSectionHTML + widgetSectionHTML + widgetWallpaperSectionHTML + fontsSectionHTML + soundSectionHTML + globalCssSectionHTML;
     customizeForm.appendChild(container);
 
     populateGlobalCssPresetSelect();
     populateFontPresetSelect();
     populateSoundPresetSelect();
     populateWidgetPresetSelect();
+    populateWidgetWallpaperPresetSelect();
     populateIconPresetSelect();
 
     const fontSizeSlider = document.getElementById('font-size-slider');

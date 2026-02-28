@@ -302,23 +302,23 @@ function setupPomodoroApp() {
 
             // 收集全局世界书 + 真正的全局世界书（isGlobal）
             const configuredGlobalIds = db.pomodoroSettings?.globalWorldBookIds || [];
-            const isGlobalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+            const isGlobalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
             const isGlobalIds = isGlobalBooks.map(wb => wb.id);
             const allGlobalIds = [...new Set([...configuredGlobalIds, ...isGlobalIds])];
             
             const globalWorldBooksBefore = allGlobalIds
                 .map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before'))
-                .filter(Boolean)
+                .filter(wb => wb && !wb.disabled)
                 .map(wb => wb.content)
                 .join('\n\n');
             const globalWorldBooksMiddle = allGlobalIds
                 .map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle'))
-                .filter(Boolean)
+                .filter(wb => wb && !wb.disabled)
                 .map(wb => wb.content)
                 .join('\n\n');
             const globalWorldBooksAfter = allGlobalIds
                 .map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after'))
-                .filter(Boolean)
+                .filter(wb => wb && !wb.disabled)
                 .map(wb => wb.content)
                 .join('\n\n');
 

@@ -179,7 +179,7 @@ function parseCharJson(file) {
     });
 }
 
-async function createCharacterFromData(data, avatar) {
+async function createCharacterFromData(data, avatar, options) {
     const charData = data.data || data;
 
     if (!charData || !charData.name) {
@@ -227,6 +227,36 @@ async function createCharacterFromData(data, avatar) {
             lastTriggerTime: 0
         }
     };
+
+    // 解析开场白：仅在用户选择导入时处理；优先 data.alternate_greetings，否则用 first_mes
+    const importGreeting = !(typeof options === 'object' && options && options.importGreeting === false);
+    if (importGreeting) {
+        const greetings = [];
+        const inner = charData.data || charData;
+        if (inner.alternate_greetings && Array.isArray(inner.alternate_greetings) && inner.alternate_greetings.length > 0) {
+            inner.alternate_greetings.forEach(t => {
+                if (t && typeof t === 'string' && t.trim() !== '') greetings.push(t.trim());
+            });
+        }
+        if (greetings.length === 0 && charData.first_mes && typeof charData.first_mes === 'string' && charData.first_mes.trim() !== '') {
+            greetings.push(charData.first_mes.trim());
+        }
+        if (inner.first_mes && typeof inner.first_mes === 'string' && inner.first_mes.trim() !== '' && !greetings.includes(inner.first_mes.trim())) {
+            const fm = inner.first_mes.trim();
+            if (!greetings.length) greetings.push(fm);
+        }
+        if (greetings.length > 0) {
+            newChar.alternateGreetings = greetings;
+            newChar.currentGreetingIndex = 0;
+            const firstContent = greetings[0];
+            newChar.history = [{
+                id: `msg_${Date.now()}_greeting`,
+                role: 'assistant',
+                content: firstContent,
+                timestamp: Date.now()
+            }];
+        }
+    }
 
     const importedWorldBookIds = [];
 
@@ -362,8 +392,10 @@ function setupImportConfirmModal() {
             pendingImportData.data.name = newName;
         }
 
+        const importGreetingCheckbox = document.getElementById('import-greeting-checkbox');
+        const importGreeting = importGreetingCheckbox ? importGreetingCheckbox.checked : true;
         try {
-            await createCharacterFromData(pendingImportData.data, pendingImportData.avatar);
+            await createCharacterFromData(pendingImportData.data, pendingImportData.avatar, { importGreeting });
             modal.classList.remove('visible');
             pendingImportData = null;
         } catch (error) {

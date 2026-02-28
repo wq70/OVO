@@ -910,6 +910,23 @@ function confirmPurchase() {
     // 生成商品列表字符串: 商品名x数量
     const itemsStr = shopState.cart.map(entry => `${entry.item.name} x${entry.quantity}`).join(', ');
 
+    // 非代付时从用户存钱罐扣款并记账
+    if (deliveryType !== 'pay-for-me') {
+        if (typeof getPiggyBalance === 'function' && getPiggyBalance() < totalPrice) {
+            if (typeof showToast === 'function') showToast('存钱罐余额不足，无法下单');
+            return;
+        }
+        if (typeof addPiggyTransaction === 'function') {
+            addPiggyTransaction({
+                type: 'expense',
+                amount: totalPrice,
+                remark: '商城订单：' + itemsStr,
+                source: '商城',
+                charName: realName || ''
+            });
+        }
+    }
+
     // 格式生成
     let messageText = '';
     if (deliveryType === 'pay-for-me') {

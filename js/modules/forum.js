@@ -106,7 +106,7 @@ function renderPostDetail(post) {
 
     let commentsHtml = '';
     if (post.comments && post.comments.length > 0) {
-        post.comments.forEach(comment => {
+        post.comments.forEach((comment, index) => {
             const firstChar = (comment.username || '').charAt(0).toUpperCase() || '?';
             const isUserComment = comment.authorId === 'user';
             // 只有用户发的帖子里，用户在自己帖子下的回复才显示楼主
@@ -119,7 +119,7 @@ function renderPostDetail(post) {
             const authorBadge = isAuthor ? '<span class="author-badge">楼主</span>' : '';
             
             commentsHtml += `
-            <li class="comment-item">
+            <li class="comment-item" data-comment-index="${index}">
                 ${avatarHtml}
                 <div class="comment-body">
                     <div class="comment-author-name">${comment.username || ''}${authorBadge}</div>
@@ -247,6 +247,34 @@ function renderPostDetail(post) {
             forumOpenDMConversation(userId, post.username);
         });
     }
+
+    const commentList = detailScreen.querySelector('.comment-list');
+    if (commentList) {
+        commentList.addEventListener('contextmenu', function(e) {
+            const li = e.target.closest('.comment-item');
+            if (!li || li.dataset.commentIndex === undefined) return;
+            e.preventDefault();
+            forumHandleCommentLongPress(post.id, parseInt(li.dataset.commentIndex, 10), e.clientX, e.clientY);
+        });
+        commentList.addEventListener('touchstart', function(e) {
+            const li = e.target.closest('.comment-item');
+            if (!li || li.dataset.commentIndex === undefined) return;
+            forumCommentLongPressTimer = setTimeout(function() {
+                const t = e.touches[0];
+                forumHandleCommentLongPress(post.id, parseInt(li.dataset.commentIndex, 10), t.clientX, t.clientY);
+            }, 400);
+        });
+        commentList.addEventListener('touchend', function() { clearTimeout(forumCommentLongPressTimer); });
+        commentList.addEventListener('touchmove', function() { clearTimeout(forumCommentLongPressTimer); });
+    }
+}
+
+function forumHandleCommentLongPress(postId, commentIndex, x, y) {
+    const menuItems = [
+        { label: '分享评论', action: function() { openShareCommentModal(postId, commentIndex); } }
+    ];
+    if (typeof triggerHapticFeedback === 'function') triggerHapticFeedback('medium');
+    createContextMenu(menuItems, x, y);
 }
 
 function setupForumFeature() {
@@ -319,33 +347,66 @@ function setupShareModal() {
             return;
         }
 
-        const postTitle = modal.dataset.postTitle;
-        const postSummary = modal.dataset.postSummary;
+        const shareType = modal.dataset.shareType || 'post';
 
-        if (!postTitle || !postSummary) {
-            showToast('无法获取帖子信息，分享失败。');
-            return;
+        if (shareType === 'comment') {
+            const postId = modal.dataset.postId;
+            const commentIndex = parseInt(modal.dataset.commentIndex, 10);
+            if (postId === undefined || isNaN(commentIndex)) {
+                showToast('无法获取评论信息，分享失败。');
+                return;
+            }
+            const post = db.forumPosts.find(p => p.id === postId);
+            if (!post || !post.comments || !post.comments[commentIndex]) {
+                showToast('找不到该评论，分享失败。');
+                return;
+            }
+            const comment = post.comments[commentIndex];
+            const postContent = (post.content || post.summary || '').replace(/\n/g, ' ');
+            const messageContent = `[论坛分享-评论]\n帖子标题：${post.title || ''}\n帖子内容：${postContent}\n评论（来自 ${comment.username || '匿名'}）：${comment.content || ''}`;
+
+            selectedCharIds.forEach(charId => {
+                const character = db.characters.find(c => c.id === charId);
+                if (character) {
+                    const message = {
+                        id: `msg_${Date.now()}_${Math.random()}`,
+                        role: 'user',
+                        content: messageContent,
+                        parts: [{ type: 'text', text: messageContent }],
+                        timestamp: Date.now()
+                    };
+                    character.history.push(message);
+                }
+            });
+        } else {
+            const postTitle = modal.dataset.postTitle;
+            const postSummary = modal.dataset.postSummary;
+
+            if (!postTitle || !postSummary) {
+                showToast('无法获取帖子信息，分享失败。');
+                return;
+            }
+
+            selectedCharIds.forEach(charId => {
+                const character = db.characters.find(c => c.id === charId);
+                if (character) {
+                    const messageContent = `[论坛分享]标题：${postTitle}\n摘要：${postSummary}`;
+
+                    const message = {
+                        id: `msg_${Date.now()}_${Math.random()}`,
+                        role: 'user',
+                        content: messageContent,
+                        parts: [{ type: 'text', text: messageContent }],
+                        timestamp: Date.now()
+                    };
+
+                    character.history.push(message);
+                }
+            });
         }
 
-        selectedCharIds.forEach(charId => {
-            const character = db.characters.find(c => c.id === charId);
-            if (character) {
-                const messageContent = `[论坛分享]标题：${postTitle}\n摘要：${postSummary}`;
-
-                const message = {
-                    id: `msg_${Date.now()}_${Math.random()}`,
-                    role: 'user', 
-                    content: messageContent,
-                    parts: [{ type: 'text', text: messageContent }],
-                    timestamp: Date.now()
-                };
-
-                character.history.push(message);
-            }
-        });
-
         await saveData();
-        renderChatList(); 
+        renderChatList();
         modal.classList.remove('visible');
         showToast(`成功分享给 ${selectedCharIds.length} 位联系人！`);
     });
@@ -361,11 +422,16 @@ function openSharePostModal(postId) {
     const modal = document.getElementById('share-post-modal');
     const charList = document.getElementById('share-char-list');
     const detailsElement = modal.querySelector('details');
+    const titleEl = document.getElementById('share-modal-title');
 
+    modal.dataset.shareType = 'post';
     modal.dataset.postTitle = post.title;
     modal.dataset.postSummary = post.summary;
+    delete modal.dataset.postId;
+    delete modal.dataset.commentIndex;
+    if (titleEl) titleEl.textContent = '是否将帖子分享给他人？';
 
-    charList.innerHTML = ''; 
+    charList.innerHTML = '';
 
     if (db.characters.length > 0) {
         db.characters.forEach(char => {
@@ -384,7 +450,50 @@ function openSharePostModal(postId) {
         charList.innerHTML = '<li style="color: #888;">暂无可以分享的角色。</li>';
     }
 
-    if(detailsElement) detailsElement.open = false;
+    if (detailsElement) detailsElement.open = false;
+
+    modal.classList.add('visible');
+}
+
+function openShareCommentModal(postId, commentIndex) {
+    const post = db.forumPosts.find(p => p.id === postId);
+    if (!post || !post.comments || !post.comments[commentIndex]) {
+        showToast('找不到该评论信息。');
+        return;
+    }
+
+    const modal = document.getElementById('share-post-modal');
+    const charList = document.getElementById('share-char-list');
+    const detailsElement = modal.querySelector('details');
+    const titleEl = document.getElementById('share-modal-title');
+
+    modal.dataset.shareType = 'comment';
+    modal.dataset.postId = postId;
+    modal.dataset.commentIndex = String(commentIndex);
+    delete modal.dataset.postTitle;
+    delete modal.dataset.postSummary;
+    if (titleEl) titleEl.textContent = '是否将这条评论分享给他人？';
+
+    charList.innerHTML = '';
+
+    if (db.characters.length > 0) {
+        db.characters.forEach(char => {
+            const li = document.createElement('li');
+            li.className = 'binding-list-item';
+            li.innerHTML = `
+                <input type="checkbox" id="share-to-${char.id}" value="${char.id}">
+                <label for="share-to-${char.id}" style="display: flex; align-items: center; gap: 10px;">
+                    <img src="${char.avatar}" alt="${char.remarkName}" style="width: 32px; height: 32px; border-radius: 50%;">
+                    ${char.remarkName}
+                </label>
+            `;
+            charList.appendChild(li);
+        });
+    } else {
+        charList.innerHTML = '<li style="color: #888;">暂无可以分享的角色。</li>';
+    }
+
+    if (detailsElement) detailsElement.open = false;
 
     modal.classList.add('visible');
 }
@@ -397,7 +506,7 @@ function getForumGenerationContext() {
         context += "===== 世界观设定 =====\n";
         bindings.worldBookIds.forEach(id => {
             const book = db.worldBooks.find(wb => wb.id === id);
-            if (book) {
+            if (book && !book.disabled) {
                 context += `设定名: ${book.name}\n内容: ${book.content}\n\n`;
             }
         });
@@ -1062,6 +1171,7 @@ function forumBindNewEvents() {
             forumOpenDMConversation(item.dataset.userId, item.dataset.userName || '');
         }
     });
+    document.getElementById('forum-dm-list-settings-btn') && document.getElementById('forum-dm-list-settings-btn').addEventListener('click', forumOpenDMSettingsModal);
     document.getElementById('forum-dm-list-refresh-btn') && document.getElementById('forum-dm-list-refresh-btn').addEventListener('click', forumGenerateStrangerDMs);
     document.getElementById('forum-dm-list-delete-btn') && document.getElementById('forum-dm-list-delete-btn').addEventListener('click', forumToggleDMListDeleteMode);
     document.getElementById('forum-dm-select-all-btn') && document.getElementById('forum-dm-select-all-btn').addEventListener('click', forumDMSelectAll);
@@ -1071,6 +1181,15 @@ function forumBindNewEvents() {
     document.getElementById('send-forum-dm-btn') && document.getElementById('send-forum-dm-btn').addEventListener('click', forumSendDM);
     document.getElementById('forum-dm-input') && document.getElementById('forum-dm-input').addEventListener('keypress', function(e) { if (e.key === 'Enter') forumSendDM(); });
     document.getElementById('ai-reply-dm-btn') && document.getElementById('ai-reply-dm-btn').addEventListener('click', forumGenerateAIDMReply);
+    document.getElementById('forum-dm-add-friend-btn') && document.getElementById('forum-dm-add-friend-btn').addEventListener('click', forumDMRequestAddFriend);
+    document.getElementById('forum-friend-request-accept-btn') && document.getElementById('forum-friend-request-accept-btn').addEventListener('click', forumAcceptFriendRequest);
+    document.getElementById('forum-friend-request-reject-btn') && document.getElementById('forum-friend-request-reject-btn').addEventListener('click', forumRejectFriendRequest);
+    document.getElementById('forum-dm-settings-close-btn') && document.getElementById('forum-dm-settings-close-btn').addEventListener('click', forumCloseDMSettingsModal);
+    const forumDmSettingsModal = document.getElementById('forum-dm-settings-modal');
+    if (forumDmSettingsModal) forumDmSettingsModal.addEventListener('click', function(e) { if (e.target === forumDmSettingsModal) forumCloseDMSettingsModal(); });
+    // 从私信对话页返回列表时刷新列表与未读角标，避免红点不消失
+    var dmConversationBackBtn = document.querySelector('#forum-dm-conversation-screen .back-btn[data-target="forum-dm-list-screen"]');
+    if (dmConversationBackBtn) dmConversationBackBtn.addEventListener('click', function() { forumRenderDMList(); forumUpdateDMUnreadBadge(); });
     
     setupForumDMMessageAreaLongPress();
     setupForumDMEditModal();
@@ -1186,9 +1305,32 @@ function forumRenderDMList() {
 
 var forumCurrentDMUserId = null;
 var forumDMLongPressTimer = null;
+var forumCommentLongPressTimer = null;
 var editingForumDMId = null;
 var forumDMListDeleteMode = false;
 var forumDMSelectedUserIds = new Set();
+var forumPendingFriendRequest = null;
+
+var FORUM_DEFAULT_AVATAR = 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg';
+
+function forumHasPendingFriendRequestFromUser(npcUserId) {
+    if (!db.forumPendingRequestFromUser || typeof db.forumPendingRequestFromUser !== 'object') return false;
+    return !!db.forumPendingRequestFromUser[npcUserId];
+}
+function forumSetPendingFriendRequestFromUser(npcUserId, value) {
+    if (!db.forumPendingRequestFromUser || typeof db.forumPendingRequestFromUser !== 'object') db.forumPendingRequestFromUser = {};
+    if (value) db.forumPendingRequestFromUser[npcUserId] = true; else delete db.forumPendingRequestFromUser[npcUserId];
+    saveData();
+}
+
+function getForumStrangerProfile(userId) {
+    if (!db.forumStrangerProfiles) return null;
+    return db.forumStrangerProfiles[userId] || null;
+}
+
+function forumIsFriend(userId) {
+    return (db.characters || []).some(function(c) { return c.source === 'forum' && c.forumUserId === userId; });
+}
 
 function forumOpenDMConversation(userId, userName) {
     forumCurrentDMUserId = userId;
@@ -1196,7 +1338,92 @@ function forumOpenDMConversation(userId, userName) {
     forumUpdateDMUnreadBadge();
     document.getElementById('forum-dm-conversation-title').textContent = userName || userId || '私信';
     forumRenderDMConversation(userId);
+    var addFriendBtn = document.getElementById('forum-dm-add-friend-btn');
+    if (addFriendBtn) {
+        var profile = getForumStrangerProfile(userId);
+        var isFriend = forumIsFriend(userId);
+        addFriendBtn.style.display = (profile && !isFriend) ? '' : 'none';
+    }
     switchScreen('forum-dm-conversation-screen');
+}
+
+function forumOpenDMSettingsModal() {
+    if (!db.forumSettings) db.forumSettings = {};
+    var cb = document.getElementById('forum-dm-generate-detailed-stranger');
+    if (cb) cb.checked = !!db.forumSettings.generateDetailedStranger;
+    var modal = document.getElementById('forum-dm-settings-modal');
+    if (modal) modal.classList.add('visible');
+}
+
+function forumCloseDMSettingsModal() {
+    var cb = document.getElementById('forum-dm-generate-detailed-stranger');
+    if (cb && db.forumSettings) {
+        db.forumSettings.generateDetailedStranger = !!cb.checked;
+        saveData();
+    }
+    var modal = document.getElementById('forum-dm-settings-modal');
+    if (modal) modal.classList.remove('visible');
+}
+
+function forumAddForumNPCAsCharacter(profile, userId) {
+    if (!db.characters) db.characters = [];
+    forumInitUserProfile();
+    var fp = db.forumUserProfile;
+    var name = profile.name || userId.replace(/^npc_/, '');
+    var charId = 'forum_friend_' + userId + '_' + Date.now();
+    var newChar = {
+        id: charId,
+        realName: name,
+        remarkName: name,
+        avatar: (profile.avatar && profile.avatar.trim()) ? profile.avatar : FORUM_DEFAULT_AVATAR,
+        persona: profile.basicPersona || '',
+        source: 'forum',
+        forumUserId: userId,
+        history: [],
+        supplementPersonaEnabled: false,
+        supplementPersonaAiEnabled: false,
+        supplementPersonaText: '',
+        myName: fp.username || fp.myName || '用户',
+        myAvatar: (fp.avatar && fp.avatar.trim()) ? fp.avatar : FORUM_DEFAULT_AVATAR,
+        myPersona: fp.bio || fp.myPersona || ''
+    };
+    db.characters.push(newChar);
+    saveData();
+    if (typeof renderChatList === 'function') renderChatList();
+    if (typeof renderContactList === 'function') renderContactList();
+    return newChar;
+}
+
+function forumShowFriendRequestModal(request) {
+    forumPendingFriendRequest = request;
+    document.getElementById('forum-friend-request-avatar').src = (request.fromAvatar && request.fromAvatar.trim()) ? request.fromAvatar : FORUM_DEFAULT_AVATAR;
+    document.getElementById('forum-friend-request-name').textContent = request.fromName || request.fromUserId.replace(/^npc_/, '');
+    document.getElementById('forum-friend-request-modal').classList.add('visible');
+}
+
+function forumAcceptFriendRequest() {
+    if (!forumPendingFriendRequest) return;
+    var profile = getForumStrangerProfile(forumPendingFriendRequest.fromUserId);
+    if (!profile) profile = { name: forumPendingFriendRequest.fromName || forumPendingFriendRequest.fromUserId.replace(/^npc_/, ''), avatar: forumPendingFriendRequest.fromAvatar, basicPersona: '' };
+    forumAddForumNPCAsCharacter(profile, forumPendingFriendRequest.fromUserId);
+    document.getElementById('forum-friend-request-modal').classList.remove('visible');
+    forumPendingFriendRequest = null;
+    showToast('已添加为好友');
+}
+
+function forumRejectFriendRequest() {
+    document.getElementById('forum-friend-request-modal').classList.remove('visible');
+    forumPendingFriendRequest = null;
+}
+
+function forumDMRequestAddFriend() {
+    if (!forumCurrentDMUserId) return;
+    var profile = getForumStrangerProfile(forumCurrentDMUserId);
+    if (!profile) { showToast('该陌生人暂无详细人设'); return; }
+    if (forumIsFriend(forumCurrentDMUserId)) { showToast('已经是好友了'); return; }
+    if (forumHasPendingFriendRequestFromUser(forumCurrentDMUserId)) { showToast('已发送过好友申请，等待对方回复'); return; }
+    forumSetPendingFriendRequestFromUser(forumCurrentDMUserId, true);
+    showToast('已发送好友申请，等待对方回复');
 }
 
 function forumMarkDMRead(userId) {
@@ -1215,12 +1442,14 @@ function forumRenderDMConversation(userId) {
     
     forumInitUserProfile();
     const userProfile = db.forumUserProfile;
-    const userAvatar = userProfile.avatar || 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg';
+    const userAvatar = (userProfile.avatar && userProfile.avatar.trim()) ? userProfile.avatar : FORUM_DEFAULT_AVATAR;
     
     const npcColors = ["#FFB6C1", "#87CEFA", "#98FB98", "#F0E68C", "#DDA0DD", "#FFDAB9", "#B0E0E6"];
     const getRandomColor = () => npcColors[Math.floor(Math.random() * npcColors.length)];
     const npcName = userId.replace(/^npc_/, '');
     const npcFirstChar = npcName.charAt(0).toUpperCase() || '?';
+    const npcProfile = getForumStrangerProfile(userId);
+    const npcAvatar = (npcProfile && npcProfile.avatar && npcProfile.avatar.trim()) ? npcProfile.avatar : FORUM_DEFAULT_AVATAR;
     const npcColor = getRandomColor();
     
     messages.forEach(m => {
@@ -1231,7 +1460,7 @@ function forumRenderDMConversation(userId) {
         
         const avatarHtml = isUser 
             ? `<img src="${userAvatar}" class="dm-message-avatar" alt="我" />`
-            : `<div class="dm-message-avatar dm-npc-avatar" style="background:${npcColor}">${npcFirstChar}</div>`;
+            : `<img src="${npcAvatar}" class="dm-message-avatar" alt="${npcName}" />`;
         
         const bubble = document.createElement('div');
         bubble.className = 'dm-message-bubble';
@@ -1379,8 +1608,33 @@ async function forumGenerateStrangerDMs() {
                 userPostsText += '【帖子' + (i + 1) + '】\n标题: ' + (p.title || '') + '\n内容: ' + (p.content || '') + '\n\n';
             });
         }
+        // 收集用户在其他帖子下的评论/回复（被这些发言吸引的人也可能来私信）
+        var userCommentsList = [];
+        (db.forumPosts || []).forEach(function(p) {
+            if (!p.comments) return;
+            p.comments.forEach(function(c) {
+                if (c.authorId === 'user' && (c.content || '').trim()) {
+                    userCommentsList.push({ postTitle: p.title || '(无标题)', postContent: (p.content || '').slice(0, 80), comment: (c.content || '').trim() });
+                }
+            });
+        });
+        var userCommentsText = '';
+        if (userCommentsList.length === 0) {
+            userCommentsText = '用户暂无在其他帖子下的评论或回复。';
+        } else {
+            userCommentsList.slice(0, 10).forEach(function(item, i) {
+                userCommentsText += '【评论' + (i + 1) + '】在帖子《' + item.postTitle + '》下的回复：' + item.comment + '\n\n';
+            });
+        }
         var strangerCount = 4;
-        var systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (userProfile.username || '用户') + '\n简介: ' + (userProfile.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n\n请生成 ' + strangerCount + ' 条陌生人私信。要求：\n1. 每条私信来自不同的NPC（陌生人），senderName 为符合世界观的论坛昵称。\n2. 若用户发过帖：私信内容可以是看到某篇帖子后的搭讪、提问、共鸣或讨论，语气自然、口语化。\n3. 若用户从未发帖：私信可以是简单打招呼、自我介绍、或与世界观/社区氛围相关的一句闲聊。\n4. 每条私信 1～2 句话即可，像真实论坛私信。\n5. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"dms":[{"senderName":"NPC昵称","content":"该陌生人发给用户的一条私信内容"}]}';
+        var generateDetailed = !!(db.forumSettings && db.forumSettings.generateDetailedStranger);
+        var systemPrompt;
+        var jsonSchema;
+        if (generateDetailed) {
+            systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景，并为每个陌生人生成一份可聊天的基础人设。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (userProfile.username || '用户') + '\n简介: ' + (userProfile.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n===== 用户在其他帖子下的评论/回复 =====\n' + userCommentsText + '\n请生成 ' + strangerCount + ' 条陌生人私信，且为每个陌生人生成基础人设。要求：\n1. 每条私信来自不同的NPC，senderName 为符合世界观的论坛昵称。\n2. 私信内容自然口语化，1～2 句话即可。\n3. 每个 NPC 的 basicPersona 必须包含：性别、性格（如开朗/冷淡/傲娇等）、大致家世或身份（如学生/上班族/家境等）、年龄或年龄段、与世界观的关系等，便于日后加好友聊天，不要纯人机感。用一两段话描述即可。\n4. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"dms":[{"senderName":"NPC昵称","content":"该陌生人发给用户的一条私信内容","basicPersona":"性别、性格、家世/身份、年龄等基础人设描述，一两段话"}]}';
+        } else {
+            systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (userProfile.username || '用户') + '\n简介: ' + (userProfile.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n===== 用户在其他帖子下的评论/回复 =====\n' + userCommentsText + '\n请生成 ' + strangerCount + ' 条陌生人私信。要求：\n1. 每条私信来自不同的NPC（陌生人），senderName 为符合世界观的论坛昵称。\n2. 若用户发过帖或发过评论：私信内容可以是看到用户某篇帖子后的搭讪、提问、共鸣，也可以是看到用户在某条帖子下的回复/评论后被吸引来打招呼，语气自然、口语化。\n3. 若用户从未发帖也从未评论：私信可以是简单打招呼、自我介绍、或与世界观/社区氛围相关的一句闲聊。\n4. 每条私信 1～2 句话即可，像真实论坛私信。\n5. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"dms":[{"senderName":"NPC昵称","content":"该陌生人发给用户的一条私信内容"}]}';
+        }
         var url = apiSettings.url;
         if (url.endsWith('/')) url = url.slice(0, -1);
         var temperature = apiSettings.temperature !== undefined ? apiSettings.temperature : 0.9;
@@ -1391,6 +1645,7 @@ async function forumGenerateStrangerDMs() {
         var jsonData = JSON.parse(contentStr);
         if (jsonData && Array.isArray(jsonData.dms) && jsonData.dms.length > 0) {
             if (!db.forumMessages) db.forumMessages = [];
+            if (!db.forumStrangerProfiles) db.forumStrangerProfiles = {};
             var baseTime = Date.now();
             jsonData.dms.forEach(function(dm, i) {
                 var senderName = (dm.senderName || ('路人' + (i + 1))).trim().replace(/\s+/g, '_');
@@ -1404,6 +1659,13 @@ async function forumGenerateStrangerDMs() {
                     timestamp: baseTime + i,
                     isRead: false
                 });
+                if (generateDetailed && dm.basicPersona) {
+                    db.forumStrangerProfiles[fromUserId] = {
+                        name: senderName,
+                        basicPersona: (dm.basicPersona || '').trim() || ('论坛用户，昵称：' + senderName),
+                        avatar: (dm.avatar && dm.avatar.trim()) ? dm.avatar : FORUM_DEFAULT_AVATAR
+                    };
+                }
             });
             await saveData();
             forumRenderDMList();
@@ -1442,10 +1704,14 @@ async function forumGenerateAIDMReply() {
     try {
         const npcName = forumCurrentDMUserId.replace(/^npc_/, '');
         const npcPosts = (db.forumPosts || []).filter(p => p.username === npcName);
+        const npcProfile = getForumStrangerProfile(forumCurrentDMUserId);
         
         const worldContext = getForumGenerationContext();
         
         let npcContext = `这是一个名叫"${npcName}"的论坛用户。`;
+        if (npcProfile && npcProfile.basicPersona) {
+            npcContext += `\n\n基础人设:\n${npcProfile.basicPersona}`;
+        }
         if (npcPosts.length > 0) {
             npcContext += `\n\n以下是Ta发过的帖子:\n`;
             npcPosts.slice(0, 3).forEach(post => {
@@ -1489,14 +1755,22 @@ ${userContext}
 ===== 对话历史 =====
 ${conversationText}
 
+===== 好友状态（重要） =====
+当前是否已是好友：${forumIsFriend(forumCurrentDMUserId) ? '是' : '否'}。
+用户是否已点击「添加好友」并发送了好友申请（等待你同意）：${forumHasPendingFriendRequestFromUser(forumCurrentDMUserId) ? '是' : '否'}。
+- 若用户**已发送**好友申请：请在本轮回复中表示同意加好友（如「好呀」「通过啦」等），系统会在本轮后自动加为好友。
+- 若用户**尚未发送**好友申请（只是聊天里说想加好友）：请勿说「通过了」「已同意」等，应说「好呀，你点一下右上角添加好友吧」或「好呀，你加我还是我加你？」引导用户去点按钮发送申请。
+
 请以"${npcName}"的口吻和风格，根据世界观设定、Ta发过的帖子内容和人设，生成${replyCount}条自然、符合角色性格的私信回复。回复应该简短自然，就像真实的私信对话一样，可以分多条发送，每条独立表达一个想法或情绪。
+若对话氛围合适且尚未是好友，可以在某条回复中表达想加用户为好友的意愿（例如："我们要不要加个好友？"），并在JSON中设置 "suggestFriend": true；若本轮没有此意愿则设置 "suggestFriend": false。
 
 返回JSON格式:
 {
   "replies": [
     "第一条回复内容",
     "第二条回复内容"
-  ]
+  ],
+  "suggestFriend": false
 }`;
         
         let url = apiSettings.url;
@@ -1525,7 +1799,7 @@ ${conversationText}
                     id: 'dm_' + Date.now() + '_' + Math.random(),
                     fromUserId: forumCurrentDMUserId,
                     toUserId: 'user',
-                    content: replyContent.trim(),
+                    content: (replyContent && replyContent.trim) ? replyContent.trim() : String(replyContent),
                     timestamp: Date.now() + index,
                     isRead: true
                 };
@@ -1535,6 +1809,22 @@ ${conversationText}
             await saveData();
             forumRenderDMConversation(forumCurrentDMUserId);
             showToast(`${npcName}发来了${jsonData.replies.length}条消息`);
+            
+            if (forumHasPendingFriendRequestFromUser(forumCurrentDMUserId)) {
+                const profile = getForumStrangerProfile(forumCurrentDMUserId) || { name: npcName, avatar: '', basicPersona: '' };
+                forumAddForumNPCAsCharacter(profile, forumCurrentDMUserId);
+                forumSetPendingFriendRequestFromUser(forumCurrentDMUserId, false);
+                showToast('已加为好友');
+                var addFriendBtn = document.getElementById('forum-dm-add-friend-btn');
+                if (addFriendBtn) { addFriendBtn.style.display = 'none'; }
+            } else if (jsonData.suggestFriend && !forumIsFriend(forumCurrentDMUserId)) {
+                const profile = getForumStrangerProfile(forumCurrentDMUserId) || {};
+                forumShowFriendRequestModal({
+                    fromUserId: forumCurrentDMUserId,
+                    fromName: profile.name || npcName,
+                    fromAvatar: (profile.avatar && profile.avatar.trim()) ? profile.avatar : FORUM_DEFAULT_AVATAR
+                });
+            }
         } else {
             throw new Error('AI返回的数据格式不正确');
         }
@@ -1643,3 +1933,36 @@ ${existingComments}
         if (aiReplyBtn) aiReplyBtn.disabled = false;
     }
 }
+
+async function forumSupplementPersonaFromChat(chatId, character) {
+    if (!character || character.source !== 'forum' || !character.supplementPersonaAiEnabled) return;
+    var apiSettings = (db.supplementPersonaApiSettings && db.supplementPersonaApiSettings.url && db.supplementPersonaApiSettings.key && db.supplementPersonaApiSettings.model)
+        ? db.supplementPersonaApiSettings
+        : db.apiSettings;
+    if (!apiSettings || !apiSettings.url || !apiSettings.key || !apiSettings.model) return;
+    var history = character.history || [];
+    var recent = history.slice(-8);
+    if (recent.length === 0) return;
+    var convText = recent.map(function(m) {
+        var who = m.role === 'user' ? (character.myName || '用户') : character.realName;
+        var content = (m.content || '').trim();
+        if (m.parts && m.parts.length) content = m.parts.map(function(p) { return p.text || ''; }).join('').trim() || content;
+        return who + ': ' + content;
+    }).join('\n');
+    var basePersona = (character.persona || '').slice(0, 500);
+    var existingSupplement = (character.supplementPersonaText || '').slice(0, 800);
+    var systemPrompt = '你是一个人设补充助手。请根据「最近对话」**只提取【该角色（NPC）在对话中向用户透露的、关于自己的信息】**，整理成简短的人设条目，用于补充该角色的人设档案。\n\n要求：\n- 只输出「关于这个角色我们新知道了什么」，例如：角色在对话里告诉用户「我叫小明」→ 补充「姓名：小明」；若提到喜好、经历、习惯、身份等，也按「条目：内容」格式补充。\n- 不要总结对话过程，不要写「用户说了…角色回答了…」，只写该角色的人设信息。\n- 若本轮对话中角色没有透露任何关于自己的新信息，则返回空。\n\n只返回 JSON：{"supplement": "姓名：xxx\\n喜好：xxx\\n..."} 或 {"supplement": ""}。\n\n已有基础人设（节选）:\n' + basePersona + '\n\n已补齐人设（节选）:\n' + existingSupplement + '\n\n最近对话:\n' + convText;
+    try {
+        var url = apiSettings.url;
+        if (url.endsWith('/')) url = url.slice(0, -1);
+        var requestBody = { model: apiSettings.model, messages: [{ role: 'user', content: systemPrompt }], temperature: 0.3, response_format: { type: 'json_object' } };
+        var contentStr = await fetchAiResponse(apiSettings, requestBody, { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiSettings.key }, url + '/v1/chat/completions');
+        var json = JSON.parse(contentStr);
+        var supplement = (json && json.supplement && String(json.supplement).trim()) ? String(json.supplement).trim() : '';
+        if (supplement) {
+            character.supplementPersonaText = ((character.supplementPersonaText || '').trim() ? (character.supplementPersonaText || '').trim() + '\n\n' : '') + supplement;
+            saveData();
+        }
+    } catch (e) { console.error('AI补齐人设提取失败', e); }
+}
+if (typeof window !== 'undefined') window.forumSupplementPersonaFromChat = forumSupplementPersonaFromChat;

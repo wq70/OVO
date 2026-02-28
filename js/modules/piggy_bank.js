@@ -15,6 +15,24 @@ function setPiggyBalance(value) {
 }
 
 /**
+ * 按 id 删除多条收支记录，并反向调整余额
+ * @param {string[]} ids - 要删除的记录 id 数组
+ * @returns {number} 实际删除条数
+ */
+function deletePiggyTransactions(ids) {
+    if (!db.piggyBank || !Array.isArray(db.piggyBank.transactions)) return 0;
+    const idSet = new Set(ids);
+    const toRemove = db.piggyBank.transactions.filter(t => idSet.has(t.id));
+    toRemove.forEach(t => {
+        if (t.type === 'income') db.piggyBank.balance -= t.amount;
+        else db.piggyBank.balance += t.amount;
+    });
+    db.piggyBank.transactions = db.piggyBank.transactions.filter(t => !idSet.has(t.id));
+    db.piggyBank.balance = Math.max(0, db.piggyBank.balance);
+    return toRemove.length;
+}
+
+/**
  * 添加一条收支记录并更新余额
  * @param {Object} opts - { type: 'income'|'expense', amount: number, remark: string, source?: string, charName?: string }
  */
@@ -42,11 +60,13 @@ function renderPiggyBankScreen() {
     const balanceEl = document.getElementById('piggy-bank-balance-display');
     const listEl = document.getElementById('piggy-bank-transaction-list');
     const emptyEl = document.getElementById('piggy-bank-empty-hint');
+    const screen = document.getElementById('piggy-bank-screen');
     if (!balanceEl || !listEl) return;
 
     const balance = getPiggyBalance();
     balanceEl.textContent = (balance % 1 === 0 ? balance : balance.toFixed(2)).toString();
 
+    const isDeleteMode = screen && screen.classList.contains('piggy-bank-delete-mode');
     const filter = (document.querySelector('.piggy-tab.active') || {}).dataset?.piggyTab || 'all';
     let transactions = (db.piggyBank && db.piggyBank.transactions) ? [...db.piggyBank.transactions] : [];
     if (filter === 'income') transactions = transactions.filter(t => t.type === 'income');
@@ -61,9 +81,14 @@ function renderPiggyBankScreen() {
     transactions.forEach(t => {
         const li = document.createElement('li');
         li.className = 'piggy-bank-list-item';
+        li.dataset.id = t.id;
         const timeStr = t.time ? new Date(t.time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
         const remark = (t.remark || (t.type === 'income' ? '收入' : '支出')) + (t.charName ? ` · ${t.charName}` : '');
+        const checkboxHtml = isDeleteMode
+            ? `<label class="piggy-item-checkbox-wrap"><input type="checkbox" class="piggy-item-checkbox" data-id="${t.id}"></label>`
+            : '';
         li.innerHTML = `
+            ${checkboxHtml}
             <div class="piggy-item-left">
                 <div class="piggy-item-remark">${escapeHtml(remark)}</div>
                 <div class="piggy-item-meta">${escapeHtml(timeStr)} ${t.source ? ' · ' + escapeHtml(t.source) : ''}</div>
@@ -151,6 +176,57 @@ function setupPiggyBankApp() {
         });
     });
 
+    const deleteBtn = document.getElementById('piggy-bank-delete-btn');
+    const deleteToolbar = document.getElementById('piggy-bank-delete-toolbar');
+    const selectAllBtn = document.getElementById('piggy-bank-select-all-btn');
+    const deleteSelectedBtn = document.getElementById('piggy-bank-delete-selected-btn');
+    const deleteCancelBtn = document.getElementById('piggy-bank-delete-cancel-btn');
+
+    function exitDeleteMode() {
+        if (screen) screen.classList.remove('piggy-bank-delete-mode');
+        if (deleteToolbar) deleteToolbar.style.display = 'none';
+        renderPiggyBankScreen();
+    }
+
+    deleteBtn && deleteBtn.addEventListener('click', () => {
+        if (!screen) return;
+        const isDeleteMode = screen.classList.contains('piggy-bank-delete-mode');
+        if (isDeleteMode) {
+            exitDeleteMode();
+            return;
+        }
+        screen.classList.add('piggy-bank-delete-mode');
+        if (deleteToolbar) deleteToolbar.style.display = 'flex';
+        renderPiggyBankScreen();
+    });
+
+    selectAllBtn && selectAllBtn.addEventListener('click', () => {
+        const list = document.getElementById('piggy-bank-transaction-list');
+        if (!list) return;
+        const checkboxes = list.querySelectorAll('.piggy-item-checkbox');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        checkboxes.forEach(cb => { cb.checked = !allChecked; });
+        selectAllBtn.textContent = allChecked ? '全选' : '取消全选';
+    });
+
+    deleteSelectedBtn && deleteSelectedBtn.addEventListener('click', async () => {
+        const list = document.getElementById('piggy-bank-transaction-list');
+        if (!list) return;
+        const checked = list.querySelectorAll('.piggy-item-checkbox:checked');
+        const ids = Array.from(checked).map(cb => cb.dataset.id).filter(Boolean);
+        if (ids.length === 0) {
+            if (typeof showToast === 'function') showToast('请先勾选要删除的记录');
+            return;
+        }
+        if (!confirm(`确定删除选中的 ${ids.length} 条账单记录吗？`)) return;
+        const count = deletePiggyTransactions(ids);
+        if (typeof showToast === 'function') showToast(count ? `已删除 ${count} 条记录` : '删除失败');
+        await saveData();
+        exitDeleteMode();
+    });
+
+    deleteCancelBtn && deleteCancelBtn.addEventListener('click', exitDeleteMode);
+
     if (screen) {
         const observer = new MutationObserver((mutations) => {
             mutations.forEach(m => {
@@ -164,5 +240,6 @@ function setupPiggyBankApp() {
 if (typeof window !== 'undefined') {
     window.getPiggyBalance = getPiggyBalance;
     window.addPiggyTransaction = addPiggyTransaction;
+    window.deletePiggyTransactions = deletePiggyTransactions;
     window.renderPiggyBankScreen = renderPiggyBankScreen;
 }

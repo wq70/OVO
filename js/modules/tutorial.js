@@ -496,6 +496,156 @@ function renderTutorialContent() {
         }
     });
 
+    // 高级清理：按 APP 多选清除
+    const ADVANCED_CLEAN_OPTIONS = [
+        { key: 'worldBooks', label: '世界书（全部世界书）' },
+        { key: 'chat', label: '聊天（角色、群聊及所有聊天记录）' },
+        { key: 'myStickers', label: '表情包' },
+        { key: 'favorites', label: '收藏' },
+        { key: 'forum', label: '论坛' },
+        { key: 'theater', label: '小剧场' }
+    ];
+    const advancedCleanModalId = 'advanced-clean-modal';
+    const advancedCleanModal = document.createElement('div');
+    advancedCleanModal.id = advancedCleanModalId;
+    advancedCleanModal.className = 'modal-overlay';
+    advancedCleanModal.style.display = 'none';
+    advancedCleanModal.style.alignItems = 'center';
+    advancedCleanModal.style.justifyContent = 'center';
+    advancedCleanModal.innerHTML = `
+        <div class="modal-window" style="max-width: 320px;">
+            <h3 style="margin-top:0;">高级清理</h3>
+            <p style="font-size: 0.89rem; color: #666; margin-bottom: 12px;">选择要清空的 APP 数据（可多选），将清除该分类下的全部内容。操作不可恢复，请谨慎选择。</p>
+            <div id="advanced-clean-checkboxes" style="margin-bottom: 12px;"></div>
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                <button type="button" id="advanced-clean-select-all" class="btn btn-neutral" style="flex:1;">全选</button>
+                <button type="button" id="advanced-clean-select-none" class="btn btn-neutral" style="flex:1;">取消全选</button>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" id="advanced-clean-do-btn" class="btn btn-danger" style="flex:1;">执行清理</button>
+                <button type="button" id="advanced-clean-cancel-btn" class="btn btn-neutral" style="flex:1;">取消</button>
+            </div>
+        </div>
+    `;
+    if (!document.getElementById(advancedCleanModalId)) document.body.appendChild(advancedCleanModal);
+
+    const advancedCleanBtn = document.createElement('button');
+    advancedCleanBtn.className = 'btn btn-neutral';
+    advancedCleanBtn.textContent = '高级清理';
+    advancedCleanBtn.style.marginTop = '15px';
+    advancedCleanBtn.style.display = 'block';
+    advancedCleanBtn.disabled = loadingBtn;
+
+    advancedCleanBtn.addEventListener('click', () => {
+        const container = document.getElementById('advanced-clean-checkboxes');
+        container.innerHTML = '';
+        ADVANCED_CLEAN_OPTIONS.forEach(opt => {
+            const label = document.createElement('label');
+            label.style.display = 'flex';
+            label.style.alignItems = 'center';
+            label.style.marginBottom = '8px';
+            label.style.cursor = 'pointer';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.dataset.key = opt.key;
+            cb.checked = false;
+            label.appendChild(cb);
+            label.appendChild(document.createTextNode(' ' + opt.label));
+            container.appendChild(label);
+        });
+        document.getElementById(advancedCleanModalId).style.display = 'flex';
+    });
+
+    document.getElementById('advanced-clean-select-all').addEventListener('click', () => {
+        document.querySelectorAll('#advanced-clean-checkboxes input[type="checkbox"]').forEach(cb => cb.checked = true);
+    });
+    document.getElementById('advanced-clean-select-none').addEventListener('click', () => {
+        document.querySelectorAll('#advanced-clean-checkboxes input[type="checkbox"]').forEach(cb => cb.checked = false);
+    });
+    document.getElementById('advanced-clean-cancel-btn').addEventListener('click', () => {
+        document.getElementById(advancedCleanModalId).style.display = 'none';
+    });
+    document.getElementById('advanced-clean-do-btn').addEventListener('click', async () => {
+        const selected = [];
+        document.querySelectorAll('#advanced-clean-checkboxes input[type="checkbox"]:checked').forEach(cb => selected.push(cb.dataset.key));
+        if (selected.length === 0) {
+            showToast('请至少选择一项要清理的数据');
+            return;
+        }
+        const labels = selected.map(k => ADVANCED_CLEAN_OPTIONS.find(o => o.key === k).label).join('、');
+        if (!confirm('即将清空以下数据：\n\n' + labels + '\n\n此操作不可恢复，确定继续？')) return;
+
+        document.getElementById(advancedCleanModalId).style.display = 'none';
+        if (loadingBtn) return;
+        loadingBtn = true;
+        advancedCleanBtn.disabled = true;
+
+        try {
+            showToast('正在执行高级清理...');
+            const report = [];
+
+            if (selected.includes('worldBooks')) {
+                const n = (db.worldBooks && db.worldBooks.length) || 0;
+                db.worldBooks = [];
+                if (n > 0) report.push(`世界书：已清空 ${n} 条`);
+            }
+            if (selected.includes('chat')) {
+                const charN = (db.characters && db.characters.length) || 0;
+                const groupN = (db.groups && db.groups.length) || 0;
+                db.characters = [];
+                db.groups = [];
+                if (db.chatFolders) db.chatFolders = [];
+                await dexieDB.characters.clear();
+                await dexieDB.groups.clear();
+                if (charN > 0 || groupN > 0) report.push(`聊天：已清空 ${charN} 个角色、${groupN} 个群聊及全部聊天记录`);
+            }
+            if (selected.includes('myStickers')) {
+                const n = (db.myStickers && db.myStickers.length) || 0;
+                db.myStickers = [];
+                if (n > 0) report.push(`表情包：已清空 ${n} 个`);
+            }
+            if (selected.includes('favorites')) {
+                const n = (db.favorites && db.favorites.length) || 0;
+                db.favorites = [];
+                if (n > 0) report.push(`收藏：已清空 ${n} 条`);
+            }
+            if (selected.includes('forum')) {
+                db.forumPosts = [];
+                db.forumMessages = [];
+                db.forumBindings = { worldBookIds: [], charIds: [], userPersonaIds: [] };
+                db.forumUserProfile = { username: '', avatar: 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg', bio: '', joinDate: 0 };
+                db.forumSettings = db.forumSettings || {};
+                db.forumStrangerProfiles = {};
+                db.forumFriendRequests = [];
+                db.forumPendingRequestFromUser = {};
+                report.push('论坛：已清空帖子、消息及绑定等');
+            }
+            if (selected.includes('theater')) {
+                const scenarioN = (db.theaterScenarios && db.theaterScenarios.length) || 0;
+                db.theaterScenarios = [];
+                db.theaterPromptPresets = db.theaterPromptPresets || [];
+                const presetN = db.theaterPromptPresets.length;
+                db.theaterPromptPresets = [];
+                if (scenarioN > 0 || presetN > 0) report.push(`小剧场：已清空 ${scenarioN} 个剧本、${presetN} 个预设`);
+            }
+
+            await saveData(db);
+            const summary = report.length ? report.join('\n') : '已清理所选数据';
+            showToast('高级清理完成');
+            alert('高级清理完成！\n\n' + summary);
+            if (selected.includes('chat')) {
+                setTimeout(() => window.location.reload(), 500);
+            }
+        } catch (e) {
+            console.error('高级清理失败:', e);
+            showToast('高级清理失败: ' + e.message);
+            alert('清理过程中发生错误：\n' + e.message);
+        } finally {
+            loadingBtn = false;
+            advancedCleanBtn.disabled = false;
+        }
+    });
+
     const importDataBtn = document.createElement('label');
     importDataBtn.className = 'btn btn-neutral';
     importDataBtn.textContent = '导入数据';
@@ -744,6 +894,7 @@ function renderTutorialContent() {
         });
     }
     tutorialContentArea.appendChild(importPartialDataBtn);
+    tutorialContentArea.appendChild(advancedCleanBtn);
     tutorialContentArea.appendChild(cleanRedundantDataBtn);
     tutorialContentArea.appendChild(clearDataBtn);
 

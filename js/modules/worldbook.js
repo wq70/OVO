@@ -1,10 +1,13 @@
 // --- 世界书功能 (js/modules/worldbook.js) ---
+let pendingWbCategoryDelete = null; // 删除分类弹窗用：{ category, count }
 
 function enterWorldBookMultiSelectMode(initialId, initialCategory = null) {
     if (isWorldBookMultiSelectMode) return;
     isWorldBookMultiSelectMode = true;
 
     document.getElementById('add-world-book-btn').style.display = 'none';
+    const importBtn = document.getElementById('import-world-book-btn');
+    if (importBtn) importBtn.style.display = 'none';
     document.getElementById('cancel-wb-multi-select-btn').style.display = 'inline-block';
     document.getElementById('world-book-multi-select-bar').style.display = 'flex';
     document.querySelector('#world-book-screen .content').style.paddingBottom = '70px';
@@ -22,6 +25,8 @@ function exitWorldBookMultiSelectMode() {
     isWorldBookMultiSelectMode = false;
 
     document.getElementById('add-world-book-btn').style.display = 'inline-block';
+    const importBtn = document.getElementById('import-world-book-btn');
+    if (importBtn) importBtn.style.display = 'inline-block';
     document.getElementById('cancel-wb-multi-select-btn').style.display = 'none';
     document.getElementById('world-book-multi-select-bar').style.display = 'none';
     document.querySelector('#world-book-screen .content').style.paddingBottom = '0';
@@ -46,6 +51,140 @@ function updateWorldBookSelectCount() {
     const count = selectedWorldBookIds.size;
     document.getElementById('world-book-select-count').textContent = `已选择 ${count} 项`;
     document.getElementById('delete-selected-world-books-btn').disabled = count === 0;
+}
+
+/**
+ * 从纯文本（TXT/DOCX 提取结果）解析为分类与条目：按双换行分段落，每段首行为条目名、其余为内容，归为「导入」分类
+ */
+function parseTextToWorldBookEntries(text) {
+    const entries = [];
+    const raw = (text || '').trim();
+    if (!raw) return entries;
+    const blocks = raw.split(/\n\s*\n/).map(b => b.trim()).filter(B => B.length > 0);
+    const category = '导入';
+    blocks.forEach(block => {
+        const lines = block.split(/\n/);
+        const name = lines[0].trim();
+        const content = lines.slice(1).join('\n').trim();
+        if (name && content) {
+            entries.push({ name, content, category });
+        } else if (block.length > 0) {
+            entries.push({ name: name || '未命名条目', content: content || block, category });
+        }
+    });
+    return entries;
+}
+
+/**
+ * 从 JSON 解析为世界书条目，支持：character_book.entries、{ categories: [...] }、条目数组
+ */
+function parseJsonToWorldBookEntries(jsonText) {
+    const entries = [];
+    let data;
+    try {
+        data = JSON.parse(jsonText);
+    } catch (e) {
+        throw new Error('JSON 格式无效');
+    }
+    if (!data || typeof data !== 'object') return entries;
+
+    // SillyTavern/角色卡式：entries 为对象 { "0": { comment, content }, "1": ... }
+    if (data.entries && typeof data.entries === 'object' && !Array.isArray(data.entries)) {
+        const category = '导入';
+        Object.values(data.entries).forEach(entry => {
+            if (!entry || typeof entry !== 'object') return;
+            const name = (entry.comment || entry.name || entry.title || '未命名').trim();
+            const content = (entry.content || entry.text || '').trim();
+            if (name && content) entries.push({ name, content, category });
+        });
+        return entries;
+    }
+    if (data.character_book && Array.isArray(data.character_book.entries)) {
+        const category = data.name || data.character_name || '导入';
+        data.character_book.entries.forEach(entry => {
+            const name = entry.comment || entry.name || '未命名';
+            const content = entry.content || '';
+            if (name && content) entries.push({ name, content, category });
+        });
+        return entries;
+    }
+    if (Array.isArray(data.categories) && data.categories.length > 0) {
+        data.categories.forEach(cat => {
+            const category = (cat.name || cat.title || '未分类').trim() || '未分类';
+            const list = cat.entries || cat.items || [];
+            list.forEach(entry => {
+                const name = (entry.name || entry.title || entry.comment || '未命名').trim();
+                const content = (entry.content || entry.text || '').trim();
+                if (name && content) entries.push({ name, content, category });
+            });
+        });
+        return entries;
+    }
+    if (Array.isArray(data)) {
+        data.forEach(item => {
+            const name = (item.name || item.title || item.comment || '未命名').trim();
+            const content = (item.content || item.text || '').trim();
+            const category = (item.category || item.categoryName || '导入').trim() || '导入';
+            if (name && content) entries.push({ name, content, category });
+        });
+        return entries;
+    }
+    return entries;
+}
+
+async function handleImportWorldBookFile(file) {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    let entries = [];
+    let text = '';
+
+    if (ext === 'txt') {
+        text = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result || '');
+            reader.onerror = () => reject(new Error('读取 TXT 失败'));
+            reader.readAsText(file, 'UTF-8');
+        });
+        entries = parseTextToWorldBookEntries(text);
+    } else if (ext === 'docx') {
+        if (typeof parseDocxFile === 'undefined') {
+            showToast('无法解析 DOCX，请刷新后重试');
+            return;
+        }
+        text = await parseDocxFile(file);
+        entries = parseTextToWorldBookEntries(text);
+    } else if (ext === 'json') {
+        text = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result || '');
+            reader.onerror = () => reject(new Error('读取 JSON 失败'));
+            reader.readAsText(file, 'UTF-8');
+        });
+        entries = parseJsonToWorldBookEntries(text);
+    } else {
+        showToast('仅支持 .txt、.json、.docx 格式');
+        return;
+    }
+
+    if (entries.length === 0) {
+        showToast('未能解析出任何条目，请检查文件格式');
+        return;
+    }
+
+    const toAdd = entries.map((e, i) => ({
+        id: `wb_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 5)}`,
+        name: e.name,
+        content: e.content,
+        category: e.category || '导入',
+        position: 'before',
+        isGlobal: false,
+        disabled: false
+    }));
+
+    db.worldBooks.push(...toAdd);
+    await dexieDB.worldBooks.bulkPut(toAdd);
+    await saveData();
+    renderWorldBookList();
+    showToast(`已导入 ${toAdd.length} 条世界书`);
 }
 
 async function deleteSelectedWorldBooks() {
@@ -90,6 +229,23 @@ function setupWorldBookApp() {
         document.getElementById('world-book-global').checked = false;
         switchScreen('edit-world-book-screen');
     });
+
+    const importWorldBookBtn = document.getElementById('import-world-book-btn');
+    const importWorldBookFileInput = document.getElementById('import-world-book-file-input');
+    if (importWorldBookBtn && importWorldBookFileInput) {
+        importWorldBookBtn.addEventListener('click', () => importWorldBookFileInput.click());
+        importWorldBookFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files && e.target.files[0];
+            e.target.value = '';
+            if (!file) return;
+            try {
+                await handleImportWorldBookFile(file);
+            } catch (err) {
+                console.error('世界书导入失败', err);
+                showToast('导入失败：' + (err.message || '未知错误'));
+            }
+        });
+    }
     
     editWorldBookForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -107,9 +263,10 @@ function setupWorldBookApp() {
                 book.position = position;
                 book.category = category;
                 book.isGlobal = isGlobal;
+                if (typeof book.disabled === 'undefined') book.disabled = false;
             }
         } else {
-            db.worldBooks.push({id: `wb_${Date.now()}`, name, content, position, category, isGlobal});
+            db.worldBooks.push({id: `wb_${Date.now()}`, name, content, position, category, isGlobal, disabled: false});
         }
         await saveData();
         showToast('世界书条目已保存');
@@ -197,6 +354,47 @@ function setupWorldBookApp() {
 
     document.getElementById('delete-selected-world-books-btn').addEventListener('click', deleteSelectedWorldBooks);
     document.getElementById('cancel-wb-multi-select-btn').addEventListener('click', exitWorldBookMultiSelectMode);
+
+    const deleteCategoryModal = document.getElementById('world-book-delete-category-modal');
+    const deleteCategoryAndEntriesBtn = document.getElementById('wb-delete-category-and-entries-btn');
+    const deleteCategoryMoveEntriesBtn = document.getElementById('wb-delete-category-move-entries-btn');
+    const deleteCategoryCancelBtn = document.getElementById('wb-delete-category-cancel-btn');
+    if (deleteCategoryModal && deleteCategoryAndEntriesBtn && deleteCategoryMoveEntriesBtn && deleteCategoryCancelBtn) {
+        deleteCategoryAndEntriesBtn.addEventListener('click', async () => {
+            if (!pendingWbCategoryDelete) return;
+            const cat = pendingWbCategoryDelete.category;
+            const idsToDelete = db.worldBooks.filter(wb => (wb.category || '未分类') === cat).map(wb => wb.id);
+            await dexieDB.worldBooks.bulkDelete(idsToDelete);
+            db.worldBooks = db.worldBooks.filter(wb => (wb.category || '未分类') !== cat);
+            db.characters.forEach(char => {
+                if (char.worldBookIds) char.worldBookIds = char.worldBookIds.filter(id => !idsToDelete.includes(id));
+            });
+            db.groups.forEach(group => {
+                if (group.worldBookIds) group.worldBookIds = group.worldBookIds.filter(id => !idsToDelete.includes(id));
+            });
+            await saveData();
+            renderWorldBookList();
+            deleteCategoryModal.classList.remove('visible');
+            pendingWbCategoryDelete = null;
+            showToast(`已删除分类及其下 ${idsToDelete.length} 个条目`);
+        });
+        deleteCategoryMoveEntriesBtn.addEventListener('click', async () => {
+            if (!pendingWbCategoryDelete) return;
+            const cat = pendingWbCategoryDelete.category;
+            db.worldBooks.forEach(book => {
+                if ((book.category || '未分类') === cat) book.category = '';
+            });
+            await saveData();
+            renderWorldBookList();
+            deleteCategoryModal.classList.remove('visible');
+            pendingWbCategoryDelete = null;
+            showToast('已删除分类，条目已移至「未分类」');
+        });
+        deleteCategoryCancelBtn.addEventListener('click', () => {
+            deleteCategoryModal.classList.remove('visible');
+            pendingWbCategoryDelete = null;
+        });
+    }
 }
 
 function renderWorldBookList(expandedCategory = null) {
@@ -238,15 +436,60 @@ function renderWorldBookList(expandedCategory = null) {
             checkboxHTML = `<input type="checkbox" class="category-checkbox" data-category="${category}" ${allInCategory ? 'checked' : ''}>`;
         }
         
+        const categoryNameEscaped = category.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const editCategoryBtnHTML = !isWorldBookMultiSelectMode
+            ? `<button type="button" class="action-btn world-book-edit-category-btn" title="编辑分类名" style="padding: 4px; border: none; background: transparent; margin-right: 4px;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>`
+            : '';
+        const deleteCategoryBtnHTML = !isWorldBookMultiSelectMode
+            ? `<button type="button" class="action-btn world-book-delete-category-btn" title="删除该分类（其下条目将移至「未分类」）" style="padding: 6px; border: none; background: transparent; margin-left: 8px;"><img src="https://i.postimg.cc/hGW6B0Wf/icons8-50.png" alt="删除分类" style="width: 20px; height: 20px; object-fit: contain;"></button>`
+            : '';
         header.innerHTML = `
             <div class="category-select-area">
                 ${checkboxHTML}
             </div>
             <div class="category-toggle-area" style="flex-grow: 1; display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-weight:bold; color:#333; font-size: 15px;">${category}</div>
-                <span class="collapsible-arrow">▼</span>
+                <div style="font-weight:bold; color:#333; font-size: 15px; display: flex; align-items: center;">${categoryNameEscaped}${editCategoryBtnHTML}</div>
+                <div style="display: flex; align-items: center;">
+                    ${deleteCategoryBtnHTML}
+                    <span class="collapsible-arrow">▼</span>
+                </div>
             </div>
         `;
+
+        if (editCategoryBtnHTML) {
+            const editCategoryBtn = header.querySelector('.world-book-edit-category-btn');
+            if (editCategoryBtn) {
+                editCategoryBtn.addEventListener('click', async (ev) => {
+                    ev.stopPropagation();
+                    const newName = prompt('输入新分类名：', category);
+                    if (newName === null) return;
+                    const trimmed = newName.trim();
+                    if (!trimmed) return showToast('分类名不能为空');
+                    if (trimmed === category) return;
+                    const oldCat = category;
+                    db.worldBooks.forEach(book => {
+                        if ((book.category || '未分类') === oldCat) book.category = trimmed;
+                    });
+                    await saveData();
+                    renderWorldBookList();
+                    showToast('分类名已修改');
+                });
+            }
+        }
+        if (deleteCategoryBtnHTML) {
+            const deleteCategoryBtn = header.querySelector('.world-book-delete-category-btn');
+            if (deleteCategoryBtn) {
+                deleteCategoryBtn.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    const cat = category;
+                    const count = groupedBooks[category].length;
+                    pendingWbCategoryDelete = { category: cat, count };
+                    document.getElementById('wb-delete-category-modal-title').textContent = `删除分类「${cat}」`;
+                    document.getElementById('wb-delete-category-modal-desc').textContent = `该分类下有 ${count} 个条目。要同时删除这些条目，还是将它们移至「未分类」？`;
+                    document.getElementById('world-book-delete-category-modal').classList.add('visible');
+                });
+            }
+        }
 
         const content = document.createElement('div');
         content.className = 'collapsible-content';
@@ -258,6 +501,8 @@ function renderWorldBookList(expandedCategory = null) {
             const li = document.createElement('li');
             li.className = 'list-item world-book-item';
             li.dataset.id = book.id;
+            const isDisabled = !!book.disabled;
+            if (isDisabled) li.classList.add('world-book-item-disabled');
 
             if (isWorldBookMultiSelectMode) {
                 li.classList.add('is-selecting');
@@ -266,12 +511,32 @@ function renderWorldBookList(expandedCategory = null) {
                 }
             }
 
-            li.innerHTML = `<div class="item-details" style="padding-left: 0;"><div class="item-name">${book.name}${book.isGlobal ? ' <span style="display:inline-block;background:#4CAF50;color:white;font-size:10px;padding:2px 6px;border-radius:3px;margin-left:6px;">全局</span>' : ''}</div><div class="item-preview">${book.content}</div></div>`;
+            const disabledBadge = isDisabled ? ' <span class="world-book-disabled-badge">未启用</span>' : '';
+            li.innerHTML = `<div class="item-details" style="padding-left: 0;"><div class="item-name">${book.name}${book.isGlobal ? ' <span style="display:inline-block;background:#4CAF50;color:white;font-size:10px;padding:2px 6px;border-radius:3px;margin-left:6px;">全局</span>' : ''}${disabledBadge}</div><div class="item-preview">${book.content}</div></div>`;
             
             if (!isWorldBookMultiSelectMode) {
+                const btnWrap = document.createElement('div');
+                btnWrap.className = 'world-book-item-actions';
+                btnWrap.style.cssText = 'position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 4px;';
+                const toggleBtn = document.createElement('button');
+                toggleBtn.type = 'button';
+                toggleBtn.className = 'action-btn world-book-toggle-enabled-btn';
+                toggleBtn.title = isDisabled ? '点击启用' : '点击停用（停用后不会被读取）';
+                toggleBtn.style.cssText = 'padding: 4px 8px; border: none; border-radius: 4px; font-size: 12px; background: ' + (isDisabled ? '#e0e0e0' : '#e8f5e9') + '; color: ' + (isDisabled ? '#666' : '#2e7d32') + ';';
+                toggleBtn.textContent = isDisabled ? '启用' : '停用';
+                toggleBtn.addEventListener('click', async (ev) => {
+                    ev.stopPropagation();
+                    const b = db.worldBooks.find(wb => wb.id === book.id);
+                    if (b) {
+                        b.disabled = !b.disabled;
+                        await saveData();
+                        renderWorldBookList();
+                        showToast(b.disabled ? '已停用，该条目不会被读取' : '已启用');
+                    }
+                });
                 const delBtn = document.createElement('button');
                 delBtn.className = 'action-btn';
-                delBtn.style.cssText = 'position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 6px; border: none; background: transparent;';
+                delBtn.style.cssText = 'padding: 6px; border: none; background: transparent;';
                 delBtn.title = '删除世界书';
                 delBtn.innerHTML = '<img src="https://i.postimg.cc/hGW6B0Wf/icons8-50.png" alt="删除" style="width: 22px; height: 22px; object-fit: contain;">';
                 delBtn.addEventListener('click', async (ev) => {
@@ -290,8 +555,10 @@ function renderWorldBookList(expandedCategory = null) {
                     renderWorldBookList();
                     showToast('世界书条目已删除');
                 });
+                btnWrap.appendChild(toggleBtn);
+                btnWrap.appendChild(delBtn);
                 li.style.position = 'relative';
-                li.appendChild(delBtn);
+                li.appendChild(btnWrap);
             }
             categoryList.appendChild(li);
         });

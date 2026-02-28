@@ -113,7 +113,10 @@ function createMessageBubbleElement(message, isContinuous = false) {
     const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
     // 这里需要把 isThinking 从 message 里解构出来
     let {role, content, timestamp, id, transferStatus, giftStatus, stickerData, senderId, quote, isWithdrawn, originalContent, isStatusUpdate, isThinking} = message;
-    
+    // 角色消息中的 {{user}} 替换为当前对话的「我的名字」
+    if (role === 'assistant' && chat && chat.myName && typeof content === 'string') {
+        content = content.replace(/\{\{user\}\}/g, chat.myName);
+    }
     // 【新增补丁】如果内容以 <thinking> 开头，强制标记为 isThinking
     // 防止因为数据库加载导致 isThinking 属性丢失，或者正则没匹配到的情况
     if (content && typeof content === 'string' && content.trim().startsWith('<thinking>')) {
@@ -436,6 +439,9 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
     if (avatarClass.includes('avatar-invisible')) {
         wrapper.classList.add('avatar-invisible-layout');
     }
+    if (currentChatType === 'private' && chat.history && chat.history[0] && chat.history[0].id === id && role === 'assistant') {
+        wrapper.classList.add('is-first-greeting');
+    }
     const bubbleRow = document.createElement('div');
     bubbleRow.className = 'message-bubble-row';
     let bubbleElement;
@@ -453,6 +459,8 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
     const groupGiftRegex = /\[(.*?)\s*向\s*(.*?)\s*送来了礼物[：:]([\s\S]+?)\]/;
     const imageRecogRegex = /\[.*?发来了一张图片[：:]\]/;
     const textRegex = /\[(?:.+?)的消息[：:]([\s\S]+?)\]/;
+    /* 用户定位 [我的位置：...] 或 角色定位 [XXX的位置：...] */
+    const locationRegex = /\[(.+?)的位置[：:](.+?)(?:；距你约\s*([\d.]+)\s*(米|千米|公里))?\]/;
     
     // 新版购物车小票格式: [A为B下单了：配送方式|总价|商品名 x数量]
     const shopOrderRegexNew = /\[(.*?)为(.*?)下单了[：:](.*?)\|(.*?)\|(.*?)\]/;
@@ -461,12 +469,15 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
     
     // 通话记录格式: [视频通话记录：时间；时长；总结] 或 [语音通话记录：...]
     const callRecordRegex = /\[(视频|语音)通话记录[：:](.*?)[；;](.*?)[；;](.*?)\]/;
+    // 小剧场分享卡片占位符: [小剧场分享:scenarioId]
+    const theaterShareRegex = /^\[小剧场分享[：:](.+?)\]$/;
     
     const pomodoroRecordRegex = /\[专注记录\]\s*任务[：:]([\s\S]+?)，时长[：:]([\s\S]+?)，期间与 .*? 互动 (\d+)\s*次。/;
     const pomodoroMatch = content.match(pomodoroRecordRegex);
     const shopOrderMatchNew = content.match(shopOrderRegexNew);
     const shopPayRequestMatch = content.match(shopPayRequestRegex);
     const callRecordMatch = content.match(callRecordRegex);
+    const theaterShareMatch = content.match(theaterShareRegex);
     
     const sentStickerMatch = content.match(sentStickerRegex);
     const receivedStickerMatch = content.match(receivedStickerRegex);
@@ -479,6 +490,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
     const groupGiftMatch = content.match(groupGiftRegex);
     const imageRecogMatch = content.match(imageRecogRegex);
     const textMatch = content.match(textRegex);
+    const locationMatch = content.match(locationRegex);
     
     if (callRecordMatch) {
         // 匹配结果: [0]全文, [1]类型(视频/语音), [2]时间, [3]时长, [4]总结
@@ -682,6 +694,61 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
         bubbleElement.addEventListener('click', () => {
             detailsDiv.classList.toggle('active');
         });
+    } else if (theaterShareMatch) {
+        // 小剧场分享卡片渲染
+        const scenarioId = theaterShareMatch[1];
+        let scenario = null;
+        if (typeof db !== 'undefined' && db && Array.isArray(db.theaterScenarios)) {
+            scenario = db.theaterScenarios.find(s => s.id === scenarioId);
+        }
+
+        bubbleElement = document.createElement('div');
+        bubbleElement.className = 'theater-share-card-bubble';
+
+        let title = '小剧场';
+        let category = '未分类';
+        let charName = '';
+        let preview = '';
+
+        if (scenario) {
+            title = scenario.title || '剧情';
+            category = scenario.category || '未分类';
+            if (scenario.charId && db && Array.isArray(db.characters)) {
+                const ch = db.characters.find(c => c.id === scenario.charId);
+                if (ch) {
+                    charName = ch.remarkName || ch.realName || '';
+                }
+            }
+            if (scenario.content) {
+                const raw = scenario.content.replace(/\s+/g, ' ').trim();
+                preview = raw.slice(0, 60) + (raw.length > 60 ? '…' : '');
+            }
+        }
+
+        const charLine = charName ? `角色：${DOMPurify.sanitize(charName)}` : '小剧场分享';
+
+        bubbleElement.innerHTML = `
+            <div class="theater-share-card-header">
+                <span class="theater-share-tag">小剧场</span>
+                <span class="theater-share-category">${DOMPurify.sanitize(category)}</span>
+            </div>
+            <div class="theater-share-title">${DOMPurify.sanitize(title)}</div>
+            ${preview ? `<div class="theater-share-preview">${DOMPurify.sanitize(preview)}</div>` : ''}
+            <div class="theater-share-footer">
+                <span class="theater-share-char">${charLine}</span>
+                <span class="theater-share-time">${timeString}</span>
+            </div>
+        `;
+
+        if (scenario && typeof showTheaterScenarioDetail === 'function') {
+            bubbleElement.addEventListener('click', () => {
+                try {
+                    showTheaterScenarioDetail(scenario);
+                } catch (e) {
+                    console.error('Failed to open theater scenario detail:', e);
+                }
+            });
+        }
     } else if ((isSent && sentStickerMatch) || (!isSent && receivedStickerMatch)) {
         bubbleElement = document.createElement('div');
         bubbleElement.className = 'image-bubble';
@@ -740,6 +807,19 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
             bubbleElement = document.createElement('div');
             bubbleElement.className = 'forum-share-card';
             bubbleElement.innerHTML = `<div class="forum-share-header"><svg viewBox="0 0 24 24"><path d="M21,3H3A2,2 0 0,0 1,5V19A2,2 0 0,0 3,21H21A2,2 0 0,0 23,19V5A2,2 0 0,0 21,3M21,19H3V5H21V19M8,11H16V9H8V11M8,15H13V13H8V15Z" /></svg><span>来自论坛的分享</span></div><div class="forum-share-content"><div class="forum-share-title">${title}</div><div class="forum-share-summary">${summary}</div></div>`;
+        }
+    } else if (content.startsWith('[论坛分享-评论]')) {
+        const forumCommentShareRegex = /\[论坛分享-评论\]\n帖子标题：([\s\S]*?)\n帖子内容：([\s\S]*?)\n评论（来自 ([^)]+)）：([\s\S]*)/;
+        const forumCommentMatch = content.match(forumCommentShareRegex);
+        if (forumCommentMatch) {
+            const postTitle = forumCommentMatch[1].trim();
+            const postContent = forumCommentMatch[2].trim().replace(/\n/g, ' ');
+            const commentAuthor = forumCommentMatch[3].trim();
+            const commentContent = forumCommentMatch[4].trim().replace(/\n/g, '<br>');
+            const contentShort = postContent.length > 80 ? postContent.slice(0, 80) + '…' : postContent;
+            bubbleElement = document.createElement('div');
+            bubbleElement.className = 'forum-share-card forum-share-comment-card';
+            bubbleElement.innerHTML = `<div class="forum-share-header"><svg viewBox="0 0 24 24"><path d="M21,3H3A2,2 0 0,0 1,5V19A2,2 0 0,0 3,21H21A2,2 0 0,0 23,19V5A2,2 0 0,0 21,3M21,19H3V5H21V19M8,11H16V9H8V11M8,15H13V13H8V15Z" /></svg><span>来自论坛的评论分享</span></div><div class="forum-share-content"><div class="forum-share-title">${postTitle}</div><div class="forum-share-summary">${contentShort}</div><div class="forum-share-comment-block"><span class="forum-share-comment-author">${commentAuthor}</span>：<span class="forum-share-comment-text">${commentContent}</span></div></div>`;
         }
     } else if (voiceMatch) {
         bubbleElement = document.createElement('div');
@@ -829,6 +909,19 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
         }
         const remarkHTML = remarkText ? `<p class="transfer-remark">${remarkText}</p>` : '';
         bubbleElement.innerHTML = `<div class="overlay"></div><div class="transfer-content"><p class="transfer-title">${titleText}</p><p class="transfer-amount">¥${amount}</p>${remarkHTML}<p class="transfer-status">${statusText}</p></div>`;
+    } else if (locationMatch) {
+        const who = (locationMatch[1] || '').trim();
+        const place = (locationMatch[2] || '').trim();
+        const distanceNum = locationMatch[3];
+        const unit = locationMatch[4] || '千米';
+        const titleText = who === '我' ? '位置' : (DOMPurify.sanitize(who) + '的位置');
+        bubbleElement = document.createElement('div');
+        bubbleElement.className = 'location-card';
+        let distanceHtml = '';
+        if (distanceNum && unit) {
+            distanceHtml = `<p class="location-distance">距你约 ${distanceNum} ${unit}</p>`;
+        }
+        bubbleElement.innerHTML = `<div class="overlay"></div><div class="location-content"><p class="location-title">${titleText}</p><p class="location-place">${DOMPurify.sanitize(place)}</p>${distanceHtml}<p class="location-status">位置分享</p></div>`;
     } else if (imageRecogMatch || urlRegex.test(content)) {
         bubbleElement = document.createElement('div');
         bubbleElement.className = 'image-bubble';
@@ -898,8 +991,8 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
     const timestampStyle = chat.timestampStyle || 'bubble';
 
     // Append Time Stamp to Bubble (if style is bubble)
-    // 注意：小票气泡 (receipt-bubble) 内部自带时间，不需要外部时间戳
-    if (bubbleElement && timestampStyle === 'bubble' && !bubbleElement.classList.contains('receipt-bubble')) {
+    // 小票、小剧场分享等卡片内部自带时间，不追加气泡外大时间戳
+    if (bubbleElement && timestampStyle === 'bubble' && !bubbleElement.classList.contains('receipt-bubble') && !bubbleElement.classList.contains('theater-share-card-bubble')) {
         bubbleElement.appendChild(timeSpan);
     }
     
@@ -975,16 +1068,68 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
         }
     }
     wrapper.prepend(bubbleRow);
+
+    // 首条开场白且有多条可切换时，包一层并显示左右箭头
+    const isFirstGreeting = currentChatType === 'private' &&
+        chat.history && chat.history[0] && chat.history[0].id === id &&
+        role === 'assistant' &&
+        chat.alternateGreetings && Array.isArray(chat.alternateGreetings) && chat.alternateGreetings.length > 1;
+    if (isFirstGreeting) {
+        const container = document.createElement('div');
+        container.className = 'greeting-switcher-container';
+        const idx = Math.max(0, Math.min(chat.currentGreetingIndex || 0, chat.alternateGreetings.length - 1));
+        container.innerHTML = `
+            <div class="greeting-switcher-body"></div>
+            <div class="greeting-switcher-btns">
+                <button type="button" class="greeting-switcher-btn greeting-switcher-left" title="上一条开场白" aria-label="上一条">‹</button>
+                <button type="button" class="greeting-switcher-btn greeting-switcher-right" title="下一条开场白" aria-label="下一条">›</button>
+            </div>
+        `;
+        const body = container.querySelector('.greeting-switcher-body');
+        body.appendChild(wrapper);
+        const leftBtn = container.querySelector('.greeting-switcher-left');
+        const rightBtn = container.querySelector('.greeting-switcher-right');
+        const applyGreeting = (newIndex) => {
+            if (!chat.history.length) return;
+            const next = (newIndex + chat.alternateGreetings.length) % chat.alternateGreetings.length;
+            chat.currentGreetingIndex = next;
+            chat.history[0].content = chat.alternateGreetings[next];
+            if (typeof saveData === 'function') saveData();
+            renderMessages(false, true);
+        };
+        leftBtn.addEventListener('click', (e) => { e.stopPropagation(); applyGreeting(idx - 1); });
+        rightBtn.addEventListener('click', (e) => { e.stopPropagation(); applyGreeting(idx + 1); });
+        return container;
+    }
     return wrapper;
 }
 
-// 全局函数：处理代付响应
+// 全局函数：处理代付响应（用户回应角色的代付请求）
 window.sendPayResponse = async function(msgId, action) {
     const chat = db.characters.find(c => c.id === currentChatId);
     if (!chat) return;
 
     const msg = chat.history.find(m => m.id === msgId);
     if (!msg) return;
+
+    // 用户同意代付时：从存钱罐扣款并记账
+    if (action === 'pay') {
+        const payReqMatch = (msg.content || '').match(/发起了代付请求[：:]([\d.]+)\|/);
+        const amount = payReqMatch ? parseFloat(payReqMatch[1]) : 0;
+        if (amount > 0 && typeof getPiggyBalance === 'function' && getPiggyBalance() < amount) {
+            if (typeof showToast === 'function') showToast('存钱罐余额不足，无法代付');
+            return;
+        }
+        if (amount > 0 && typeof addPiggyTransaction === 'function') {
+            addPiggyTransaction({
+                type: 'expense',
+                amount,
+                remark: '代付给' + (chat.realName || ''),
+                source: '商城代付',
+                charName: chat.realName || ''
+            });
+        }
+    }
 
     // 1. 更新原消息状态
     msg.payStatus = action === 'pay' ? 'paid' : 'rejected';
@@ -1070,6 +1215,7 @@ function addMessageBubble(message, targetChatId, targetChatType) {
                 else if (/\[.*?的语音[：:].*?\]/.test(previewText)) previewText = '[语音]';
                 else if (/\[.*?发来的照片\/视频[：:].*?\]/.test(previewText)) previewText = '[照片/视频]';
                 else if (/\[.*?的转账[：:].*?\]/.test(previewText) || /\[.*?向.*?转账[：:].*?\]/.test(previewText)) previewText = '[转账]';
+                else if (/\[(.+?)的位置[：:].*?\]/.test(previewText)) previewText = '[定位]';
                 else if (/\[.*?送来的礼物[：:].*?\]/.test(previewText)) previewText = '[礼物]';
                 else if (/\[.*?发来了一张图片[：:]\]/.test(previewText)) previewText = '[图片]';
                 else if (/\[商城订单[：:].*?\]/.test(previewText)) previewText = '[商城订单]';
@@ -1191,6 +1337,13 @@ function addMessageBubble(message, targetChatId, targetChatType) {
                 const actualIndex = character.history.length - 1 - lastPendingTransferIndex;
                 const transferMsg = character.history[actualIndex];
                 transferMsg.transferStatus = statusToSet;
+                if (statusToSet === 'returned' && typeof addPiggyTransaction === 'function') {
+                    const amountMatch = transferMsg.content && transferMsg.content.match(/转账[：:]\s*([\d.,]+)\s*元/);
+                    const amount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '.')) : 0;
+                    if (amount > 0) {
+                        addPiggyTransaction({ type: 'income', amount, remark: '转账退回', source: '聊天', charName: character.realName || '' });
+                    }
+                }
                 const transferCardOnScreen = messageArea.querySelector(`.message-wrapper[data-id="${transferMsg.id}"] .transfer-card`);
                 if (transferCardOnScreen) {
                     transferCardOnScreen.classList.remove('received', 'returned');

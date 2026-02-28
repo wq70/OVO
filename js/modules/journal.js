@@ -587,10 +587,10 @@ async function generateJournal(start, end, includeFavorited = false, silent = fa
             // 群聊逻辑
             // 收集关联的 + 全局的世界书（去重）
             const associatedIds = chat.worldBookIds || [];
-            const globalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+            const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
             const globalIds = globalBooks.map(wb => wb.id);
             const allBookIds = [...new Set([...associatedIds, ...globalIds])];
-            const groupWorldBooks = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
+            const groupWorldBooks = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id)).filter(wb => wb && !wb.disabled);
             worldBooksContent = groupWorldBooks.map(wb => wb.content).join('\n\n');
 
             summaryPrompt = `你是一个群聊记录总结助手。请以完全客观的第三视角，对以下群聊记录进行精简总结。\n\n`;
@@ -643,10 +643,10 @@ async function generateJournal(start, end, includeFavorited = false, silent = fa
 
             // 1. 自动获取通用世界书 (Context) + 全局世界书
             const associatedIds = chat.worldBookIds || [];
-            const globalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+            const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
             const globalIds = globalBooks.map(wb => wb.id);
             const allBookIds = [...new Set([...associatedIds, ...globalIds])];
-            const commonWorldBooks = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
+            const commonWorldBooks = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id)).filter(wb => wb && !wb.disabled);
             worldBooksContent = commonWorldBooks.map(wb => wb.content).join('\n\n');
 
             // 2. 获取风格设置
@@ -717,7 +717,7 @@ Strictly output in JSON format only. Do not speak outside the JSON object.
 
                 // 如果是自定义风格，注入额外要求
                 if (styleSettings.mode === 'custom') {
-                    const customWorldBooks = (styleSettings.customWorldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
+                    const customWorldBooks = (styleSettings.customWorldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id)).filter(wb => wb && !wb.disabled);
                     const customStyleContent = customWorldBooks.map(wb => wb.content).join('\n\n');
                     
                     if (customStyleContent) {

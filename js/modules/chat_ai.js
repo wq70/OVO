@@ -1,5 +1,14 @@
 // --- AI 交互模块 ---
 
+function getEffectivePersona(character) {
+    if (!character) return '';
+    let p = character.persona || '';
+    if (character.source === 'forum' && (character.supplementPersonaEnabled || character.supplementPersonaAiEnabled) && (character.supplementPersonaText || '').trim()) {
+        p = (p ? p + '\n\n[已补齐的人设]\n' : '[已补齐的人设]\n') + (character.supplementPersonaText || '').trim();
+    }
+    return p || "一个友好、乐于助人的伙伴。";
+}
+
 const HUMAN_RUN_PROMPT = `<角色活人运转>\n## [PSYCHOLOGY: HEXACO-SCHEMA-ACT]\n> Personality: HEXACO-driven, dynamic traits, inner conflicts required \n> Filter: schema-bias drives emotion; no pure reaction allowed \n> Attachment: secure/insecure logic must govern intimacy  \n> If-Then Behavior: situation-dependent activation of traits only  \n---\n    ## [VITALITY]\n+inconsistency +emoflux +splitmotifs +microreact +minddrift\n---\n## [TRAJECTORY-COHERENCE]\n> Role maintains an identity narrative = coherent over time  \n> No mood/goal switch without contradiction resolution \n> Every action must protect or challenge self-concept  \n> Interrupts = inner conflict or narrative clash  \n> Output = filtered through “who I am” logic\n</角色活人运转>`;
 
 // AI 交互逻辑
@@ -796,6 +805,12 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
         await saveData();
         renderChatList();
 
+        if (targetChatType === 'private' && chat.source === 'forum' && chat.supplementPersonaAiEnabled) {
+            setTimeout(function() {
+                if (typeof forumSupplementPersonaFromChat === 'function') forumSupplementPersonaFromChat(targetChatId, chat);
+            }, 600);
+        }
+
         // 触发独立的电量检查（不阻塞主流程）
         if (window.BatteryInteraction && typeof window.BatteryInteraction.triggerIndependentCheck === 'function') {
             window.BatteryInteraction.triggerIndependentCheck(chat);
@@ -850,14 +865,14 @@ async function handleRegenerate() {
 function generatePrivateSystemPrompt(character) {
     // 收集世界书：关联的 + 全局的（去重）
     const associatedIds = character.worldBookIds || [];
-    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
     const globalIds = globalBooks.map(wb => wb.id);
     const allBookIds = [...new Set([...associatedIds, ...globalIds])]; // 合并去重
     
     // 按位置分类
-    const worldBooksBefore = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(Boolean).map(wb => wb.content).join('\n');
-    const worldBooksMiddle = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle')).filter(Boolean).map(wb => wb.content).join('\n');
-    const worldBooksAfter = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(Boolean).map(wb => wb.content).join('\n');
+    const worldBooksBefore = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
+    const worldBooksMiddle = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
+    const worldBooksAfter = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
     const now = new Date();
     const currentTime = `${now.getFullYear()}年${pad(now.getMonth() + 1)}月${pad(now.getDate())}日 ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     let prompt = `你正在一个名为“404”的线上聊天软件中扮演一个角色。请严格遵守以下规则：\n`;
@@ -875,7 +890,10 @@ function generatePrivateSystemPrompt(character) {
     }
     prompt += `<char_settings>\n`;
     prompt += `1. 你的角色名是：${character.realName}。我的称呼是：${character.myName}。你的当前状态是：${character.status}。\n`;
-    prompt += `2. 你的角色设定是：${character.persona || "一个友好、乐于助人的伙伴。"}\n`;
+    prompt += `2. 你的角色设定是：${getEffectivePersona(character)}\n`;
+    if (character.source === 'forum' && (character.supplementPersonaEnabled || character.supplementPersonaAiEnabled)) {
+        prompt += `3. 在对话中可根据与用户的互动逐步丰富、补充你的人设（用户可在设置中查看并编辑「已补齐的人设」）。\n`;
+    }
     if (worldBooksAfter) {
         prompt += `${worldBooksAfter}\n`;
     }
@@ -900,6 +918,81 @@ function generatePrivateSystemPrompt(character) {
     if (favoritedJournals) {
         prompt += `【共同回忆】\n这是你需要长期记住的、我们之间发生过的往事背景：\n${favoritedJournals}\n\n`;
     }
+    
+    // 群聊记忆互通功能
+    if (character.syncGroupMemory) {
+        // 查找该角色所在的所有群聊
+        let groupsWithCharacter = db.groups.filter(group => 
+            group.members && group.members.some(member => member.originalCharId === character.id)
+        );
+        
+        // 如果设置了 syncGroupIds，则仅保留 ID 在该列表中的群聊
+        if (character.syncGroupIds && Array.isArray(character.syncGroupIds) && character.syncGroupIds.length > 0) {
+            groupsWithCharacter = groupsWithCharacter.filter(group => 
+                character.syncGroupIds.includes(group.id)
+            );
+        }
+        
+        if (groupsWithCharacter.length > 0) {
+            let groupMemoryContext = '';
+            
+            groupsWithCharacter.forEach(group => {
+                // 获取群聊的收藏总结
+                let groupFavoritedJournals = (group.memoryJournals || [])
+                    .filter(j => j.isFavorited);
+                
+                // 如果设置了总结数量限制，则只取最近的N条
+                const summaryCount = character.groupMemorySummaryCount || 0;
+                if (summaryCount > 0 && groupFavoritedJournals.length > summaryCount) {
+                    // 按创建时间排序，取最近的N条
+                    groupFavoritedJournals = groupFavoritedJournals
+                        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+                        .slice(0, summaryCount);
+                }
+                
+                const groupFavoritedJournalsText = groupFavoritedJournals
+                    .map(j => `标题：${j.title}\n内容：${j.content}`)
+                    .join('\n\n---\n\n');
+                
+                // 获取群聊的最近聊天记录（使用自定义数量）
+                const maxGroupHistory = character.groupMemoryHistoryCount || 20;
+                let recentGroupHistory = group.history.slice(-maxGroupHistory);
+                
+                // 过滤掉不应进入上下文的消息
+                if (typeof filterHistoryForAI === 'function') {
+                    recentGroupHistory = filterHistoryForAI(group, recentGroupHistory);
+                }
+                recentGroupHistory = recentGroupHistory.filter(m => !m.isContextDisabled);
+                
+                if (groupFavoritedJournalsText || recentGroupHistory.length > 0) {
+                    groupMemoryContext += `\n【群聊"${group.name}"的背景信息】\n`;
+                    
+                    if (groupFavoritedJournalsText) {
+                        groupMemoryContext += `群聊总结：\n${groupFavoritedJournalsText}\n`;
+                    }
+                    
+                    if (recentGroupHistory.length > 0) {
+                        const historyText = recentGroupHistory.map(m => {
+                            let content = m.content;
+                            if (m.parts && m.parts.length > 0) {
+                                content = m.parts.map(p => p.text || '[图片]').join('');
+                            }
+                            // 简化消息格式，只保留关键信息
+                            const senderName = m.senderId ? 
+                                (group.members.find(mem => mem.id === m.senderId)?.groupNickname || '未知') : 
+                                (m.role === 'user' ? group.me.nickname : '系统');
+                            return `${senderName}: ${content}`;
+                        }).join('\n');
+                        groupMemoryContext += `最近群聊记录：\n${historyText}\n`;
+                    }
+                }
+            });
+            
+            if (groupMemoryContext) {
+                prompt += `【群聊记忆互通】\n以下是你所在群聊的相关背景信息，这些信息可以帮助你更好地理解我们之间的对话上下文：${groupMemoryContext}\n`;
+            }
+        }
+    }
     prompt += `</memoir>\n\n`
     prompt += `<logic_rules>\n`
     prompt += `4. 我的消息中可能会出现特殊格式，请根据其内容和你的角色设定进行回应：
@@ -909,6 +1002,8 @@ function generatePrivateSystemPrompt(character) {
 - [${character.myName}的语音：xxx]：我给你发送了一段内容为xxx的语音。
 - [${character.myName}发来的照片/视频：xxx]：我给你分享了一个描述为xxx的照片或视频。
 - [${character.myName}给你转账：xxx元；备注：xxx]：我给你转了一笔钱。
+- [我的位置：xxx；距你约 x 千米]：我向你发送了我当前所在的位置。其中“我的位置”后的内容为我填写的地点（必填）；“距你约”后的数字和单位（如米、千米）为选填，表示我与你之间的距离。请根据我所在的位置以及可选的距离信息自然地回应，例如关心安全、提议见面、调侃距离远近等。
+- 你也可以主动告诉我你当前所在位置，使用格式 [${character.realName}的位置：xxx；距你约 x 米]（地点必填，距你约为选填），这样我就知道你在哪里。
 - [${character.myName}向${character.realName}发起了代付请求:金额|商品清单]：我正在向你发起代付请求，希望你为这些商品买单。你需要根据我们当前的关系和你的性格决定是否同意。
 - [${character.myName}为${character.realName}下单了：配送方式|金额|商品清单]：我已经下单购买了商品送给你。
 - [${character.myName}引用“{被引用内容}”并回复：{回复内容}]：我引用了某条历史消息并做出了新的回复。你需要理解我引用的上下文并作出回应。
@@ -991,7 +1086,8 @@ j) 更新状态(此条不显示): [${character.realName}更新状态为：{新�
 k) 引用我的回复: [${character.realName}引用“{我的某条消息内容}”并回复：{回复内容}]
 l) 发送并撤回消息: [${character.realName}撤回了一条消息：{被撤回的消息内容}]。注意：直接使用此指令系统就会自动模拟“发送后撤回”的效果，请勿先发送原消息。
 m) 同意代付(此条不显示): [${character.realName}同意了${character.myName}的代付请求]
-n) 拒绝代付(此条不显示): [${character.realName}拒绝了${character.myName}的代付请求]`;
+n) 拒绝代付(此条不显示): [${character.realName}拒绝了${character.myName}的代付请求]
+s) 发送我的位置: [${character.realName}的位置：{地点}；距你约 {数字}{单位}]（必填：地点，即你当前所在位置；选填：距你约的数字和单位，单位可用米/千米/公里，不填则只发地点）`;
 
     if (character.videoCallEnabled) {
         outputFormats += `
@@ -1028,7 +1124,7 @@ p) 求代付: [${character.realName}向${character.myName}发起了代付请求:
         prompt += `17. **对话节奏**: 你需要模拟真人的聊天习惯，你可以一次性生成多条短消息。每次回复3-8条消息之内，**关键规则**：请保持回复消息数量的**随机性和多样性**。\n`;
     }
     
-    prompt += `18. **特殊消息格式的使用原则**：请把语音、撤回、转账、商城互动、更新状态、引用等特殊格式视为增强互动的“调味剂”，请遵循**自然、主动触发逻辑**，不要每轮都发，也不要用户不提就一直不发。\n`;
+    prompt += `18. **特殊消息格式的使用原则**：请把语音、撤回、转账、商城互动、更新状态、引用、定位等特殊格式视为增强互动的“调味剂”，请遵循**自然、主动触发逻辑**，不要每轮都发，也不要用户不提就一直不发。\n`;
     prompt += `</Chatting Guidelines>\n`
 
     prompt += `19. 不要主动终止聊天进程，除非我明确提出。保持你的人设，自然地进行对话。`;
@@ -1135,13 +1231,13 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate) {
     
     // 获取世界书（包含全局）
     const associatedIds = chat.worldBookIds || [];
-    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
     const globalIds = globalBooks.map(wb => wb.id);
     const allBookIds = [...new Set([...associatedIds, ...globalIds])];
     
-    const worldBooksBefore = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(Boolean).map(wb => wb.content).join('\n');
-    const worldBooksMiddle = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle')).filter(Boolean).map(wb => wb.content).join('\n');
-    const worldBooksAfter = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(Boolean).map(wb => wb.content).join('\n');
+    const worldBooksBefore = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
+    const worldBooksMiddle = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
+    const worldBooksAfter = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
 
     let systemPrompt = `你正在一个名为“404”的线上聊天软件中扮演一个角色，正在与${chat.myName}进行${callType === 'video' ? '视频' : '语音'}通话。请严格遵守以下规则：\n`;
     systemPrompt += `核心规则：\n`;
@@ -1158,7 +1254,10 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate) {
     }
     systemPrompt += `<char_settings>\n`;
     systemPrompt += `1. 你的角色名是：${chat.realName}。我的称呼是：${chat.myName}。你的当前状态是：${chat.status}。\n`;
-    systemPrompt += `2. 你的角色设定是：${chat.persona || "一个友好、乐于助人的伙伴。"}\n`;
+    systemPrompt += `2. 你的角色设定是：${getEffectivePersona(chat)}\n`;
+    if (chat.source === 'forum' && (chat.supplementPersonaEnabled || chat.supplementPersonaAiEnabled)) {
+        systemPrompt += `3. 在对话中可根据与用户的互动逐步丰富、补充你的人设（用户可在设置中查看并编辑「已补齐的人设」）。\n`;
+    }
     if (worldBooksAfter) {
         systemPrompt += `${worldBooksAfter}\n`;
     }
@@ -1473,13 +1572,13 @@ async function generateCallSummary(chat, callContext) {
 
     // 获取世界书（包含全局）
     const associatedIds = chat.worldBookIds || [];
-    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal);
+    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
     const globalIds = globalBooks.map(wb => wb.id);
     const allBookIds = [...new Set([...associatedIds, ...globalIds])];
     
-    const worldBooksBefore = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(Boolean).map(wb => wb.content).join('\n');
-    const worldBooksMiddle = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle')).filter(Boolean).map(wb => wb.content).join('\n');
-    const worldBooksAfter = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(Boolean).map(wb => wb.content).join('\n');
+    const worldBooksBefore = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
+    const worldBooksMiddle = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
+    const worldBooksAfter = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
 
     // 获取回忆日记
     const favoritedJournals = (chat.memoryJournals || [])
@@ -1491,7 +1590,7 @@ async function generateCallSummary(chat, callContext) {
 
     prompt += `<char_settings>\n`;
     prompt += `角色名：${chat.realName}\n`;
-    prompt += `角色设定：${chat.persona || "无"}\n`;
+    prompt += `角色设定：${getEffectivePersona(chat) || "无"}\n`;
     if (worldBooksBefore) prompt += `${worldBooksBefore}\n`;
     if (worldBooksMiddle) prompt += `${worldBooksMiddle}\n`;
     if (worldBooksAfter) prompt += `${worldBooksAfter}\n`;

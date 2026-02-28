@@ -413,6 +413,14 @@
         tryAutoPlay();
     }
 
+    function resumeMusicIfPaused() {
+        const el = getAudio();
+        if (el.src && el.paused) {
+            el.play().catch(function () {});
+        }
+    }
+
     window.initMusicPlayer = initMusicPlayer;
     window.onShowMusicScreen = onShowMusicScreen;
+    window.resumeMusicPlayback = resumeMusicIfPaused;
 })();

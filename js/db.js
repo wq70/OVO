@@ -88,7 +88,8 @@ const defaultIcons = {
     'diary-screen': {name: '日记本', url: 'https://i.postimg.cc/bJBLzmFH/chan-70.png'},
     'piggy-bank-screen': {name: '存钱罐', url: 'https://i.postimg.cc/3RmWRRtS/chan-18.png'},
     'pomodoro-screen': {name: '番茄钟', url: 'https://i.postimg.cc/PrYGRDPF/chan-76.png'},
-    'storage-analysis-screen': {name: '存储分析', url: 'https://i.postimg.cc/J0F3Lt0T/chan-107.png'}
+    'storage-analysis-screen': {name: '存储分析', url: 'https://i.postimg.cc/J0F3Lt0T/chan-107.png'},
+    'theater-screen': {name: '小剧场', url: 'https://i.postimg.cc/t4gXjG8P/7632D362A35EC703E7A81F6FF0F8AE34.png'}
 };
 
 const peekScreenApps = {
@@ -101,8 +102,8 @@ const peekScreenApps = {
     'album': { name: '相册', url: 'https://i.postimg.cc/qBcdpqNc/export202509221549335970.png' },
     'steps': { name: '步数', url: 'https://i.postimg.cc/5NndFrq6/export202509181824532800.png' },
     'unlock': { name: 'unlock！', url: 'https://i.postimg.cc/28zNyYWs/export202509221542593320.png' },
-    'wallet': { name: '钱包', url: 'https://i.postimg.cc/3NBWY1RV/87C8E6E2942AED8F4B7161342198C744.png' },
-    'timeThoughts': { name: '时光想说', url: 'https://i.postimg.cc/sxgY7vtV/F23EDFB4269AABBEA753D86388808766.png' }
+    'wallet': { name: '钱包', url: 'https://i.postimg.cc/NjRxBZXV/20260228-062729.webp' },
+    'timeThoughts': { name: '时光想说', url: 'https://i.postimg.cc/FRpWm8MK/20260228-062619.webp' }
 };
 
 const DEFAULT_COT_PRESETS = [
@@ -157,13 +158,14 @@ const DEFAULT_COT_PRESETS = [
 ];
 
 const globalSettingKeys = [
-    'apiSettings', 'summaryApiSettings', 'backgroundApiSettings', 'wallpaper', 'homeScreenMode', 'fontUrl', 'customIcons',
-    'apiPresets', 'summaryApiPresets', 'backgroundApiPresets', 'bubbleCssPresets', 'myPersonaPresets', 'globalCss',
-    'globalCssPresets', 'fontPresets', 'homeSignature', 'forumPosts', 'forumBindings', 'forumUserProfile', 'forumSettings', 'forumMessages', 'pomodoroTasks', 'pomodoroSettings', 'insWidgetSettings', 'homeWidgetSettings',
+    'apiSettings', 'summaryApiSettings', 'backgroundApiSettings', 'supplementPersonaApiSettings', 'wallpaper', 'homeScreenMode', 'fontUrl', 'customIcons',
+    'apiPresets', 'summaryApiPresets', 'backgroundApiPresets', 'supplementPersonaApiPresets', 'bubbleCssPresets', 'myPersonaPresets', 'globalCss',
+    'globalCssPresets', 'fontPresets', 'homeSignature', 'forumPosts', 'forumBindings', 'forumUserProfile', 'forumSettings', 'forumApiSettings', 'forumMessages', 'forumStrangerProfiles', 'forumFriendRequests', 'forumPendingRequestFromUser', 'pomodoroTasks', 'pomodoroSettings', 'insWidgetSettings', 'homeWidgetSettings',
     'chatFolders', 'fontSizeScale', 'activePersonaId', 'moreProfileCardBg', 'statusBarPresets', 'themeSettings', 'themePresets', 'savedKeyboardHeight',
-    'globalSendSound', 'globalReceiveSound', 'multiMsgSoundEnabled', 'soundPresets', 'galleryPresets', 'iconPresets', 'homeWidgetPresets',
+    'globalSendSound', 'globalReceiveSound', 'globalIncomingCallSound', 'multiMsgSoundEnabled', 'soundPresets', 'galleryPresets', 'iconPresets', 'homeWidgetPresets', 'widgetWallpaperPresets',
     'cotSettings', 'cotPresets', 'hasSeenVideoCallDisclaimer', 'hasSeenVideoCallAvatarHint',
-    'favorites', 'piggyBank'
+    'favorites', 'piggyBank',
+    'theaterScenarios', 'theaterPromptPresets'
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
 
@@ -337,6 +339,7 @@ var db = {
     apiSettings: {},
     summaryApiSettings: {},
     backgroundApiSettings: {},
+    supplementPersonaApiSettings: {},
     wallpaper: 'https://i.postimg.cc/W4Z9R9x4/ins-1.jpg',
     myStickers: [],
     homeScreenMode: 'night',
@@ -346,6 +349,7 @@ var db = {
     apiPresets: [],
     summaryApiPresets: [],
     backgroundApiPresets: [],
+    supplementPersonaApiPresets: [],
     bubbleCssPresets: [],
     myPersonaPresets: [],
     fontPresets: [],
@@ -411,6 +415,7 @@ var db = {
     themePresets: [],
     globalSendSound: '',
     globalReceiveSound: '',
+    globalIncomingCallSound: '',
     multiMsgSoundEnabled: false,
     soundPresets: [],
     galleryPresets: [],
@@ -585,6 +590,7 @@ const loadData = async () => {
             apiSettings: {},
             summaryApiSettings: {},
             backgroundApiSettings: {},
+            supplementPersonaApiSettings: {},
             wallpaper: 'https://i.postimg.cc/W4Z9R9x4/ins-1.jpg',
             homeScreenMode: 'night',
             fontUrl: '',
@@ -592,6 +598,7 @@ const loadData = async () => {
             apiPresets: [],
             summaryApiPresets: [],
             backgroundApiPresets: [],
+            supplementPersonaApiPresets: [],
             bubbleCssPresets: [],
             myPersonaPresets: [],
             fontPresets: [],
@@ -601,8 +608,12 @@ const loadData = async () => {
             forumPosts: [],
             forumBindings: { worldBookIds: [], charIds: [], userPersonaIds: [] },
             forumUserProfile: { username: '', avatar: 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg', bio: '', joinDate: 0 },
-            forumSettings: { postsPerGeneration: 8, commentsPerPost: { min: 4, max: 8 } },
+            forumSettings: { postsPerGeneration: 8, commentsPerPost: { min: 4, max: 8 }, generateDetailedStranger: false },
+            forumApiSettings: { useForumApi: false, url: '', key: '', model: '', temperature: 0.9 },
             forumMessages: [],
+            forumStrangerProfiles: {},
+            forumFriendRequests: [],
+            forumPendingRequestFromUser: {},
             pomodoroTasks: [],
             pomodoroSettings: { boundCharId: null, userPersona: '', focusBackground: '', taskCardBackground: '', encouragementMinutes: 25, pokeLimit: 5, globalWorldBookIds: [] },
             insWidgetSettings: { avatar1: 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg', bubble1: 'love u.', avatar2: 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg', bubble2: 'miss u.' },
@@ -611,17 +622,21 @@ const loadData = async () => {
             moreProfileCardBg: 'https://i.postimg.cc/XvFDdTKY/Smart-Select-20251013-023208.jpg',
             globalSendSound: '',
             globalReceiveSound: '',
+            globalIncomingCallSound: '',
             multiMsgSoundEnabled: false,
             soundPresets: [],
             galleryPresets: [],
             iconPresets: [],
             homeWidgetPresets: [],
+            widgetWallpaperPresets: [],
             cotSettings: { enabled: false, activePresetId: 'default' },
             cotPresets: JSON.parse(JSON.stringify(DEFAULT_COT_PRESETS)),
             hasSeenVideoCallDisclaimer: false,
             hasSeenVideoCallAvatarHint: false,
             favorites: [],
-            piggyBank: { balance: 520, transactions: [] }
+            piggyBank: { balance: 520, transactions: [] },
+            theaterScenarios: [],
+            theaterPromptPresets: []
         };
         db[key] = settings[key] !== undefined ? settings[key] : (defaultValue[key] !== undefined ? JSON.parse(JSON.stringify(defaultValue[key])) : undefined);
     });
@@ -629,6 +644,10 @@ const loadData = async () => {
     if (!db.piggyBank) db.piggyBank = { balance: 520, transactions: [] };
     if (typeof db.piggyBank.balance !== 'number') db.piggyBank.balance = 520;
     if (!Array.isArray(db.piggyBank.transactions)) db.piggyBank.transactions = [];
+    if (!db.forumStrangerProfiles || typeof db.forumStrangerProfiles !== 'object') db.forumStrangerProfiles = {};
+    if (!Array.isArray(db.forumFriendRequests)) db.forumFriendRequests = [];
+    if (!db.forumPendingRequestFromUser || typeof db.forumPendingRequestFromUser !== 'object') db.forumPendingRequestFromUser = {};
+    if (db.forumSettings && db.forumSettings.generateDetailedStranger === undefined) db.forumSettings.generateDetailedStranger = false;
 
     // Data integrity checks
     db.characters.forEach(c => {

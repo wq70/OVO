@@ -303,6 +303,68 @@ async function setupStickerSystem() {
             }
         }
     });
+
+    // 表情包智能匹配：输入框打字时在输入框上方显示匹配的表情，点击即发送
+    const msgInput = document.getElementById('message-input');
+    const smartMatchBar = document.getElementById('sticker-smart-match-bar');
+    const smartMatchList = document.getElementById('sticker-smart-match-list');
+    const SMART_MATCH_LIMIT = 12;
+    let smartMatchDebounceTimer = null;
+
+    function updateStickerSmartMatchBar() {
+        if (!smartMatchBar || !smartMatchList || !msgInput) return;
+        const text = (msgInput.value || '').trim().toLowerCase();
+        const isPrivate = (typeof currentChatType !== 'undefined' && currentChatType === 'private');
+        const character = isPrivate && typeof currentChatId !== 'undefined' && db.characters ? db.characters.find(c => c.id === currentChatId) : null;
+        const enabled = character && (character.stickerSmartMatchEnabled === true);
+
+        if (!enabled || !text) {
+            smartMatchBar.style.display = 'none';
+            smartMatchList.innerHTML = '';
+            return;
+        }
+
+        const matched = (db.myStickers || []).filter(s => (s.name || '').toLowerCase().includes(text)).slice(0, SMART_MATCH_LIMIT);
+        if (matched.length === 0) {
+            smartMatchBar.style.display = 'none';
+            smartMatchList.innerHTML = '';
+            return;
+        }
+
+        smartMatchList.innerHTML = '';
+        matched.forEach(sticker => {
+            const item = document.createElement('div');
+            item.className = 'sticker-smart-match-item';
+            item.title = sticker.name;
+            item.innerHTML = `<img src="${sticker.data}" alt="${sticker.name}">`;
+            item.addEventListener('click', () => {
+                sendSticker(sticker);
+                smartMatchBar.style.display = 'none';
+                smartMatchList.innerHTML = '';
+                msgInput.value = '';
+            });
+            smartMatchList.appendChild(item);
+        });
+        smartMatchBar.style.display = 'block';
+    }
+
+    if (msgInput) {
+        msgInput.addEventListener('input', () => {
+            clearTimeout(smartMatchDebounceTimer);
+            smartMatchDebounceTimer = setTimeout(updateStickerSmartMatchBar, 200);
+        });
+        msgInput.addEventListener('blur', () => {
+            clearTimeout(smartMatchDebounceTimer);
+            setTimeout(() => {
+                if (smartMatchBar && document.activeElement !== msgInput) {
+                    smartMatchBar.style.display = 'none';
+                }
+            }, 150);
+        });
+        msgInput.addEventListener('focus', () => {
+            updateStickerSmartMatchBar();
+        });
+    }
 }
 
 function renderStickerCategories() {

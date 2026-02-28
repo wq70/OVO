@@ -424,6 +424,10 @@ function setupHomeScreen() {
                     <img src="${getIcon('music-screen')}" alt="音乐" class="icon-img">
                     <span class="app-name">${defaultIcons['music-screen'].name}</span>
                 </a>
+                <a href="#" class="app-icon" data-target="theater-screen">
+                    <img src="${getIcon('theater-screen')}" alt="小剧场" class="icon-img">
+                    <span class="app-name">${defaultIcons['theater-screen'].name}</span>
+                </a>
              </div>
         </div>
 

@@ -439,6 +439,7 @@ const SearchSystem = {
         const stickerRegex = /\[.*?的表情包：.*?\]|\[.*?发送的表情包：.*?\]/;
         const giftRegex = /\[.*?送来的礼物：.*?\]|\[.*?向.*?送来了礼物：.*?\]/;
         const forumShareRegex = /\[论坛分享\]标题：([\s\S]+?)\n摘要：([\s\S]+)/;
+        const forumCommentShareRegex = /\[论坛分享-评论\]/;
         const htmlRegex = /<[a-z][\s\S]*>/i;
 
         if (giftRegex.test(content)) return true;
@@ -447,7 +448,7 @@ const SearchSystem = {
         if (photoVideoRegex.test(content)) return true;
         if (transferRegex.test(content)) return true;
         if (imageRecogRegex.test(content) || (msg.parts && msg.parts.some(p => p.type === 'image'))) return true;
-        if (forumShareRegex.test(content)) return true;
+        if (forumShareRegex.test(content) || forumCommentShareRegex.test(content)) return true;
         if (msg.parts && msg.parts.some(p => p.type === 'html')) return true;
         if (htmlRegex.test(content)) return true;
         if (urlRegex.test(content)) return true;

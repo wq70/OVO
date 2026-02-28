@@ -636,6 +636,41 @@ function filterHistoryForAI(chat, historySlice, ignoreContextDisabled = false) {
         });
     }
 
+    // 4. 小剧场分享占位符展开为真实内容（仅供 AI 上下文使用）
+    try {
+        const theaterShareRegex = /^\[小剧场分享[：:](.+?)\]$/;
+        if (typeof db !== 'undefined' && db && Array.isArray(db.theaterScenarios)) {
+            filteredHistory.forEach(msg => {
+                if (!msg || !msg.content || typeof msg.content !== 'string') return;
+                const match = msg.content.match(theaterShareRegex);
+                if (!match) return;
+                const scenarioId = match[1];
+                const scenario = db.theaterScenarios.find(s => s.id === scenarioId);
+                if (!scenario) return;
+
+                let charName = '';
+                if (scenario.charId && Array.isArray(db.characters)) {
+                    const ch = db.characters.find(c => c.id === scenario.charId);
+                    if (ch) charName = ch.remarkName || ch.realName || '';
+                }
+
+                const lines = [];
+                lines.push('【小剧场分享】');
+                lines.push(`标题：${scenario.title || '剧情'}`);
+                lines.push(`分类：${scenario.category || '未分类'}`);
+                if (charName) {
+                    lines.push(`角色：${charName}`);
+                }
+                lines.push('');
+                lines.push(scenario.content || '');
+
+                msg.content = lines.join('\n');
+            });
+        }
+    } catch (e) {
+        console.error('展开小剧场分享内容到 AI 上下文时出错:', e);
+    }
+
     return filteredHistory;
 }
 

@@ -17,7 +17,18 @@ const VideoCallModule = {
         initialAiResponse: null, // 存储开场白
         incomingChat: null, // 暂存来电对象
         isMinimized: false, // 是否处于悬浮窗模式
-        hasEnteredCallScene: false // 是否已进入通话界面（区分「等待中」与「已接通」）
+        hasEnteredCallScene: false, // 是否已进入通话界面（区分「等待中」与「已接通」）
+        ringAudio: null // 来电铃声 Audio 实例，用于循环播放与接通/拒绝时停止
+    },
+
+    stopRingSound: function() {
+        if (this.state.ringAudio) {
+            try {
+                this.state.ringAudio.pause();
+                this.state.ringAudio.currentTime = 0;
+            } catch (e) {}
+            this.state.ringAudio = null;
+        }
     },
 
     init: function() {
@@ -413,12 +424,20 @@ const VideoCallModule = {
         modal.offsetHeight;
         modal.classList.add('visible');
 
-        if (typeof playSound === 'function' && db.globalReceiveSound) {
-            playSound(db.globalReceiveSound);
+        this.stopRingSound();
+        if (db.globalIncomingCallSound) {
+            try {
+                const ring = new Audio(db.globalIncomingCallSound);
+                ring.loop = true;
+                ring.volume = 1;
+                ring.play().catch(() => {});
+                this.state.ringAudio = ring;
+            } catch (e) {}
         }
     },
 
     acceptCall: function() {
+        this.stopRingSound();
         const modal = document.getElementById('vc-incoming-modal');
         modal.classList.remove('visible');
         setTimeout(() => {
@@ -438,6 +457,7 @@ const VideoCallModule = {
     },
 
     rejectCall: async function() {
+        this.stopRingSound();
         const modal = document.getElementById('vc-incoming-modal');
         modal.classList.remove('visible');
         setTimeout(() => {
@@ -1448,7 +1468,11 @@ const VideoCallModule = {
                 return;
             }
 
-            // 检查 TTS 是否启用
+            // 未启用 TTS 时静默返回，不提示
+            if (!MinimaxTTSService.config.enabled) {
+                return;
+            }
+            // 已启用但未配置完整时才提示
             if (!MinimaxTTSService.isConfigured()) {
                 showToast('TTS 未配置或未启用');
                 return;

@@ -1,5 +1,28 @@
 // js/modules/tts_service.js
 // Minimax TTS 语音合成服务
+// language_boost 取值见官方文档: https://platform.minimaxi.com/docs/api-reference/speech-t2a-http
+
+const LANGUAGE_BOOST_MAP = {
+    zh: 'Chinese',
+    yue: 'Chinese,Yue',
+    en: 'English',
+    ja: 'Japanese',
+    ko: 'Korean',
+    es: 'Spanish',
+    fr: 'French',
+    de: 'German',
+    ru: 'Russian',
+    pt: 'Portuguese',
+    it: 'Italian',
+    ar: 'Arabic',
+    th: 'Thai',
+    vi: 'Vietnamese',
+    id: 'Indonesian',
+    tr: 'Turkish',
+    nl: 'Dutch',
+    uk: 'Ukrainian',
+    pl: 'Polish'
+};
 
 const MinimaxTTSService = {
     // 配置项（从 localStorage 加载）
@@ -104,9 +127,10 @@ const MinimaxTTSService = {
                 }
             };
 
-            // 如果指定了语言，添加 language_boost 参数
+            // 若指定了语言，将前端语言码映射为 API 要求的 language_boost 枚举值后传入
             if (language && language !== 'auto') {
-                requestBody.language_boost = language;
+                const apiValue = LANGUAGE_BOOST_MAP[language] || language;
+                requestBody.language_boost = apiValue;
             }
 
             const response = await fetch(url, {
