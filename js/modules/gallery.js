@@ -8,6 +8,7 @@ function setupGalleryManagement() {
     const addGalleryBtn = document.getElementById('add-gallery-item-btn');
     const batchAddBtn = document.getElementById('batch-add-gallery-btn');
     const exportGalleryBtn = document.getElementById('export-gallery-btn');
+    const clearGalleryBtn = document.getElementById('clear-gallery-btn');
     const savePresetBtn = document.getElementById('save-gallery-preset-btn');
     const loadPresetBtn = document.getElementById('load-gallery-preset-btn');
     
@@ -140,6 +141,22 @@ function setupGalleryManagement() {
     });
 
     if (cancelBatchBtn) cancelBatchBtn.addEventListener('click', () => batchModal.classList.remove('visible'));
+
+    // 一键清空相册
+    if (clearGalleryBtn) {
+        clearGalleryBtn.addEventListener('click', async () => {
+            const char = db.characters.find(c => c.id === currentChatId);
+            if (!char) return;
+            if (!char.gallery || char.gallery.length === 0) {
+                return showToast('相册已是空的');
+            }
+            if (!confirm('确定要清空当前角色的相册吗？此操作不可恢复。')) return;
+            char.gallery = [];
+            await saveData();
+            renderGalleryList(char);
+            showToast('相册已清空');
+        });
+    }
 
     // 导出相册
     if (exportGalleryBtn) {

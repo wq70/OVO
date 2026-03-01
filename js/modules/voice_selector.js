@@ -68,6 +68,8 @@ const VoiceSelector = {
 
     selectedVoiceId: null,
     currentFilter: 'all',
+    // 'char' = 角色音色, 'user' = 用户音色
+    currentMode: 'char',
 
     // 初始化
     init: function() {
@@ -77,10 +79,19 @@ const VoiceSelector = {
 
     // 绑定事件
     bindEvents: function() {
-        // 打开弹窗
         const selectBtn = document.getElementById('select-voice-id-btn');
         if (selectBtn) {
-            selectBtn.addEventListener('click', () => this.showModal());
+            selectBtn.addEventListener('click', () => {
+                this.currentMode = 'char';
+                this.showModal();
+            });
+        }
+        const selectUserBtn = document.getElementById('select-user-voice-id-btn');
+        if (selectUserBtn) {
+            selectUserBtn.addEventListener('click', () => {
+                this.currentMode = 'user';
+                this.showModal();
+            });
         }
 
         // 关闭弹窗
@@ -212,12 +223,12 @@ const VoiceSelector = {
 
     // 确认选择
     confirmSelection: function() {
-        const btnText = document.getElementById('current-voice-name');
+        const isUser = this.currentMode === 'user';
+        const btnText = document.getElementById(isUser ? 'current-user-voice-name' : 'current-voice-name');
         if (!this.selectedVoiceId) {
-            // 确认为「不选择」：清除保存的音色
             if (btnText) btnText.textContent = '选择音色';
             if (typeof currentChatId !== 'undefined' && currentChatId) {
-                this.saveVoiceToChat(currentChatId, null);
+                this.saveVoiceToChat(currentChatId, null, this.currentMode);
             }
             this.hideModal();
             showToast('已清除音色选择');
@@ -229,29 +240,27 @@ const VoiceSelector = {
 
         if (btnText) btnText.textContent = voice.name;
         if (typeof currentChatId !== 'undefined' && currentChatId) {
-            this.saveVoiceToChat(currentChatId, this.selectedVoiceId);
+            this.saveVoiceToChat(currentChatId, this.selectedVoiceId, this.currentMode);
         }
         this.hideModal();
         showToast(`已选择：${voice.name}`);
     },
 
-    // 保存到聊天配置（voiceId 为 null 时表示清除选择）
-    saveVoiceToChat: async function(chatId, voiceId) {
+    // 保存到聊天配置。mode: 'char' | 'user'，voiceId 为 null 时表示清除
+    saveVoiceToChat: async function(chatId, voiceId, mode) {
         try {
             if (typeof db === 'undefined' || !db.characters) return;
-            
             const chat = db.characters.find(c => c.id === chatId);
             if (!chat) return;
 
-            if (!chat.ttsConfig) {
-                chat.ttsConfig = {};
-            }
+            if (!chat.ttsConfig) chat.ttsConfig = {};
+            const key = mode === 'user' ? 'userVoiceId' : 'voiceId';
             if (voiceId === null || voiceId === '') {
-                delete chat.ttsConfig.voiceId;
-                console.log('[VoiceSelector] 已清除角色音色配置');
+                delete chat.ttsConfig[key];
+                console.log('[VoiceSelector] 已清除' + (mode === 'user' ? '用户' : '角色') + '音色配置');
             } else {
-                chat.ttsConfig.voiceId = voiceId;
-                console.log('[VoiceSelector] 音色已保存到角色配置');
+                chat.ttsConfig[key] = voiceId;
+                console.log('[VoiceSelector] 音色已保存到' + (mode === 'user' ? '用户' : '角色') + '配置');
             }
             await saveData();
         } catch (err) {
@@ -259,12 +268,13 @@ const VoiceSelector = {
         }
     },
 
-    // 加载当前音色（无配置时 selectedVoiceId 为 null，列表无选中项）
+    // 加载当前音色（按 currentMode 读角色或用户）
     loadCurrentVoice: function() {
         try {
             if (typeof currentChatId === 'undefined' || !currentChatId) return;
             const chat = db.characters.find(c => c.id === currentChatId);
-            this.selectedVoiceId = (chat && chat.ttsConfig && chat.ttsConfig.voiceId) ? chat.ttsConfig.voiceId : null;
+            const key = this.currentMode === 'user' ? 'userVoiceId' : 'voiceId';
+            this.selectedVoiceId = (chat && chat.ttsConfig && chat.ttsConfig[key]) ? chat.ttsConfig[key] : null;
             this.renderVoices();
         } catch (err) {
             console.error('[VoiceSelector] 加载当前音色失败:', err);
@@ -276,27 +286,28 @@ const VoiceSelector = {
         this.renderVoices(term);
     },
 
-    // 获取角色的音色配置
-    getVoiceConfig: function(chatId) {
+    // 获取音色配置。mode 可选 'char' | 'user'，默认 'char'
+    getVoiceConfig: function(chatId, mode) {
         try {
             if (typeof db === 'undefined' || !db.characters) return null;
-            
             const chat = db.characters.find(c => c.id === chatId);
             if (!chat || !chat.ttsConfig) return null;
 
-            // 优先使用自定义 Voice ID
-            const customVoiceId = chat.ttsConfig.customVoiceId;
+            const isUser = mode === 'user';
+            const customKey = isUser ? 'userCustomVoiceId' : 'customVoiceId';
+            const voiceKey = isUser ? 'userVoiceId' : 'voiceId';
+            const langKey = isUser ? 'userLanguage' : 'language';
+
+            const customVoiceId = chat.ttsConfig[customKey];
             if (customVoiceId && customVoiceId.trim()) {
                 return {
                     voiceId: customVoiceId.trim(),
-                    language: chat.ttsConfig.language || 'auto'
+                    language: chat.ttsConfig[langKey] || 'auto'
                 };
             }
-
-            // 否则使用选择的 Voice ID
             return {
-                voiceId: chat.ttsConfig.voiceId || 'female-shaonv',
-                language: chat.ttsConfig.language || 'auto'
+                voiceId: chat.ttsConfig[voiceKey] || (isUser ? '' : 'female-shaonv'),
+                language: chat.ttsConfig[langKey] || 'auto'
             };
         } catch (err) {
             console.error('[VoiceSelector] 获取配置失败:', err);

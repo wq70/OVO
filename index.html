@@ -630,6 +630,22 @@
                             </div>
                             <span class="expansion-item-name">发送定位</span>
                         </div>
+                        <div class="expansion-item" id="abort-reply-btn">
+                            <div class="expansion-item-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 6h12v12H6z"/>
+                                </svg>
+                            </div>
+                            <span class="expansion-item-name">暂停调用</span>
+                        </div>
+                        <div class="expansion-item" id="camera-capture-btn">
+                            <div class="expansion-item-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm10 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm4-6H4v12h16V8z"/>
+                                </svg>
+                            </div>
+                            <span class="expansion-item-name">直接拍照</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1338,11 +1354,11 @@
                         </div>
                     </div>
 
-                    <!-- Minimax TTS 配置 (独立保存) -->
+                    <!-- 角色 TTS 配置 (独立保存) -->
                     <div class="kkt-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
                         <div style="margin-bottom: 15px;">
-                            <h3 style="margin: 0; font-size: 16px; color: var(--primary-color);">Minimax TTS 配置</h3>
-                            <p style="font-size: 12px; color: #999; margin: 5px 0 0;">语音合成服务，独立配置</p>
+                            <h3 style="margin: 0; font-size: 16px; color: var(--primary-color);">角色 TTS 配置</h3>
+                            <p style="font-size: 12px; color: #999; margin: 5px 0 0;">角色语音合成，用于播放角色消息</p>
                         </div>
                         
                         <div class="kkt-item">
@@ -1447,6 +1463,67 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- 用户 TTS 配置 (独立于角色) -->
+                    <div class="kkt-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
+                        <div style="margin-bottom: 15px;">
+                            <h3 style="margin: 0; font-size: 16px; color: var(--primary-color);">用户 TTS 配置</h3>
+                            <p style="font-size: 12px; color: #999; margin: 5px 0 0;">用户语音合成，用于播放用户消息；不启用则不显示聊天中的用户音色设置</p>
+                        </div>
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">启用用户 TTS</div>
+                            <div class="kkt-item-control">
+                                <label class="kkt-switch">
+                                    <input type="checkbox" id="minimax-user-tts-enabled">
+                                    <span class="kkt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">Group ID</div>
+                            <div class="kkt-item-control">
+                                <input type="text" id="minimax-user-group-id" autocomplete="off"
+                                    placeholder="输入 GroupId"
+                                    style="text-align:right; border:none; background:transparent; width: 100%;">
+                            </div>
+                        </div>
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">API Key</div>
+                            <div class="kkt-item-control">
+                                <input type="password" id="minimax-user-api-key" autocomplete="new-password"
+                                    placeholder="输入 API Key"
+                                    style="text-align:right; border:none; background:transparent; width: 100%;">
+                            </div>
+                        </div>
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">域名选择</div>
+                            <div class="kkt-item-control">
+                                <select id="minimax-user-domain"
+                                    style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                    <option value="api.minimaxi.com">国际 (api.minimaxi.com)</option>
+                                    <option value="api.minimax.chat">国内 (api.minimax.chat)</option>
+                                </select>
+                                <span class="kkt-arrow">›</span>
+                            </div>
+                        </div>
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">TTS 模型</div>
+                            <div class="kkt-item-control">
+                                <select id="minimax-user-tts-model"
+                                    style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                    <option value="speech-01">speech-01</option>
+                                    <option value="speech-02-turbo">speech-02-turbo</option>
+                                    <option value="speech-02-hd">speech-02-hd</option>
+                                    <option value="speech-2.6-turbo">speech-2.6-turbo</option>
+                                    <option value="speech-2.6-hd">speech-2.6-hd</option>
+                                    <option value="speech-2.8-turbo">speech-2.8-turbo</option>
+                                    <option value="speech-2.8-hd" selected>speech-2.8-hd (推荐)</option>
+                                </select>
+                                <span class="kkt-arrow">›</span>
+                            </div>
+                        </div>
+                        <p style="font-size: 12px; color: #999; margin-top: 10px;">保存请点击上方「保存 TTS 配置」按钮</p>
                     </div>
                 </div>
             </main>
@@ -1938,6 +2015,7 @@
             </div>
         </div>
         <input type="file" id="image-upload-input" accept="image/*" style="display:none;">
+        <input type="file" id="camera-upload-input" accept="image/*" capture="environment" style="display:none;">
 
         <!-- Profile Card Modal -->
         <div id="profile-card-modal" class="modal-overlay">
@@ -2711,6 +2789,28 @@
                                 </div>
                             </div>
 
+                            <!-- 聊天快速定位（回顶/回底） -->
+                            <div class="kkt-group" style="margin-top:15px;">
+                                <div class="kkt-item kkt-item-clickable" id="chat-scroll-to-top-current-btn" style="cursor:pointer;">
+                                    <div class="kkt-item-label">回顶（当前已加载）</div>
+                                    <div class="kkt-item-control">
+                                        <span class="kkt-arrow">›</span>
+                                    </div>
+                                </div>
+                                <div class="kkt-item kkt-item-clickable" id="chat-scroll-to-top-all-btn" style="cursor:pointer;">
+                                    <div class="kkt-item-label">回顶（全部）</div>
+                                    <div class="kkt-item-control">
+                                        <span class="kkt-arrow">›</span>
+                                    </div>
+                                </div>
+                                <div class="kkt-item kkt-item-clickable" id="chat-scroll-to-bottom-btn" style="cursor:pointer;">
+                                    <div class="kkt-item-label">聊天回底</div>
+                                    <div class="kkt-item-control">
+                                        <span class="kkt-arrow">›</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- 角色状态栏设置 -->
                             <div class="kkt-group" style="margin-top:15px;">
                                 <div class="kkt-item">
@@ -2796,10 +2896,10 @@
                             <div class="kkt-group">
                                 <div class="kkt-item">
                                     <div class="kkt-item-label">聊天背景</div>
-                                    <div class="kkt-item-control"
-                                        onclick="document.getElementById('setting-chat-bg-upload').click()">
-                                        <span>点击更换</span>
+                                    <div class="kkt-item-control" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                        <span onclick="document.getElementById('setting-chat-bg-upload').click()" style="cursor:pointer;">点击更换</span>
                                         <span class="kkt-arrow">›</span>
+                                        <span id="reset-chat-bg-btn" style="margin-left:4px;color:#888;font-size:13px;cursor:pointer;">恢复默认</span>
                                     </div>
                                     <input type="file" id="setting-chat-bg-upload" accept="image/*"
                                         style="display:none;">
@@ -2928,6 +3028,24 @@
                                             class="btn btn-small btn-neutral" style="padding:4px 8px;">重置</button>
                                     </div>
                                 </div>
+                                <div class="kkt-item" style="margin-top:12px;">
+                                    <div class="kkt-item-label">允许角色在对话中自主更换聊天主题</div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                            <input type="checkbox" id="setting-allow-char-switch-bubble-css">
+                                            <span class="kkt-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div id="bubble-css-theme-bindings-wrap" class="kkt-item" style="display:none; margin-top:10px;">
+                                    <div class="bubble-theme-desc-card" style="background:var(--panel-bg-secondary, #f8f9fa); border-radius:12px; padding:14px; border:1px solid var(--border-color, #eee);">
+                                        <div style="font-weight:600; color:var(--text-color, #333); margin-bottom:6px;">描述库</div>
+                                        <p style="font-size:12px; color:#888; margin:0 0 10px 0;">为下方主题填写描述（选填），角色会看到这些描述并在合适时机提议更换<strong>你与TA共用的</strong>对话界面主题。</p>
+                                        <div id="bubble-css-theme-bindings-list" style="max-height:200px; overflow:auto;"></div>
+                                        <div id="bubble-css-theme-bindings-empty" style="display:none; text-align:center; padding:16px; color:#999; font-size:13px;">暂无主题，添加后角色可在对话中看到并主动更换</div>
+                                        <button type="button" id="bubble-css-add-theme-binding-btn" class="btn btn-small btn-primary" style="margin-top:10px; border-radius:8px;">+ 添加主题</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -2964,6 +3082,62 @@
                                     <div class="kkt-item-label">语言</div>
                                     <div class="kkt-item-control">
                                         <select id="setting-tts-language"
+                                            style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                            <option value="auto">自动识别</option>
+                                            <option value="zh">中文 (普通话)</option>
+                                            <option value="yue">中文 (粤语)</option>
+                                            <option value="en">英语</option>
+                                            <option value="ja">日语</option>
+                                            <option value="ko">韩语</option>
+                                            <option value="es">西班牙语</option>
+                                            <option value="fr">法语</option>
+                                            <option value="de">德语</option>
+                                            <option value="ru">俄语</option>
+                                            <option value="pt">葡萄牙语</option>
+                                            <option value="it">意大利语</option>
+                                            <option value="ar">阿拉伯语</option>
+                                            <option value="th">泰语</option>
+                                            <option value="vi">越南语</option>
+                                            <option value="id">印尼语</option>
+                                            <option value="tr">土耳其语</option>
+                                            <option value="nl">荷兰语</option>
+                                            <option value="uk">乌克兰语</option>
+                                            <option value="pl">波兰语</option>
+                                        </select>
+                                        <span class="kkt-arrow">›</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 用户语音设置（仅当 API 中启用用户 TTS 时显示） -->
+                            <div id="user-voice-settings-wrap" class="kkt-group" style="margin-top: 20px; display: none;">
+                                <div style="margin-bottom: 15px; padding-top: 5px; padding-left: 8px;">
+                                    <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">用户语音设置</div>
+                                    <p style="font-size: 11px; color: #999; margin: 5px 0 0;">播放「我的」消息时使用的音色</p>
+                                    <p id="user-voice-incomplete-hint" style="font-size: 11px; color: #e65100; margin: 5px 0 0; display: none;">未配置完全：请选择用户音色并保存</p>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">用户语音音色</div>
+                                    <div class="kkt-item-control">
+                                        <button type="button" id="select-user-voice-id-btn"
+                                            class="btn btn-small btn-secondary"
+                                            style="margin: 0; padding: 4px 12px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                            <span id="current-user-voice-name">选择音色</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">用户自定义 Voice ID</div>
+                                    <div class="kkt-item-control">
+                                        <input type="text" id="setting-user-custom-voice-id" autocomplete="off"
+                                            placeholder="可选，优先使用"
+                                            style="text-align:right; border:none; background:transparent; width: 100%;">
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">用户语言</div>
+                                    <div class="kkt-item-control">
+                                        <select id="setting-user-tts-language"
                                             style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
                                             <option value="auto">自动识别</option>
                                             <option value="zh">中文 (普通话)</option>
@@ -3243,6 +3417,27 @@
                     </div>
 
                     <form id="group-settings-form">
+                        <!-- 聊天快速定位（回顶/回底） -->
+                        <div class="kkt-group">
+                            <div class="kkt-item kkt-item-clickable" id="group-chat-scroll-to-top-current-btn" style="cursor:pointer;">
+                                <div class="kkt-item-label">回顶（当前已加载）</div>
+                                <div class="kkt-item-control">
+                                    <span class="kkt-arrow">›</span>
+                                </div>
+                            </div>
+                            <div class="kkt-item kkt-item-clickable" id="group-chat-scroll-to-top-all-btn" style="cursor:pointer;">
+                                <div class="kkt-item-label">回顶（全部）</div>
+                                <div class="kkt-item-control">
+                                    <span class="kkt-arrow">›</span>
+                                </div>
+                            </div>
+                            <div class="kkt-item kkt-item-clickable" id="group-chat-scroll-to-bottom-btn" style="cursor:pointer;">
+                                <div class="kkt-item-label">聊天回底</div>
+                                <div class="kkt-item-control">
+                                    <span class="kkt-arrow">›</span>
+                                </div>
+                            </div>
+                        </div>
                         <!-- 我的信息分组 -->
                         <div class="kkt-group">
                             <div class="kkt-item">
@@ -4004,6 +4199,33 @@
                         </div>
                     </div>
                     <div class="kkt-group">
+                        <div class="kkt-group-title">角色小号私信</div>
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">允许角色用小号私信你</div>
+                            <div class="kkt-item-control">
+                                <label class="kkt-switch">
+                                    <input type="checkbox" id="forum-char-alt-enable">
+                                    <span class="kkt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <p style="font-size:12px;color:#888;margin:4px 0 8px 0;">开启后，生成陌生人私信时有机会刷到已选角色的小号；加好友后仍以小号身份聊天，可能露马脚或揭穿。</p>
+                        <div id="forum-char-alt-options" style="display:none;">
+                            <div class="kkt-item" style="flex-direction:column;align-items:stretch;">
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                                    <div class="kkt-item-label">小号出现占比</div>
+                                    <span id="forum-char-alt-prob-value" style="color:var(--primary-color);font-weight:bold;">25%</span>
+                                </div>
+                                <input type="range" id="forum-char-alt-prob-slider" min="0" max="100" value="25" style="width:100%;accent-color:var(--primary-color);">
+                                <p style="font-size:12px;color:#999;margin-top:4px;margin-bottom:8px;">在每次生成的陌生人私信中，约有多少条来自角色小号（可多条、来自不同角色）。</p>
+                            </div>
+                            <div class="kkt-item" style="flex-direction:column;align-items:stretch;">
+                                <div class="kkt-item-label" style="margin-bottom:6px;">可选小号的角色（多选）</div>
+                                <ul id="forum-char-alt-list" class="forum-char-alt-list" style="list-style:none;padding:0;margin:0;max-height:200px;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:8px;"></ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="kkt-group">
                         <button class="btn btn-primary" id="save-forum-settings-btn" style="width:100%;">保存设置</button>
                     </div>
                 </div>
@@ -4553,6 +4775,11 @@
                             <input type="checkbox" id="peek-unlock-comments-enabled" style="width: auto;">
                             <label for="peek-unlock-comments-enabled" style="margin: 0;">查手机时自动生成小号帖子下的评论</label>
                         </div>
+                        <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="peek-char-aware-peek-enabled" style="width: auto;">
+                            <label for="peek-char-aware-peek-enabled" style="margin: 0;">角色知晓用户窥屏</label>
+                        </div>
+                        <p style="font-size: 12px; color: #888; margin: 4px 0 0 0;">开启后，若用户偷看了你的手机并点进了某些应用，你会知道用户看了哪些应用以及其中的内容，并可以据此在对话中自然反应。</p>
                     </div>
                 </div>
                 <div class="collapsible-section">
@@ -5220,6 +5447,24 @@
                     class="btn btn-primary" style="padding:8px 12px;border-radius:8px;">关闭</button></div>
         </div>
     </div>
+    <div id="bubble-add-theme-modal" class="modal-overlay"
+        style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);justify-content:center;align-items:center;z-index:10000;">
+        <div class="modal-window" style="max-width:400px;background:var(--panel-bg,#fff);padding:16px;border-radius:12px;box-shadow:0 12px 36px rgba(10,10,20,0.12);">
+            <h3 style="margin:0 0 12px 0;font-size:15px;">添加对话主题</h3>
+            <div style="margin-bottom:10px;">
+                <label style="font-size:13px;color:#666;">选择预设</label>
+                <select id="bubble-add-theme-preset-select" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid var(--border-color,#eee);"></select>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:13px;color:#666;">描述（选填，给角色看）</label>
+                <input type="text" id="bubble-add-theme-desc-input" placeholder="例如：温馨、夜晚氛围" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid var(--border-color,#eee);box-sizing:border-box;">
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button type="button" id="bubble-add-theme-cancel-btn" class="btn btn-neutral" style="padding:8px 14px;border-radius:8px;">取消</button>
+                <button type="button" id="bubble-add-theme-confirm-btn" class="btn btn-primary" style="padding:8px 14px;border-radius:8px;">添加</button>
+            </div>
+        </div>
+    </div>
     <div id="mypersona-presets-modal" class="modal-overlay"
         style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);justify-content:center;align-items:center;z-index:9999;">
         <div class="modal-window"
@@ -5393,7 +5638,8 @@
                 <p class="placeholder-text" style="text-align: center; color: #999; margin-top: 20px;">相册空空如也~</p>
             </div>
 
-            <div style="margin-top: 5px; text-align: right;">
+            <div style="margin-top: 5px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="clear-gallery-btn" class="btn btn-danger">一键清空</button>
                 <button id="close-gallery-modal-btn" class="btn btn-neutral">关闭</button>
             </div>
         </div>

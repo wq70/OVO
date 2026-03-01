@@ -646,6 +646,172 @@ function renderTutorialContent() {
         }
     });
 
+    // 清理本地图片：对话中发送的 base64/data URL 图片（不含头像、相册）
+    const isLocalImageData = (s) => typeof s === 'string' && (s.startsWith('data:image/') || (s.length > 200 && /^[A-Za-z0-9+/=]+$/.test(s)));
+    const dataUrlToBytes = (s) => {
+        if (!s || typeof s !== 'string') return 0;
+        if (s.startsWith('data:')) {
+            const base64 = s.indexOf('base64,') >= 0 ? s.split('base64,')[1] : '';
+            return base64 ? Math.ceil((base64.length * 3) / 4) : 0;
+        }
+        return Math.ceil((s.length * 3) / 4);
+    };
+    const getMessageLocalImageBytes = (msg) => {
+        let bytes = 0;
+        if (msg.content && isLocalImageData(msg.content)) bytes += dataUrlToBytes(msg.content);
+        if (msg.parts && Array.isArray(msg.parts)) {
+            msg.parts.forEach(p => { if (p.type === 'image' && p.data && isLocalImageData(p.data)) bytes += dataUrlToBytes(p.data); });
+        }
+        return bytes;
+    };
+    const getLocalImageStats = () => {
+        const list = [];
+        (db.characters || []).forEach(char => {
+            let bytes = 0;
+            (char.history || []).forEach(msg => { bytes += getMessageLocalImageBytes(msg); });
+            if (bytes > 0) list.push({ id: char.id, type: 'private', name: (char.remarkName || char.realName || '未命名角色'), bytes });
+        });
+        (db.groups || []).forEach(group => {
+            let bytes = 0;
+            (group.history || []).forEach(msg => { bytes += getMessageLocalImageBytes(msg); });
+            if (bytes > 0) list.push({ id: group.id, type: 'group', name: group.name || '未命名群聊', bytes });
+        });
+        return list;
+    };
+    const clearLocalImagesInHistory = (history) => {
+        if (!history || !Array.isArray(history)) return;
+        history.forEach(msg => {
+            if (msg.content && isLocalImageData(msg.content)) msg.content = '';
+            if (msg.parts && Array.isArray(msg.parts)) {
+                msg.parts = msg.parts.filter(p => p.type !== 'image' || !p.data || !isLocalImageData(p.data));
+                if (msg.parts.length === 0 && msg.content === undefined) msg.content = '';
+            }
+        });
+    };
+    const formatBytes = (b) => b >= 1048576 ? (b / 1048576).toFixed(2) + ' MB' : (b >= 1024 ? (b / 1024).toFixed(2) + ' KB' : b + ' B');
+
+    const cleanLocalImagesModalId = 'clean-local-images-modal';
+    const cleanLocalImagesModal = document.createElement('div');
+    cleanLocalImagesModal.id = cleanLocalImagesModalId;
+    cleanLocalImagesModal.className = 'modal-overlay';
+    cleanLocalImagesModal.style.display = 'none';
+    cleanLocalImagesModal.style.alignItems = 'center';
+    cleanLocalImagesModal.style.justifyContent = 'center';
+    cleanLocalImagesModal.innerHTML = `
+        <div class="modal-window" style="max-width: 360px;">
+            <h3 style="margin-top:0;">清理本地图片</h3>
+            <p style="font-size: 0.89rem; color: #666; margin-bottom: 12px;">仅清理对话中发送的本地图片（base64），不影响头像与相册。选中会话后执行，该会话中的本地图片将被清空，占用变为空。</p>
+            <div id="clean-local-images-list" style="margin-bottom: 12px; max-height: 240px; overflow-y: auto;"></div>
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                <button type="button" id="clean-local-images-select-all" class="btn btn-neutral" style="flex:1;">全选</button>
+                <button type="button" id="clean-local-images-select-none" class="btn btn-neutral" style="flex:1;">取消全选</button>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" id="clean-local-images-do-btn" class="btn btn-danger" style="flex:1;">执行清理</button>
+                <button type="button" id="clean-local-images-cancel-btn" class="btn btn-neutral" style="flex:1;">取消</button>
+            </div>
+        </div>
+    `;
+    if (!document.getElementById(cleanLocalImagesModalId)) {
+        document.body.appendChild(cleanLocalImagesModal);
+        const modalEl = document.getElementById(cleanLocalImagesModalId);
+        modalEl.addEventListener('click', (e) => {
+            const id = e.target.id;
+            if (id === 'clean-local-images-cancel-btn') {
+                modalEl.style.display = 'none';
+                return;
+            }
+            if (id === 'clean-local-images-select-all') {
+                document.querySelectorAll('#clean-local-images-list input[type="checkbox"]').forEach(cb => cb.checked = true);
+                return;
+            }
+            if (id === 'clean-local-images-select-none') {
+                document.querySelectorAll('#clean-local-images-list input[type="checkbox"]').forEach(cb => cb.checked = false);
+                return;
+            }
+            if (id === 'clean-local-images-do-btn') {
+                const selected = [];
+                document.querySelectorAll('#clean-local-images-list input[type="checkbox"]:checked').forEach(cb => {
+                    selected.push({ id: cb.dataset.chatId, type: cb.dataset.chatType });
+                });
+                if (selected.length === 0) {
+                    showToast('请至少选择一个角色或群聊');
+                    return;
+                }
+                if (!confirm(`即将清理 ${selected.length} 个会话中的本地图片，图片将被清空。确定继续？`)) return;
+
+                modalEl.style.display = 'none';
+                if (loadingBtn) return;
+                loadingBtn = true;
+                const openBtn = document.getElementById('clean-local-images-open-btn');
+                if (openBtn) openBtn.disabled = true;
+
+                (async () => {
+                    try {
+                        showToast('正在清理本地图片...');
+                        selected.forEach(({ id, type }) => {
+                            if (type === 'private') {
+                                const char = db.characters.find(c => c.id === id);
+                                if (char && char.history) clearLocalImagesInHistory(char.history);
+                            } else {
+                                const group = db.groups.find(g => g.id === id);
+                                if (group && group.history) clearLocalImagesInHistory(group.history);
+                            }
+                        });
+                        await saveData(db);
+                        showToast('清理完成');
+                        alert('清理完成！所选会话中的本地图片已清空，占用已为空。');
+                    } catch (err) {
+                        console.error('清理本地图片失败:', err);
+                        showToast('清理失败: ' + err.message);
+                        alert('清理过程中发生错误：\n' + err.message);
+                    } finally {
+                        loadingBtn = false;
+                        if (openBtn) openBtn.disabled = false;
+                    }
+                })();
+            }
+        });
+    }
+
+    const cleanLocalImagesBtn = document.createElement('button');
+    cleanLocalImagesBtn.id = 'clean-local-images-open-btn';
+    cleanLocalImagesBtn.className = 'btn btn-neutral';
+    cleanLocalImagesBtn.textContent = '清理本地图片';
+    cleanLocalImagesBtn.style.marginTop = '15px';
+    cleanLocalImagesBtn.style.display = 'block';
+    cleanLocalImagesBtn.disabled = loadingBtn;
+
+    cleanLocalImagesBtn.addEventListener('click', () => {
+        const list = getLocalImageStats();
+        const container = document.getElementById('clean-local-images-list');
+        container.innerHTML = '';
+        if (list.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:#999; padding:16px;">当前没有角色或群聊含有对话中的本地图片。</p>';
+            document.getElementById('clean-local-images-do-btn').disabled = true;
+        } else {
+            document.getElementById('clean-local-images-do-btn').disabled = false;
+            list.forEach(item => {
+                const label = document.createElement('label');
+                label.style.display = 'flex';
+                label.style.alignItems = 'center';
+                label.style.marginBottom = '8px';
+                label.style.cursor = 'pointer';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.dataset.chatId = item.id;
+                cb.dataset.chatType = item.type;
+                cb.checked = false;
+                label.appendChild(cb);
+                const tag = item.type === 'group' ? '群聊' : '角色';
+                label.appendChild(document.createTextNode(` ${item.name}（${tag}） ${formatBytes(item.bytes)}`));
+                container.appendChild(label);
+            });
+        }
+        const modalEl = document.getElementById(cleanLocalImagesModalId);
+        if (modalEl) modalEl.style.display = 'flex';
+    });
+
     const importDataBtn = document.createElement('label');
     importDataBtn.className = 'btn btn-neutral';
     importDataBtn.textContent = '导入数据';
@@ -895,6 +1061,7 @@ function renderTutorialContent() {
     }
     tutorialContentArea.appendChild(importPartialDataBtn);
     tutorialContentArea.appendChild(advancedCleanBtn);
+    tutorialContentArea.appendChild(cleanLocalImagesBtn);
     tutorialContentArea.appendChild(cleanRedundantDataBtn);
     tutorialContentArea.appendChild(clearDataBtn);
 

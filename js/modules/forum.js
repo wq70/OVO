@@ -970,6 +970,61 @@ function forumLoadSettings() {
     if (fetchModelsBtn) {
         fetchModelsBtn.addEventListener('click', forumFetchModels);
     }
+
+    // 角色小号私信设置
+    const charAltEnable = document.getElementById('forum-char-alt-enable');
+    const charAltOptions = document.getElementById('forum-char-alt-options');
+    const charAltProbSlider = document.getElementById('forum-char-alt-prob-slider');
+    const charAltProbValue = document.getElementById('forum-char-alt-prob-value');
+    const charAltList = document.getElementById('forum-char-alt-list');
+    if (charAltEnable && charAltOptions) {
+        const altSettings = db.forumSettings && db.forumSettings.enableCharAltDm;
+        charAltEnable.checked = !!altSettings;
+        charAltOptions.style.display = charAltEnable.checked ? 'block' : 'none';
+        charAltEnable.addEventListener('change', function() {
+            charAltOptions.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+    if (charAltProbSlider && charAltProbValue) {
+        const p = (db.forumSettings && db.forumSettings.charAltProbability) != null ? db.forumSettings.charAltProbability : 25;
+        charAltProbSlider.value = Math.max(0, Math.min(100, p));
+        charAltProbValue.textContent = charAltProbSlider.value + '%';
+        charAltProbSlider.addEventListener('input', function() {
+            charAltProbValue.textContent = this.value + '%';
+        });
+    }
+    if (charAltList) {
+        const mainChars = (db.characters || []).filter(function(c) { return c.source !== 'forum'; });
+        const selectedIds = (db.forumSettings && db.forumSettings.charAltCharIds) || [];
+        const altNames = (db.forumSettings && db.forumSettings.charAltNames) || {};
+        charAltList.innerHTML = '';
+        mainChars.forEach(function(c) {
+            const li = document.createElement('li');
+            li.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f0;';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.id = 'forum-char-alt-cb-' + c.id;
+            cb.value = c.id;
+            cb.checked = selectedIds.indexOf(c.id) !== -1;
+            const label = document.createElement('label');
+            label.htmlFor = cb.id;
+            label.textContent = (c.remarkName || c.realName || c.id) + ' ';
+            label.style.flex = '0 0 auto';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = '小号昵称（选填）';
+            input.dataset.charId = c.id;
+            input.value = altNames[c.id] || '';
+            input.style.cssText = 'flex:1;min-width:0;padding:4px 8px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;';
+            li.appendChild(cb);
+            li.appendChild(label);
+            li.appendChild(input);
+            charAltList.appendChild(li);
+        });
+        if (mainChars.length === 0) {
+            charAltList.innerHTML = '<li style="padding:8px;color:#999;">暂无主角色（仅非论坛来源角色可设小号）</li>';
+        }
+    }
 }
 
 function forumSaveSettings() {
@@ -987,12 +1042,28 @@ function forumSaveSettings() {
     
     if (commentsMin > commentsMax) { showToast('最小评论数不能大于最大评论数'); return; }
     
-    db.forumSettings = { 
-        postsPerGeneration: postsCount, 
-        commentsPerPost: { min: commentsMin, max: commentsMax },
-        autoReplyCount: autoReplyCount,
-        detailReplyCount: detailReplyCount
-    };
+    db.forumSettings = db.forumSettings || {};
+    db.forumSettings.postsPerGeneration = postsCount;
+    db.forumSettings.commentsPerPost = { min: commentsMin, max: commentsMax };
+    db.forumSettings.autoReplyCount = autoReplyCount;
+    db.forumSettings.detailReplyCount = detailReplyCount;
+
+    const charAltEnable = document.getElementById('forum-char-alt-enable');
+    const charAltProbSlider = document.getElementById('forum-char-alt-prob-slider');
+    const charAltList = document.getElementById('forum-char-alt-list');
+    db.forumSettings.enableCharAltDm = !!(charAltEnable && charAltEnable.checked);
+    db.forumSettings.charAltProbability = (charAltProbSlider && charAltProbSlider.value != null) ? Math.max(0, Math.min(100, parseInt(charAltProbSlider.value, 10))) : 25;
+    db.forumSettings.charAltCharIds = [];
+    db.forumSettings.charAltNames = {};
+    if (charAltList) {
+        charAltList.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+            if (cb.checked && cb.value) db.forumSettings.charAltCharIds.push(cb.value);
+        });
+        charAltList.querySelectorAll('input[type="text"][data-char-id]').forEach(function(inp) {
+            var cid = inp.dataset.charId;
+            if (cid && (inp.value || '').trim()) db.forumSettings.charAltNames[cid] = inp.value.trim();
+        });
+    }
     
     const useApiToggle = document.getElementById('forum-use-api-toggle');
     const apiUrlInput = document.getElementById('forum-api-url-input');
@@ -1387,6 +1458,7 @@ function forumAddForumNPCAsCharacter(profile, userId) {
         myAvatar: (fp.avatar && fp.avatar.trim()) ? fp.avatar : FORUM_DEFAULT_AVATAR,
         myPersona: fp.bio || fp.myPersona || ''
     };
+    if (profile.linkedCharId) newChar.linkedCharId = profile.linkedCharId;
     db.characters.push(newChar);
     saveData();
     if (typeof renderChatList === 'function') renderChatList();
@@ -1628,25 +1700,40 @@ async function forumGenerateStrangerDMs() {
         }
         var strangerCount = 4;
         var generateDetailed = !!(db.forumSettings && db.forumSettings.generateDetailedStranger);
-        var systemPrompt;
-        var jsonSchema;
-        if (generateDetailed) {
-            systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景，并为每个陌生人生成一份可聊天的基础人设。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (userProfile.username || '用户') + '\n简介: ' + (userProfile.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n===== 用户在其他帖子下的评论/回复 =====\n' + userCommentsText + '\n请生成 ' + strangerCount + ' 条陌生人私信，且为每个陌生人生成基础人设。要求：\n1. 每条私信来自不同的NPC，senderName 为符合世界观的论坛昵称。\n2. 私信内容自然口语化，1～2 句话即可。\n3. 每个 NPC 的 basicPersona 必须包含：性别、性格（如开朗/冷淡/傲娇等）、大致家世或身份（如学生/上班族/家境等）、年龄或年龄段、与世界观的关系等，便于日后加好友聊天，不要纯人机感。用一两段话描述即可。\n4. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"dms":[{"senderName":"NPC昵称","content":"该陌生人发给用户的一条私信内容","basicPersona":"性别、性格、家世/身份、年龄等基础人设描述，一两段话"}]}';
-        } else {
-            systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (userProfile.username || '用户') + '\n简介: ' + (userProfile.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n===== 用户在其他帖子下的评论/回复 =====\n' + userCommentsText + '\n请生成 ' + strangerCount + ' 条陌生人私信。要求：\n1. 每条私信来自不同的NPC（陌生人），senderName 为符合世界观的论坛昵称。\n2. 若用户发过帖或发过评论：私信内容可以是看到用户某篇帖子后的搭讪、提问、共鸣，也可以是看到用户在某条帖子下的回复/评论后被吸引来打招呼，语气自然、口语化。\n3. 若用户从未发帖也从未评论：私信可以是简单打招呼、自我介绍、或与世界观/社区氛围相关的一句闲聊。\n4. 每条私信 1～2 句话即可，像真实论坛私信。\n5. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"dms":[{"senderName":"NPC昵称","content":"该陌生人发给用户的一条私信内容"}]}';
+        var enableCharAlt = !!(db.forumSettings && db.forumSettings.enableCharAltDm);
+        var charAltIds = (db.forumSettings && db.forumSettings.charAltCharIds) || [];
+        var charAltNames = (db.forumSettings && db.forumSettings.charAltNames) || {};
+        var charAltProb = (db.forumSettings && db.forumSettings.charAltProbability) != null ? Math.max(0, Math.min(100, db.forumSettings.charAltProbability)) : 25;
+        var altCount = 0;
+        if (enableCharAlt && charAltIds.length > 0) {
+            altCount = Math.min(charAltIds.length, Math.max(0, Math.floor(strangerCount * charAltProb / 100)));
         }
-        var url = apiSettings.url;
-        if (url.endsWith('/')) url = url.slice(0, -1);
-        var temperature = apiSettings.temperature !== undefined ? apiSettings.temperature : 0.9;
-        var requestBody = { model: apiSettings.model, messages: [{ role: 'user', content: systemPrompt }], temperature: temperature, response_format: { type: 'json_object' } };
-        var endpoint = url + '/v1/chat/completions';
-        var headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiSettings.key };
-        var contentStr = await fetchAiResponse(apiSettings, requestBody, headers, endpoint);
-        var jsonData = JSON.parse(contentStr);
-        if (jsonData && Array.isArray(jsonData.dms) && jsonData.dms.length > 0) {
+        var normalCount = strangerCount - altCount;
+
+        var jsonData = { dms: [] };
+        if (normalCount > 0) {
+            var systemPrompt;
+            if (generateDetailed) {
+                systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景，并为每个陌生人生成一份可聊天的基础人设。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (userProfile.username || '用户') + '\n简介: ' + (userProfile.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n===== 用户在其他帖子下的评论/回复 =====\n' + userCommentsText + '\n请生成 ' + normalCount + ' 条陌生人私信，且为每个陌生人生成基础人设。要求：\n1. 每条私信来自不同的NPC，senderName 为符合世界观的论坛昵称。\n2. 私信内容自然口语化，1～2 句话即可。\n3. 每个 NPC 的 basicPersona 必须包含：性别、性格（如开朗/冷淡/傲娇等）、大致家世或身份（如学生/上班族/家境等）、年龄或年龄段、与世界观的关系等，便于日后加好友聊天，不要纯人机感。用一两段话描述即可。\n4. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"dms":[{"senderName":"NPC昵称","content":"该陌生人发给用户的一条私信内容","basicPersona":"性别、性格、家世/身份、年龄等基础人设描述，一两段话"}]}';
+            } else {
+                systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (userProfile.username || '用户') + '\n简介: ' + (userProfile.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n===== 用户在其他帖子下的评论/回复 =====\n' + userCommentsText + '\n请生成 ' + normalCount + ' 条陌生人私信。要求：\n1. 每条私信来自不同的NPC（陌生人），senderName 为符合世界观的论坛昵称。\n2. 若用户发过帖或发过评论：私信内容可以是看到用户某篇帖子后的搭讪、提问、共鸣，也可以是看到用户在某条帖子下的回复/评论后被吸引来打招呼，语气自然、口语化。\n3. 若用户从未发帖也从未评论：私信可以是简单打招呼、自我介绍、或与世界观/社区氛围相关的一句闲聊。\n4. 每条私信 1～2 句话即可，像真实论坛私信。\n5. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"dms":[{"senderName":"NPC昵称","content":"该陌生人发给用户的一条私信内容"}]}';
+            }
+            var url = apiSettings.url;
+            if (url.endsWith('/')) url = url.slice(0, -1);
+            var temperature = apiSettings.temperature !== undefined ? apiSettings.temperature : 0.9;
+            var requestBody = { model: apiSettings.model, messages: [{ role: 'user', content: systemPrompt }], temperature: temperature, response_format: { type: 'json_object' } };
+            var endpoint = url + '/v1/chat/completions';
+            var headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiSettings.key };
+            var contentStr = await fetchAiResponse(apiSettings, requestBody, headers, endpoint);
+            jsonData = JSON.parse(contentStr);
+            if (!jsonData || !Array.isArray(jsonData.dms)) throw new Error('AI返回的数据格式不正确');
+        }
+
+        if (jsonData.dms.length > 0 || altCount > 0) {
             if (!db.forumMessages) db.forumMessages = [];
             if (!db.forumStrangerProfiles) db.forumStrangerProfiles = {};
             var baseTime = Date.now();
+            var offset = 0;
             jsonData.dms.forEach(function(dm, i) {
                 var senderName = (dm.senderName || ('路人' + (i + 1))).trim().replace(/\s+/g, '_');
                 if (!senderName) senderName = '路人' + (i + 1);
@@ -1666,11 +1753,35 @@ async function forumGenerateStrangerDMs() {
                         avatar: (dm.avatar && dm.avatar.trim()) ? dm.avatar : FORUM_DEFAULT_AVATAR
                     };
                 }
+                offset = i + 1;
             });
+            var altTemplates = ['你好呀，看到你的动态了～', '嗨，来打个招呼', '你好～', '看到你发的了，忍不住来聊两句'];
+            for (var a = 0; a < altCount; a++) {
+                var charId = charAltIds[a % charAltIds.length];
+                var mainChar = db.characters && db.characters.find(function(c) { return c.id === charId; });
+                if (!mainChar) continue;
+                var altDisplayName = (charAltNames[charId] || (mainChar.remarkName || mainChar.realName || '') + '的小号').trim().replace(/\s+/g, '_') || ('小号_' + (a + 1));
+                var fromUserId = 'npc_alt_' + charId + '_' + baseTime + '_' + a;
+                db.forumMessages.push({
+                    id: 'dm_' + baseTime + '_alt_' + a + '_' + Math.random(),
+                    fromUserId: fromUserId,
+                    toUserId: 'user',
+                    content: altTemplates[a % altTemplates.length],
+                    timestamp: baseTime + offset + a,
+                    isRead: false
+                });
+                db.forumStrangerProfiles[fromUserId] = {
+                    name: altDisplayName,
+                    basicPersona: (mainChar.persona || '').trim() || ('论坛用户，昵称：' + altDisplayName),
+                    avatar: (mainChar.avatar && mainChar.avatar.trim()) ? mainChar.avatar : FORUM_DEFAULT_AVATAR,
+                    linkedCharId: charId
+                };
+            }
             await saveData();
             forumRenderDMList();
             forumUpdateDMUnreadBadge();
-            showToast('已生成 ' + jsonData.dms.length + ' 条陌生人私信');
+            var total = jsonData.dms.length + altCount;
+            showToast('已生成 ' + total + ' 条陌生人私信' + (altCount > 0 ? '（含 ' + altCount + ' 条角色小号）' : ''));
         } else {
             throw new Error('AI返回的数据格式不正确');
         }

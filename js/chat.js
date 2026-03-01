@@ -240,6 +240,15 @@ function setupChatRoom() {
 
     getReplyBtn.addEventListener('click', () => getAiReply(currentChatId, currentChatType));
     regenerateBtn.addEventListener('click', handleRegenerate);
+
+    const abortReplyBtn = document.getElementById('abort-reply-btn');
+    if (abortReplyBtn) {
+        abortReplyBtn.addEventListener('click', () => {
+            if (typeof currentReplyAbortController !== 'undefined' && currentReplyAbortController) {
+                currentReplyAbortController.abort();
+            }
+        });
+    }
     
     messageArea.addEventListener('click', (e) => {
         if (isDebugMode) {
@@ -265,23 +274,50 @@ function setupChatRoom() {
         } else {
             const voiceBubble = e.target.closest('.voice-bubble');
             if (voiceBubble) {
-                const transcript = voiceBubble.closest('.message-wrapper').querySelector('.voice-transcript');
+                const wrapper = voiceBubble.closest('.message-wrapper');
+                const transcript = wrapper ? wrapper.querySelector('.voice-transcript') : null;
                 if (transcript) {
                     transcript.classList.toggle('active');
-                    
-                    // === TTS 播放功能 ===
-                    // 获取语音消息的文本内容
                     const voiceText = transcript.textContent.trim();
-                    if (voiceText && typeof MinimaxTTSService !== 'undefined' && MinimaxTTSService.isConfigured()) {
-                        // 获取当前角色的语音配置
-                        if (typeof VoiceSelector !== 'undefined' && currentChatId) {
+                    if (!voiceText) return;
+
+                    const playKey = wrapper ? wrapper.dataset.id : null;
+                    const svc = typeof MinimaxTTSService !== 'undefined' ? MinimaxTTSService : null;
+                    const state = svc ? svc.getPlayState() : {};
+
+                    // 当前正在播的就是这条：切换暂停/恢复，避免重复读
+                    if (svc && state.currentPlayKey === playKey && state.isPlaying) {
+                        svc.togglePause();
+                        return;
+                    }
+
+                    const isUserMsg = wrapper && wrapper.classList.contains('sent');
+                    const opts = playKey ? { playKey: playKey } : {};
+                    if (isUserMsg) {
+                        if (svc && MinimaxTTSService.isUserConfigured && MinimaxTTSService.isUserConfigured() && typeof VoiceSelector !== 'undefined' && currentChatId) {
+                            const userVoiceConfig = VoiceSelector.getVoiceConfig(currentChatId, 'user');
+                            if (userVoiceConfig && userVoiceConfig.voiceId) {
+                                Object.assign(opts, { forUser: true });
+                                MinimaxTTSService.synthesizeAndPlay(
+                                    voiceText,
+                                    userVoiceConfig.voiceId,
+                                    userVoiceConfig.language || 'auto',
+                                    opts
+                                ).catch(err => {
+                                    console.error('[Chat] 用户 TTS 播放失败:', err);
+                                    if (!err.message.includes('未配置')) showToast('TTS 播放失败');
+                                });
+                            }
+                        }
+                    } else {
+                        if (svc && MinimaxTTSService.isConfigured() && typeof VoiceSelector !== 'undefined' && currentChatId) {
                             const voiceConfig = VoiceSelector.getVoiceConfig(currentChatId);
                             if (voiceConfig && voiceConfig.voiceId) {
-                                // 播放 TTS
                                 MinimaxTTSService.synthesizeAndPlay(
                                     voiceText,
                                     voiceConfig.voiceId,
-                                    voiceConfig.language || 'auto'
+                                    voiceConfig.language || 'auto',
+                                    opts
                                 ).catch(err => {
                                     console.error('[Chat] TTS 播放失败:', err);
                                     if (!err.message.includes('TTS 未配置')) {
@@ -328,7 +364,27 @@ function setupChatRoom() {
             }
         }
     });
-    
+
+    // TTS 状态变化时更新所有语音条的播放/暂停样式
+    function updateVoiceBubblesPlayState() {
+        const state = typeof MinimaxTTSService !== 'undefined' ? MinimaxTTSService.getPlayState() : {};
+        const key = state.currentPlayKey;
+        const isPlaying = state.isPlaying;
+        const isPaused = state.isPaused;
+        const area = document.getElementById('message-area');
+        if (!area) return;
+        area.querySelectorAll('.voice-bubble').forEach(function(bubble) {
+            const w = bubble.closest('.message-wrapper');
+            const id = w ? w.dataset.id : null;
+            bubble.classList.remove('playing', 'paused');
+            if (id && id === key) {
+                if (isPlaying && !isPaused) bubble.classList.add('playing');
+                else if (isPaused) bubble.classList.add('paused');
+            }
+        });
+    }
+    document.addEventListener('ttsStateChange', updateVoiceBubblesPlayState);
+
     messageArea.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         if (e.target.id === 'load-more-btn' || isInMultiSelectMode) return;
@@ -508,9 +564,28 @@ function openChatRoom(chatId, type) {
     updateCustomBubbleStyle(chatId, chat.customBubbleCss, chat.useCustomBubbleCss);
     renderMessages(false, true);
     switchScreen('chat-room-screen');
-    
+
+    if (window._searchScrollToMessageId) {
+        const messageId = window._searchScrollToMessageId;
+        window._searchScrollToMessageId = null;
+        const pageSize = (typeof MESSAGES_PER_PAGE !== 'undefined') ? MESSAGES_PER_PAGE : 50;
+        setTimeout(() => {
+            const curChat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
+            if (!curChat || !curChat.history) return;
+            const msgIndex = curChat.history.findIndex(m => m.id === messageId);
+            if (msgIndex === -1) return;
+            const targetPage = Math.ceil((curChat.history.length - msgIndex) / pageSize);
+            currentPage = targetPage;
+            renderMessages(false, false);
+            setTimeout(() => {
+                const el = messageArea && messageArea.querySelector('.message-wrapper[data-id="' + messageId + '"]');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 50);
+        }, 100);
+    }
+
     requestAnimationFrame(() => {
-        void document.body.offsetHeight; 
+        void document.body.offsetHeight;
     });
 }
 

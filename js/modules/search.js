@@ -345,7 +345,12 @@ const SearchSystem = {
                 </div>
                 <div class="search-result-content">${highlightedContent}</div>
             `;
-            
+            item.style.cursor = 'pointer';
+            item.addEventListener('click', () => {
+                if (typeof openChatRoom !== 'function') return;
+                window._searchScrollToMessageId = msg.id;
+                openChatRoom(group.chatId, group.chatType);
+            });
             list.appendChild(item);
         });
 

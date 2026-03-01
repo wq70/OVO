@@ -30,30 +30,38 @@ const TTSSettings = {
         }
     },
 
-    // 加载 TTS 全局配置
+    // 加载 TTS 全局配置（角色 + 用户）
     loadSettings: function() {
         try {
             const config = MinimaxTTSService.config;
-            
-            // 填充表单
             const enabledInput = document.getElementById('minimax-tts-enabled');
             const groupIdInput = document.getElementById('minimax-group-id');
             const apiKeyInput = document.getElementById('minimax-api-key');
             const domainSelect = document.getElementById('minimax-domain');
             const modelSelect = document.getElementById('minimax-tts-model');
-
             if (enabledInput) enabledInput.checked = config.enabled || false;
             if (groupIdInput) groupIdInput.value = config.groupId || '';
             if (apiKeyInput) apiKeyInput.value = config.apiKey || '';
             if (domainSelect) domainSelect.value = config.domain || 'api.minimaxi.com';
             if (modelSelect) modelSelect.value = config.model || 'speech-2.8-hd';
 
+            const userConfig = MinimaxTTSService.userConfig;
+            const userEnabledInput = document.getElementById('minimax-user-tts-enabled');
+            const userGroupIdInput = document.getElementById('minimax-user-group-id');
+            const userApiKeyInput = document.getElementById('minimax-user-api-key');
+            const userDomainSelect = document.getElementById('minimax-user-domain');
+            const userModelSelect = document.getElementById('minimax-user-tts-model');
+            if (userEnabledInput) userEnabledInput.checked = userConfig.enabled || false;
+            if (userGroupIdInput) userGroupIdInput.value = userConfig.groupId || '';
+            if (userApiKeyInput) userApiKeyInput.value = userConfig.apiKey || '';
+            if (userDomainSelect) userDomainSelect.value = userConfig.domain || 'api.minimaxi.com';
+            if (userModelSelect) userModelSelect.value = userConfig.model || 'speech-2.8-hd';
         } catch (err) {
             console.error('[TTSSettings] 加载设置失败:', err);
         }
     },
 
-    // 保存 TTS 全局配置
+    // 保存 TTS 全局配置（角色 + 用户）
     saveTTSConfig: function() {
         try {
             const enabledInput = document.getElementById('minimax-tts-enabled');
@@ -61,7 +69,6 @@ const TTSSettings = {
             const apiKeyInput = document.getElementById('minimax-api-key');
             const domainSelect = document.getElementById('minimax-domain');
             const modelSelect = document.getElementById('minimax-tts-model');
-
             const config = {
                 enabled: enabledInput?.checked || false,
                 groupId: groupIdInput?.value?.trim() || '',
@@ -69,21 +76,31 @@ const TTSSettings = {
                 domain: domainSelect?.value || 'api.minimaxi.com',
                 model: modelSelect?.value || 'speech-2.8-hd'
             };
-
-            // 验证
             if (config.enabled && (!config.groupId || !config.apiKey)) {
-                showToast('请填写完整的 GroupId 和 API Key');
+                showToast('请填写完整的角色 TTS GroupId 和 API Key');
                 return;
             }
+            MinimaxTTSService.saveConfig(config);
 
-            // 保存
-            const success = MinimaxTTSService.saveConfig(config);
-            if (success) {
-                showToast('TTS 配置已保存');
-            } else {
-                showToast('保存失败，请重试');
+            const userEnabledInput = document.getElementById('minimax-user-tts-enabled');
+            const userGroupIdInput = document.getElementById('minimax-user-group-id');
+            const userApiKeyInput = document.getElementById('minimax-user-api-key');
+            const userDomainSelect = document.getElementById('minimax-user-domain');
+            const userModelSelect = document.getElementById('minimax-user-tts-model');
+            const userConfig = {
+                enabled: userEnabledInput?.checked || false,
+                groupId: userGroupIdInput?.value?.trim() || '',
+                apiKey: userApiKeyInput?.value?.trim() || '',
+                domain: userDomainSelect?.value || 'api.minimaxi.com',
+                model: userModelSelect?.value || 'speech-2.8-hd'
+            };
+            if (userConfig.enabled && (!userConfig.groupId || !userConfig.apiKey)) {
+                showToast('请填写完整的用户 TTS GroupId 和 API Key');
+                return;
             }
+            MinimaxTTSService.saveUserConfig(userConfig);
 
+            showToast('TTS 配置已保存');
         } catch (err) {
             console.error('[TTSSettings] 保存配置失败:', err);
             showToast('保存失败');
@@ -122,7 +139,7 @@ const TTSSettings = {
         }
     },
 
-    // 保存角色 TTS 配置（音色和语言）
+    // 保存角色 + 用户 TTS 配置（音色和语言）
     saveChatTTSConfig: async function() {
         try {
             if (typeof currentChatId === 'undefined' || !currentChatId) return;
@@ -131,68 +148,79 @@ const TTSSettings = {
             const chat = db.characters.find(c => c.id === currentChatId);
             if (!chat) return;
 
-            // 获取语言选择
+            if (!chat.ttsConfig) chat.ttsConfig = {};
+
             const languageSelect = document.getElementById('setting-tts-language');
-            const language = languageSelect?.value || 'auto';
-            
-            // 获取自定义 Voice ID
             const customVoiceIdInput = document.getElementById('setting-custom-voice-id');
-            const customVoiceId = customVoiceIdInput?.value?.trim() || '';
+            chat.ttsConfig.language = languageSelect?.value || 'auto';
+            chat.ttsConfig.customVoiceId = customVoiceIdInput?.value?.trim() || '';
 
-            // 初始化 ttsConfig
-            if (!chat.ttsConfig) {
-                chat.ttsConfig = {};
-            }
-
-            // 保存配置（音色ID已经在 VoiceSelector 中保存了）
-            chat.ttsConfig.language = language;
-            chat.ttsConfig.customVoiceId = customVoiceId;
+            const userLanguageSelect = document.getElementById('setting-user-tts-language');
+            const userCustomVoiceIdInput = document.getElementById('setting-user-custom-voice-id');
+            if (userLanguageSelect) chat.ttsConfig.userLanguage = userLanguageSelect.value || 'auto';
+            if (userCustomVoiceIdInput) chat.ttsConfig.userCustomVoiceId = userCustomVoiceIdInput.value?.trim() || '';
 
             await saveData();
-            console.log('[TTSSettings] 角色 TTS 配置已保存', chat.ttsConfig);
-
+            console.log('[TTSSettings] 角色与用户 TTS 配置已保存', chat.ttsConfig);
         } catch (err) {
             console.error('[TTSSettings] 保存角色配置失败:', err);
         }
     },
 
-    // 加载角色 TTS 配置到表单
+    // 加载角色 + 用户 TTS 配置到表单，并控制用户语音区块显隐
     loadChatTTSConfig: function(chatId) {
         try {
             if (typeof db === 'undefined' || !db.characters) return;
-            
             const chat = db.characters.find(c => c.id === chatId);
             if (!chat) return;
 
-            // 加载语言设置
             const languageSelect = document.getElementById('setting-tts-language');
-            if (languageSelect && chat.ttsConfig && chat.ttsConfig.language) {
-                languageSelect.value = chat.ttsConfig.language;
-            } else if (languageSelect) {
-                languageSelect.value = 'auto';
-            }
-            
-            // 加载自定义 Voice ID
+            if (languageSelect) languageSelect.value = (chat.ttsConfig && chat.ttsConfig.language) || 'auto';
             const customVoiceIdInput = document.getElementById('setting-custom-voice-id');
-            if (customVoiceIdInput && chat.ttsConfig && chat.ttsConfig.customVoiceId) {
-                customVoiceIdInput.value = chat.ttsConfig.customVoiceId;
-            } else if (customVoiceIdInput) {
-                customVoiceIdInput.value = '';
-            }
+            if (customVoiceIdInput) customVoiceIdInput.value = (chat.ttsConfig && chat.ttsConfig.customVoiceId) || '';
 
-            // 更新音色显示
             const voiceNameSpan = document.getElementById('current-voice-name');
-            if (voiceNameSpan && chat.ttsConfig && chat.ttsConfig.voiceId) {
-                const voice = VoiceSelector.voices.find(v => v.id === chat.ttsConfig.voiceId);
-                if (voice) {
-                    voiceNameSpan.textContent = voice.name;
+            if (voiceNameSpan) {
+                const voiceId = chat.ttsConfig && chat.ttsConfig.voiceId;
+                if (voiceId) {
+                    const voice = VoiceSelector.voices.find(v => v.id === voiceId);
+                    voiceNameSpan.textContent = voice ? voice.name : '选择音色';
                 } else {
                     voiceNameSpan.textContent = '选择音色';
                 }
-            } else if (voiceNameSpan) {
-                voiceNameSpan.textContent = '选择音色';
             }
 
+            // 用户语音区块：仅当 API 中启用用户 TTS 时显示
+            const userWrap = document.getElementById('user-voice-settings-wrap');
+            const userIncompleteHint = document.getElementById('user-voice-incomplete-hint');
+            const userTTSEnabled = typeof MinimaxTTSService !== 'undefined' && MinimaxTTSService.userConfig && MinimaxTTSService.userConfig.enabled;
+
+            if (userWrap) {
+                userWrap.style.display = userTTSEnabled ? 'block' : 'none';
+            }
+            if (userTTSEnabled) {
+                const userLanguageSelect = document.getElementById('setting-user-tts-language');
+                if (userLanguageSelect) userLanguageSelect.value = (chat.ttsConfig && chat.ttsConfig.userLanguage) || 'auto';
+                const userCustomInput = document.getElementById('setting-user-custom-voice-id');
+                if (userCustomInput) userCustomInput.value = (chat.ttsConfig && chat.ttsConfig.userCustomVoiceId) || '';
+
+                const userVoiceNameSpan = document.getElementById('current-user-voice-name');
+                if (userVoiceNameSpan) {
+                    const uid = chat.ttsConfig && chat.ttsConfig.userVoiceId;
+                    if (uid) {
+                        const uVoice = VoiceSelector.voices.find(v => v.id === uid);
+                        userVoiceNameSpan.textContent = uVoice ? uVoice.name : '选择音色';
+                    } else {
+                        userVoiceNameSpan.textContent = '选择音色';
+                    }
+                }
+
+                // 仅当启用但未配置完全时显示「未配置完全」
+                const hasUserVoice = (chat.ttsConfig && (chat.ttsConfig.userVoiceId || (chat.ttsConfig.userCustomVoiceId && chat.ttsConfig.userCustomVoiceId.trim())));
+                if (userIncompleteHint) userIncompleteHint.style.display = hasUserVoice ? 'none' : 'block';
+            } else if (userIncompleteHint) {
+                userIncompleteHint.style.display = 'none';
+            }
         } catch (err) {
             console.error('[TTSSettings] 加载角色配置失败:', err);
         }

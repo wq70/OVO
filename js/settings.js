@@ -39,6 +39,67 @@ function setupChatSettings() {
         saveSettingsFromSidebar();
     });
 
+    document.getElementById('chat-scroll-to-top-current-btn').addEventListener('click', () => {
+        switchScreen('chat-room-screen');
+        setTimeout(() => {
+            const area = document.getElementById('message-area');
+            if (area) area.scrollTop = 0;
+        }, 80);
+    });
+    document.getElementById('chat-scroll-to-top-all-btn').addEventListener('click', () => {
+        switchScreen('chat-room-screen');
+        setTimeout(() => {
+            const chat = (typeof currentChatType !== 'undefined' && currentChatType === 'private')
+                ? db.characters.find(c => c.id === currentChatId)
+                : db.groups.find(g => g.id === currentChatId);
+            if (chat && chat.history && chat.history.length > 0 && typeof renderMessages === 'function') {
+                const pageSize = (typeof MESSAGES_PER_PAGE !== 'undefined') ? MESSAGES_PER_PAGE : 50;
+                currentPage = Math.ceil(chat.history.length / pageSize) || 1;
+                renderMessages(false, false);
+                const area = document.getElementById('message-area');
+                if (area) area.scrollTop = 0;
+            }
+        }, 80);
+    });
+    document.getElementById('chat-scroll-to-bottom-btn').addEventListener('click', () => {
+        switchScreen('chat-room-screen');
+        setTimeout(() => {
+            const area = document.getElementById('message-area');
+            if (area) area.scrollTop = area.scrollHeight;
+        }, 80);
+    });
+
+    const scrollToTopOrBottomGroup = (mode) => {
+        switchScreen('chat-room-screen');
+        setTimeout(() => {
+            const area = document.getElementById('message-area');
+            if (!area) return;
+            if (mode === 'bottom') {
+                area.scrollTop = area.scrollHeight;
+                return;
+            }
+            if (mode === 'topAll') {
+                const chat = (typeof currentChatType !== 'undefined' && currentChatType === 'group')
+                    ? db.groups.find(g => g.id === currentChatId)
+                    : db.characters.find(c => c.id === currentChatId);
+                if (chat && chat.history && chat.history.length > 0 && typeof renderMessages === 'function') {
+                    const pageSize = (typeof MESSAGES_PER_PAGE !== 'undefined') ? MESSAGES_PER_PAGE : 50;
+                    currentPage = Math.ceil(chat.history.length / pageSize) || 1;
+                    renderMessages(false, false);
+                    area.scrollTop = 0;
+                }
+            } else {
+                area.scrollTop = 0;
+            }
+        }, 80);
+    };
+    const groupTopCurrentBtn = document.getElementById('group-chat-scroll-to-top-current-btn');
+    const groupTopAllBtn = document.getElementById('group-chat-scroll-to-top-all-btn');
+    const groupBottomBtn = document.getElementById('group-chat-scroll-to-bottom-btn');
+    if (groupTopCurrentBtn) groupTopCurrentBtn.addEventListener('click', () => scrollToTopOrBottomGroup('topCurrent'));
+    if (groupTopAllBtn) groupTopAllBtn.addEventListener('click', () => scrollToTopOrBottomGroup('topAll'));
+    if (groupBottomBtn) groupBottomBtn.addEventListener('click', () => scrollToTopOrBottomGroup('bottom'));
+
     // --- Tab 切换逻辑 ---
     // 仅选择聊天设置和群聊设置中的 Tab，排除 CoT 设置
     const tabs = document.querySelectorAll('#chat-settings-screen .settings-tab-item, #group-settings-screen .settings-tab-item');
@@ -142,6 +203,15 @@ function setupChatSettings() {
                 }
             }
         }
+    });
+
+    document.getElementById('reset-chat-bg-btn').addEventListener('click', async () => {
+        const char = db.characters.find(c => c.id === currentChatId);
+        if (!char) return;
+        char.chatBg = '';
+        chatRoomScreen.style.backgroundImage = 'none';
+        await saveData();
+        showToast('已恢复默认背景');
     });
     
     document.getElementById('clear-chat-history-btn').addEventListener('click', async () => {
@@ -530,6 +600,11 @@ function loadSettingsToSidebar() {
         const theme = colorThemes[e.theme || 'white_pink'];
         updateBubbleCssPreview(privatePreviewBox, e.customBubbleCss, !e.useCustomBubbleCss, theme);
         populateBubblePresetSelect('bubble-preset-select');
+        const allowCharSwitchCssEl = document.getElementById('setting-allow-char-switch-bubble-css');
+        const bindingsWrap = document.getElementById('bubble-css-theme-bindings-wrap');
+        if (allowCharSwitchCssEl) allowCharSwitchCssEl.checked = !!e.allowCharSwitchBubbleCss;
+        if (bindingsWrap) bindingsWrap.style.display = (e.allowCharSwitchBubbleCss ? 'block' : 'none');
+        populateBubbleThemeBindingsList(e.bubbleCssThemeBindings || []);
         populateMyPersonaSelect();
         if (typeof populateStatusBarPresetSelect === 'function') {
             populateStatusBarPresetSelect();
@@ -590,6 +665,14 @@ async function saveSettingsFromSidebar() {
         e.characterAutoFavoriteEnabled = charAutoFavEl ? charAutoFavEl.checked : false;
         e.useCustomBubbleCss = document.getElementById('setting-use-custom-css').checked;
         e.customBubbleCss = document.getElementById('setting-custom-bubble-css').value;
+        e.allowCharSwitchBubbleCss = document.getElementById('setting-allow-char-switch-bubble-css').checked;
+        e.bubbleCssThemeBindings = collectBubbleThemeBindingsFromDOM();
+        if (e.allowCharSwitchBubbleCss) {
+            const cssTrim = (e.customBubbleCss || '').trim();
+            const presets = _getBubblePresets();
+            const matched = presets.find(p => p.css && (p.css.trim() === cssTrim));
+            e.currentBubbleCssPresetName = matched ? matched.name : '';
+        }
         e.bilingualModeEnabled = document.getElementById('setting-bilingual-mode').checked;
         e.bilingualBubbleStyle = document.getElementById('setting-bilingual-style').value;
         
@@ -1299,6 +1382,62 @@ function populateBubblePresetSelect(selectId) {
     });
 }
 
+function populateBubbleThemeBindingsList(bindings) {
+    const listEl = document.getElementById('bubble-css-theme-bindings-list');
+    const emptyEl = document.getElementById('bubble-css-theme-bindings-empty');
+    if (!listEl || !emptyEl) return;
+    listEl.innerHTML = '';
+    const presets = _getBubblePresets();
+    if (!bindings || bindings.length === 0) {
+        listEl.style.display = 'none';
+        emptyEl.style.display = 'block';
+        return;
+    }
+    listEl.style.display = 'block';
+    emptyEl.style.display = 'none';
+    bindings.forEach((b, idx) => {
+        const row = document.createElement('div');
+        row.className = 'bubble-theme-binding-row';
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-color,#eee);';
+        row.dataset.presetName = b.presetName;
+        const nameSpan = document.createElement('span');
+        nameSpan.style.cssText = 'min-width:100px;font-weight:500;color:var(--text-color,#333);';
+        nameSpan.textContent = b.presetName;
+        const descInput = document.createElement('input');
+        descInput.type = 'text';
+        descInput.placeholder = '选填描述';
+        descInput.value = b.description || '';
+        descInput.style.cssText = 'flex:1;padding:6px 8px;border-radius:6px;border:1px solid var(--border-color,#eee);font-size:13px;';
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn btn-small';
+        delBtn.style.cssText = 'padding:4px 8px;border-radius:6px;color:#c62828;';
+        delBtn.textContent = '移除';
+        delBtn.addEventListener('click', () => {
+            const char = db.characters.find(c => c.id === currentChatId);
+            if (!char) return;
+            if (!Array.isArray(char.bubbleCssThemeBindings)) char.bubbleCssThemeBindings = [];
+            const i = char.bubbleCssThemeBindings.findIndex(x => x.presetName === b.presetName);
+            if (i >= 0) char.bubbleCssThemeBindings.splice(i, 1);
+            populateBubbleThemeBindingsList(char.bubbleCssThemeBindings);
+        });
+        row.appendChild(nameSpan);
+        row.appendChild(descInput);
+        row.appendChild(delBtn);
+        listEl.appendChild(row);
+    });
+}
+
+function collectBubbleThemeBindingsFromDOM() {
+    const listEl = document.getElementById('bubble-css-theme-bindings-list');
+    if (!listEl) return [];
+    const rows = listEl.querySelectorAll('.bubble-theme-binding-row');
+    return Array.from(rows).map(row => ({
+        presetName: row.dataset.presetName || '',
+        description: (row.querySelector('input') && row.querySelector('input').value) ? row.querySelector('input').value.trim() : ''
+    })).filter(b => b.presetName);
+}
+
 async function applyPresetToCurrentChat(presetName) {
     const presets = _getBubblePresets();
     const preset = presets.find(p => p.name === presetName);
@@ -1317,6 +1456,10 @@ async function applyPresetToCurrentChat(presetName) {
         if (chat) {
             chat.customBubbleCss = preset.css;
             chat.useCustomBubbleCss = true;
+            if (currentChatType === 'private') {
+                chat.currentBubbleCssPresetName = presetName;
+                chat.themeJustChangedByUser = presetName;
+            }
             if (currentChatType === 'private') {
                 document.getElementById('setting-use-custom-css').checked = true;
                 document.getElementById('setting-custom-bubble-css').disabled = false;
@@ -1754,6 +1897,53 @@ function setupPresetFeatures() {
         document.getElementById('bubble-presets-modal').style.display = 'none';
     });
 
+    const allowCharSwitchCssCb = document.getElementById('setting-allow-char-switch-bubble-css');
+    const bubbleBindingsWrap = document.getElementById('bubble-css-theme-bindings-wrap');
+    if (allowCharSwitchCssCb && bubbleBindingsWrap) {
+        allowCharSwitchCssCb.addEventListener('change', () => {
+            bubbleBindingsWrap.style.display = allowCharSwitchCssCb.checked ? 'block' : 'none';
+        });
+    }
+    const bubbleAddThemeBtn = document.getElementById('bubble-css-add-theme-binding-btn');
+    const bubbleAddThemeModal = document.getElementById('bubble-add-theme-modal');
+    const bubbleAddThemePresetSelect = document.getElementById('bubble-add-theme-preset-select');
+    const bubbleAddThemeDescInput = document.getElementById('bubble-add-theme-desc-input');
+    const bubbleAddThemeCancelBtn = document.getElementById('bubble-add-theme-cancel-btn');
+    const bubbleAddThemeConfirmBtn = document.getElementById('bubble-add-theme-confirm-btn');
+    if (bubbleAddThemeBtn) bubbleAddThemeBtn.addEventListener('click', () => {
+        const char = db.characters.find(c => c.id === currentChatId);
+        if (!char) return showToast('请先选择角色');
+        const presets = _getBubblePresets();
+        const boundNames = (char.bubbleCssThemeBindings || []).map(b => b.presetName);
+        const available = presets.filter(p => !boundNames.includes(p.name));
+        if (!bubbleAddThemePresetSelect) return;
+        bubbleAddThemePresetSelect.innerHTML = '<option value="">— 选择预设 —</option>';
+        available.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.name;
+            opt.textContent = p.name;
+            bubbleAddThemePresetSelect.appendChild(opt);
+        });
+        if (bubbleAddThemeDescInput) bubbleAddThemeDescInput.value = '';
+        if (bubbleAddThemeModal) bubbleAddThemeModal.style.display = 'flex';
+    });
+    if (bubbleAddThemeCancelBtn) bubbleAddThemeCancelBtn.addEventListener('click', () => {
+        if (bubbleAddThemeModal) bubbleAddThemeModal.style.display = 'none';
+    });
+    if (bubbleAddThemeConfirmBtn) bubbleAddThemeConfirmBtn.addEventListener('click', () => {
+        const presetName = bubbleAddThemePresetSelect && bubbleAddThemePresetSelect.value;
+        if (!presetName) return showToast('请选择预设');
+        const char = db.characters.find(c => c.id === currentChatId);
+        if (!char) return;
+        if (!Array.isArray(char.bubbleCssThemeBindings)) char.bubbleCssThemeBindings = [];
+        char.bubbleCssThemeBindings.push({
+            presetName,
+            description: (bubbleAddThemeDescInput && bubbleAddThemeDescInput.value) ? bubbleAddThemeDescInput.value.trim() : ''
+        });
+        populateBubbleThemeBindingsList(char.bubbleCssThemeBindings);
+        if (bubbleAddThemeModal) bubbleAddThemeModal.style.display = 'none';
+    });
+
     if (groupBubbleApplyBtn) groupBubbleApplyBtn.addEventListener('click', () => {
         const selVal = document.getElementById('group-bubble-preset-select').value;
         if (!selVal) return showToast('请选择要应用的预设');
@@ -2172,7 +2362,8 @@ function _captureCurrentWidgetWallpaperScheme() {
         wallpaper: db.wallpaper || DEFAULT_WALLPAPER_URL,
         homeWidgetSettings: JSON.parse(JSON.stringify(db.homeWidgetSettings || {})),
         homeSignature: db.homeSignature !== undefined ? db.homeSignature : DEFAULT_HOME_SIGNATURE,
-        insWidgetSettings: JSON.parse(JSON.stringify(db.insWidgetSettings || DEFAULT_INS_WIDGET))
+        insWidgetSettings: JSON.parse(JSON.stringify(db.insWidgetSettings || DEFAULT_INS_WIDGET)),
+        customIcons: JSON.parse(JSON.stringify(db.customIcons || {}))
     };
 }
 
@@ -2212,6 +2403,9 @@ function applyWidgetWallpaperPreset(name) {
     db.homeWidgetSettings = JSON.parse(JSON.stringify(p.homeWidgetSettings || {}));
     db.homeSignature = p.homeSignature !== undefined ? p.homeSignature : DEFAULT_HOME_SIGNATURE;
     db.insWidgetSettings = JSON.parse(JSON.stringify(p.insWidgetSettings || DEFAULT_INS_WIDGET));
+    if (p.customIcons && typeof p.customIcons === 'object') {
+        db.customIcons = JSON.parse(JSON.stringify(p.customIcons));
+    }
     saveData();
     if (typeof setupHomeScreen === 'function') setupHomeScreen();
     if (typeof updatePolaroidImage === 'function' && db.homeWidgetSettings.polaroidImage) {
@@ -2222,6 +2416,7 @@ function applyWidgetWallpaperPreset(name) {
         preview.style.backgroundImage = `url(${db.wallpaper})`;
         preview.textContent = '';
     }
+    renderCustomizeForm();
     showToast('已应用方案');
 }
 
@@ -2318,7 +2513,7 @@ function importWidgetWallpaperScheme(file) {
             const name = preset.name || '导入的方案';
             const presets = _getWidgetWallpaperPresets();
             const existingIdx = presets.findIndex(p => p.name === name);
-            const toAdd = { name, wallpaper: preset.wallpaper, homeWidgetSettings: preset.homeWidgetSettings || {}, homeSignature: preset.homeSignature, insWidgetSettings: preset.insWidgetSettings || {} };
+            const toAdd = { name, wallpaper: preset.wallpaper, homeWidgetSettings: preset.homeWidgetSettings || {}, homeSignature: preset.homeSignature, insWidgetSettings: preset.insWidgetSettings || {}, customIcons: preset.customIcons || {} };
             if (existingIdx >= 0) presets[existingIdx] = toAdd;
             else presets.push(toAdd);
             _saveWidgetWallpaperPresets(presets);
@@ -2336,12 +2531,13 @@ function importWidgetWallpaperScheme(file) {
 }
 
 function resetWidgetWallpaperToDefault() {
-    if (!confirm('确定要恢复默认吗？将清除当前所有小组件和壁纸设置。')) return;
+    if (!confirm('确定要恢复默认吗？将清除当前所有小组件、壁纸和应用图标设置。')) return;
     db.wallpaper = DEFAULT_WALLPAPER_URL;
     if (typeof applyWallpaper === 'function') applyWallpaper(DEFAULT_WALLPAPER_URL);
     db.homeWidgetSettings = JSON.parse(JSON.stringify(defaultWidgetSettings));
     db.homeSignature = DEFAULT_HOME_SIGNATURE;
     db.insWidgetSettings = JSON.parse(JSON.stringify(DEFAULT_INS_WIDGET));
+    db.customIcons = {};
     saveData();
     if (typeof setupHomeScreen === 'function') setupHomeScreen();
     const preview = document.getElementById('wallpaper-preview');
@@ -2350,7 +2546,7 @@ function resetWidgetWallpaperToDefault() {
         preview.textContent = '';
     }
     renderCustomizeForm();
-    showToast('已恢复默认（小组件+壁纸）');
+    showToast('已恢复默认（小组件+壁纸+图标）');
 }
 
 function _getIconPresets() {
@@ -3054,7 +3250,7 @@ function renderCustomizeForm() {
         </div>
         <div class="collapsible-content">
             <div class="kkt-item" style="display:block; padding: 15px;">
-                <p style="font-size: 13px; color: #888; margin-bottom: 12px; line-height: 1.5;">将当前主屏幕的「所有小组件 + 壁纸」保存为方案，可导出分享或导入他人方案；一键恢复默认。</p>
+                <p style="font-size: 13px; color: #888; margin-bottom: 12px; line-height: 1.5;">将当前主屏幕的「所有小组件 + 壁纸 + 应用图标」保存为方案，可导出分享或导入他人方案；一键恢复默认。与下方「应用图标自定义」中的图标预设库相互独立。</p>
                 <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:12px; border: 1px solid #f0f0f0;">
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
                         <label for="widget-wallpaper-preset-select" style="width:auto;color:#666;font-size:13px;">方案预设库</label>
@@ -3071,7 +3267,7 @@ function renderCustomizeForm() {
                     <button type="button" id="widget-wallpaper-import-btn" class="btn btn-small btn-neutral" style="padding:4px 8px;">导入方案</button>
                 </div>
                 <div style="display: flex; justify-content: flex-end;">
-                    <button type="button" id="widget-wallpaper-reset-btn" class="btn btn-neutral btn-small" style="width: auto;">恢复默认（小组件+壁纸）</button>
+                    <button type="button" id="widget-wallpaper-reset-btn" class="btn btn-neutral btn-small" style="width: auto;">恢复默认（小组件+壁纸+图标）</button>
                 </div>
                 <input type="file" id="widget-wallpaper-import-file" accept=".json,.ee" style="display:none;">
             </div>

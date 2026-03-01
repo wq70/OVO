@@ -63,6 +63,7 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
     if (!chat) return;
 
     if (!isBackground) {
+        currentReplyAbortController = new AbortController();
         isGenerating = true;
         getReplyBtn.disabled = true;
         regenerateBtn.disabled = true;
@@ -296,7 +297,8 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: headers,
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify(requestBody),
+            signal: currentReplyAbortController ? currentReplyAbortController.signal : undefined
         });
         if (!response.ok) {
             const error = new Error(`API Error: ${response.status} ${await response.text()}`);
@@ -340,10 +342,15 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
         }
 
     } catch (error) {
-        if (!isBackground) showApiError(error);
-        else console.error("Background Auto-Reply Error:", error);
+        if (error.name === 'AbortError') {
+            if (!isBackground && typeof showToast === 'function') showToast('已暂停调用');
+        } else {
+            if (!isBackground) showApiError(error);
+            else console.error("Background Auto-Reply Error:", error);
+        }
     } finally {
         if (!isBackground) {
+            currentReplyAbortController = null;
             isGenerating = false;
             getReplyBtn.disabled = false;
             regenerateBtn.disabled = false;
@@ -586,6 +593,27 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
                         console.error("状态栏正则解析错误:", e);
                     }
                 }
+                // 解析并执行 [更换主题：主题名]（你与用户共用的对话主题）
+                if (char && char.allowCharSwitchBubbleCss && Array.isArray(char.bubbleCssThemeBindings) && char.bubbleCssThemeBindings.length > 0) {
+                    const themeSwitchRegex = /\[更换主题[：:]\s*([^\]\n]+)\]/g;
+                    let themeSwitchMatch;
+                    let contentAfterStrip = item.content;
+                    while ((themeSwitchMatch = themeSwitchRegex.exec(item.content)) !== null) {
+                        let themeName = themeSwitchMatch[1].trim().replace(/^[「『"【\[]+/, '').replace(/[」』"】\]]+$/, '').trim();
+                        const binding = char.bubbleCssThemeBindings.find(b => b.presetName === themeName);
+                        const preset = binding && (db.bubbleCssPresets || []).find(p => p.name === binding.presetName);
+                        if (preset) {
+                            chat.customBubbleCss = preset.css;
+                            chat.useCustomBubbleCss = true;
+                            char.currentBubbleCssPresetName = preset.name;
+                            if (typeof updateCustomBubbleStyle === 'function') updateCustomBubbleStyle(targetChatId, preset.css, true);
+                            if (typeof saveData === 'function') saveData();
+                            contentAfterStrip = contentAfterStrip.replace(themeSwitchMatch[0], '').replace(/\n\s*\n/g, '\n').trim();
+                        }
+                    }
+                    item.content = contentAfterStrip;
+                    if (!item.content || !item.content.trim()) continue; // 仅更换主题时不再追加空消息
+                }
             }
 
             // 如果是后台模式，跳过延迟，直接处理
@@ -700,11 +728,22 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
                     const receivedTransferRegex = new RegExp(`\\[${character.realName}的转账：.*?元；备注：.*?\\]`);
                     const giftRegex = new RegExp(`\\[${character.realName}送来的礼物：.*?\\]`);
 
+                    const rawContent = item.content.trim();
+                    let finalContent = rawContent;
+                    let revealToMain = null;
+                    if (chat.source === 'forum' && chat.linkedCharId && rawContent.includes('[REVEAL]')) {
+                        const idx = rawContent.indexOf('[REVEAL]');
+                        finalContent = rawContent.slice(0, idx).trim();
+                        const afterReveal = rawContent.slice(idx + '[REVEAL]'.length).trim();
+                        const linkedChar = db.characters && db.characters.find(c => c.id === chat.linkedCharId);
+                        revealToMain = afterReveal || (linkedChar ? '其实我就是' + (linkedChar.realName || linkedChar.remarkName) + '啦～' : '没想到吧，是我哦～');
+                    }
+
                     const message = {
                         id: `msg_${Date.now()}_${Math.random()}`,
                         role: 'assistant',
-                        content: item.content.trim(),
-                        parts: [{type: item.type, text: item.content.trim()}],
+                        content: finalContent,
+                        parts: [{type: item.type, text: finalContent}],
                         timestamp: Date.now(),
                         isStatusUpdate: item.isStatusUpdate,
                         statusSnapshot: item.statusSnapshot
@@ -718,6 +757,23 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
 
                     chat.history.push(message);
                     addMessageBubble(message, targetChatId, targetChatType);
+
+                    if (revealToMain !== null && chat.linkedCharId) {
+                        const mainChar = db.characters && db.characters.find(c => c.id === chat.linkedCharId);
+                        if (mainChar && mainChar.history) {
+                            const revealMsg = {
+                                id: 'msg_reveal_' + Date.now() + '_' + Math.random(),
+                                role: 'assistant',
+                                content: revealToMain,
+                                parts: [{ type: 'text', text: revealToMain }],
+                                timestamp: Date.now()
+                            };
+                            mainChar.history.push(revealMsg);
+                            if (typeof saveData === 'function') saveData();
+                            if (typeof renderChatList === 'function') renderChatList();
+                            showToast((mainChar.remarkName || mainChar.realName) + ' 揭穿身份了！');
+                        }
+                    }
                 }
 
             } else if (targetChatType === 'group') {
@@ -862,9 +918,82 @@ async function handleRegenerate() {
     await getAiReply(currentChatId, currentChatType);
 }
 
+/** 将偷看记录中的单条应用内容格式化为可读摘要，供系统提示使用 */
+function formatPeekContentForPrompt(entry) {
+    if (!entry || !entry.content) return '';
+    const c = entry.content;
+    const appName = entry.appName || entry.appId || '';
+    const maxLen = 600;
+    const trunc = (s) => (s && String(s).length > maxLen) ? String(s).slice(0, maxLen) + '…' : (s || '');
+    let text = '';
+    switch (entry.appId) {
+        case 'messages':
+            if (c.conversations && Array.isArray(c.conversations)) {
+                text = c.conversations.map(cv => {
+                    const last = (cv.history && cv.history.length) ? cv.history[cv.history.length - 1] : null;
+                    const lastContent = last ? (last.content || '').replace(/\[.*?\]/g, '').trim() : '…';
+                    return `与 ${cv.partnerName || '某人'} 的对话，最近一条：${trunc(lastContent)}`;
+                }).join('；');
+            }
+            break;
+        case 'album':
+            if (c.photos && Array.isArray(c.photos)) {
+                text = c.photos.map(p => `照片/视频：${trunc(p.imageDescription)}；批注：${trunc(p.description)}`).join('；');
+            }
+            break;
+        case 'memos':
+            if (c.memos && Array.isArray(c.memos)) {
+                text = c.memos.map(m => `《${m.title || '无标题'}》${trunc(m.content)}`).join('；');
+            }
+            break;
+        case 'unlock':
+            text = `昵称：${c.nickname || ''}；签名：${trunc(c.bio)}；帖子数：${(c.posts && c.posts.length) || 0}。`;
+            if (c.posts && c.posts.length) {
+                text += ' 最近帖子：' + c.posts.slice(0, 3).map(p => trunc(p.content)).join(' | ');
+            }
+            break;
+        case 'wallet':
+            text = `收入 ${(c.income && c.income.length) || 0} 条，支出 ${(c.expense && c.expense.length) || 0} 条。`;
+            if (c.summary) text += ' 摘要：' + trunc(c.summary);
+            break;
+        case 'drafts':
+            if (c.draft) text = `收件人：${c.draft.to || ''}；内容：${trunc(c.draft.content)}`;
+            break;
+        case 'steps':
+            text = `当前步数：${c.currentSteps ?? '?'}；${(c.annotation && trunc(c.annotation)) || ''}`;
+            break;
+        case 'cart':
+            if (c.items && Array.isArray(c.items)) {
+                text = `共 ${c.items.length} 件：` + c.items.map(i => i.name || i.title || '商品').join('、');
+            }
+            break;
+        case 'browser':
+            if (c.history && Array.isArray(c.history)) {
+                text = c.history.slice(0, 5).map(h => h.title || h.url || '').filter(Boolean).join('；');
+            }
+            break;
+        case 'transfer':
+            if (c.entries && Array.isArray(c.entries)) {
+                text = c.entries.map(e => e.content || e.title || '').filter(Boolean).map(trunc).join('；');
+            }
+            break;
+        case 'timeThoughts':
+            if (c.thoughts && Array.isArray(c.thoughts)) {
+                text = c.thoughts.map(t => trunc(t.content || t.text)).join('；');
+            }
+            break;
+        default:
+            text = trunc(JSON.stringify(c));
+    }
+    return `【${appName}】${text || '（无内容摘要）'}`;
+}
+
 function generatePrivateSystemPrompt(character) {
-    // 收集世界书：关联的 + 全局的（去重）
-    const associatedIds = character.worldBookIds || [];
+    const linkedChar = (character.source === 'forum' && character.linkedCharId && db.characters)
+        ? db.characters.find(c => c.id === character.linkedCharId) : null;
+    const effectiveChar = linkedChar || character;
+    // 收集世界书：关联的 + 全局的（去重）；小号用主角色世界书
+    const associatedIds = effectiveChar.worldBookIds || [];
     const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
     const globalIds = globalBooks.map(wb => wb.id);
     const allBookIds = [...new Set([...associatedIds, ...globalIds])]; // 合并去重
@@ -889,9 +1018,14 @@ function generatePrivateSystemPrompt(character) {
         prompt += `${worldBooksMiddle}\n`;
     }
     prompt += `<char_settings>\n`;
-    prompt += `1. 你的角色名是：${character.realName}。我的称呼是：${character.myName}。你的当前状态是：${character.status}。\n`;
-    prompt += `2. 你的角色设定是：${getEffectivePersona(character)}\n`;
-    if (character.source === 'forum' && (character.supplementPersonaEnabled || character.supplementPersonaAiEnabled)) {
+    prompt += `1. 你的角色名是：${character.realName}。我的称呼是：${character.myName}。你的当前状态是：${character.status || '在线'}。\n`;
+    if (linkedChar) {
+        prompt += `【小号身份】你实际上是以论坛小号在与用户聊天。你的真实身份是：${linkedChar.realName}。请用真实身份的人设和性格来回复（可偶尔露出与本人相似的蛛丝马迹），但不要主动暴露身份。若你觉得适当时（例如用户搞暧昧、或戏剧性时机），可在回复中插入 [REVEAL]，[REVEAL] 后的内容将作为你本尊对用户说的话发到本尊对话里；若不揭穿则不要写 [REVEAL]。\n`;
+        prompt += `2. 你的角色设定是：${getEffectivePersona(linkedChar)}\n`;
+    } else {
+        prompt += `2. 你的角色设定是：${getEffectivePersona(character)}\n`;
+    }
+    if (character.source === 'forum' && !linkedChar && (character.supplementPersonaEnabled || character.supplementPersonaAiEnabled)) {
         prompt += `3. 在对话中可根据与用户的互动逐步丰富、补充你的人设（用户可在设置中查看并编辑「已补齐的人设」）。\n`;
     }
     if (worldBooksAfter) {
@@ -903,7 +1037,57 @@ function generatePrivateSystemPrompt(character) {
         prompt += `3. 关于我的人设：${character.myPersona}\n`;
     }
     prompt += `</user_settings>\n`
-    
+
+    // 窥屏知晓：若用户偷看过手机并点进过应用，向角色注入「用户刚刚/在xx时间偷看过手机」及查看过的应用内容摘要
+    if (character.peekScreenSettings?.charAwarePeek && character.peekViewedByUser && character.peekViewedByUser.length > 0) {
+        const lastAt = character.lastPeekViewedAt;
+        let timeDesc = '曾';
+        if (lastAt && typeof lastAt === 'number') {
+            const diff = Date.now() - lastAt;
+            if (diff >= 0 && diff < 2 * 60 * 1000) timeDesc = '刚刚';
+            else {
+                const d = new Date(lastAt);
+                const today = new Date();
+                const isToday = d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+                const isYesterday = new Date(today.getTime() - 86400000).toDateString() === d.toDateString();
+                if (isToday) timeDesc = `在 今天 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                else if (isYesterday) timeDesc = `在 昨天 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                else timeDesc = `在 ${d.getMonth() + 1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
+        }
+        const viewedSummary = character.peekViewedByUser.map(entry => formatPeekContentForPrompt(entry)).filter(Boolean).join('\n');
+        prompt += `\n<peek_awareness>\n`;
+        prompt += `用户${timeDesc}偷看过你的手机，并点进并查看了以下应用及其内容。请根据你的人设与当前对话氛围，自然地对此做出反应（例如惊讶、生气、调侃、害羞、无奈等），无需刻意提及“系统告诉你”，当作你作为角色自然发现或推断到即可。以下为用户查看过的应用及内容摘要：\n\n`;
+        prompt += viewedSummary;
+        prompt += `\n</peek_awareness>\n\n`;
+    }
+
+    // 对话主题（你与用户共用的聊天界面主题，变量注入）
+    if (character.allowCharSwitchBubbleCss && Array.isArray(character.bubbleCssThemeBindings) && character.bubbleCssThemeBindings.length > 0) {
+        const bubblePresets = db.bubbleCssPresets || [];
+        const themeLines = character.bubbleCssThemeBindings.map(b => {
+            const desc = (b.description && b.description.trim()) ? `：${b.description.trim()}` : '';
+            return `- ${b.presetName}${desc}`;
+        });
+        const themeListText = themeLines.join('\n');
+        let currentThemeName = character.currentBubbleCssPresetName || '';
+        if (!currentThemeName && character.useCustomBubbleCss && character.customBubbleCss) {
+            const matched = bubblePresets.find(p => p.css && p.css.trim() === character.customBubbleCss.trim());
+            if (matched) currentThemeName = matched.name;
+        }
+        if (!currentThemeName) currentThemeName = '当前为自定义样式或默认';
+        prompt += `\n<chat_themes>\n`;
+        prompt += `【你与用户共用的对话主题】以下是你与用户共同使用的聊天界面主题列表。更换后，你和用户看到的对话界面都会一起改变；这是「当前这场对话」的视觉主题，不是仅你可见的设定。\n\n`;
+        prompt += `当前可选的对话主题：\n${themeListText}\n\n`;
+        prompt += `当前正在使用：${currentThemeName}\n\n`;
+        if (character.themeJustChangedByUser && character.themeJustChangedByUser.trim()) {
+            prompt += `用户刚刚将对话主题更换为了：${character.themeJustChangedByUser.trim()}。请根据人设自然地对此做出反应（如开心、好奇、调侃等）。\n\n`;
+            character.themeJustChangedByUser = '';
+        }
+        prompt += `你可以在合适时机（例如氛围、心情、场景变化时）主动提议或请求更换主题。提及或填写主题名时直接写主题名，不要加「」、书名号等括号。若想更换，请在回复中单独一行使用格式：[更换主题：主题名]（主题名只写名称，不要加括号）。\n`;
+        prompt += `</chat_themes>\n\n`;
+    }
+
     // 检查是否启用“角色活人运转” (默认关闭)
     if (db.cotSettings && db.cotSettings.humanRunEnabled) {
         prompt += HUMAN_RUN_PROMPT + '\n';

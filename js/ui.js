@@ -23,6 +23,10 @@ const regenerateBtn = document.getElementById('regenerate-btn');
 
 // 屏幕切换
 const switchScreen = (targetId) => {
+    // 离开聊天室时停止 TTS 播放，避免退出后继续读
+    if (targetId !== 'chat-room-screen' && typeof MinimaxTTSService !== 'undefined' && MinimaxTTSService.stop) {
+        MinimaxTTSService.stop();
+    }
     // 离开聊天室时清理自定义样式
     if (targetId !== 'chat-room-screen') {
         const customStyles = document.querySelectorAll('style[id^="custom-bubble-style-for-"]');

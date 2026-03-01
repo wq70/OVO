@@ -19,7 +19,9 @@ function setupPeekFeature() {
         if (confirm('确定要清空该角色的所有偷看数据吗？清空后下次进入各应用将重新生成。')) {
             const char = db.characters.find(c => c.id === currentChatId);
             if (char) {
-                char.peekData = {}; 
+                char.peekData = {};
+                char.peekViewedByUser = [];
+                char.lastPeekViewedAt = undefined;
                 await saveData();   
                 showToast('偷看数据已清空');
             }
@@ -126,7 +128,7 @@ function setupPeekFeature() {
         }
 
         if (!character.peekScreenSettings) {
-            character.peekScreenSettings = { wallpaper: '', customIcons: {}, unlockAvatar: '', unlockCommentsEnabled: false };
+            character.peekScreenSettings = { wallpaper: '', customIcons: {}, unlockAvatar: '', unlockCommentsEnabled: false, charAwarePeek: false };
         }
 
         character.peekScreenSettings.wallpaper = document.getElementById('peek-wallpaper-url-input').value.trim();
@@ -149,6 +151,8 @@ function setupPeekFeature() {
         
         character.peekScreenSettings.unlockAvatar = document.getElementById('peek-unlock-avatar-url').value.trim();
         character.peekScreenSettings.unlockCommentsEnabled = document.getElementById('peek-unlock-comments-enabled').checked;
+        const charAwarePeekEl = document.getElementById('peek-char-aware-peek-enabled');
+        character.peekScreenSettings.charAwarePeek = charAwarePeekEl ? charAwarePeekEl.checked : false;
 
         await saveData();
         renderPeekScreen(); 
@@ -331,6 +335,9 @@ async function deleteSelectedPeekData() {
     selectedCheckboxes.forEach(cb => {
         const appId = cb.dataset.appId;
         delete char.peekData[appId];
+        if (char.peekViewedByUser && char.peekViewedByUser.length > 0) {
+            char.peekViewedByUser = char.peekViewedByUser.filter(e => e.appId !== appId);
+        }
     });
 
     await saveData();
@@ -357,6 +364,8 @@ async function deleteAllPeekData() {
     }
 
     char.peekData = {};
+    char.peekViewedByUser = [];
+    char.lastPeekViewedAt = undefined;
     await saveData();
     showToast('已清空所有偷看数据');
 
@@ -365,7 +374,7 @@ async function deleteAllPeekData() {
 
 function renderPeekSettings() {
     const character = db.characters.find(c => c.id === currentChatId);
-    const peekSettings = character?.peekScreenSettings || { wallpaper: '', customIcons: {}, unlockAvatar: '', unlockCommentsEnabled: false };
+    const peekSettings = character?.peekScreenSettings || { wallpaper: '', customIcons: {}, unlockAvatar: '', unlockCommentsEnabled: false, charAwarePeek: false };
 
     // 1. 设置壁纸输入框
     const wallpaperInput = document.getElementById('peek-wallpaper-url-input');
@@ -382,6 +391,11 @@ function renderPeekSettings() {
     const unlockCommentsCheckbox = document.getElementById('peek-unlock-comments-enabled');
     if (unlockCommentsCheckbox) {
         unlockCommentsCheckbox.checked = !!peekSettings.unlockCommentsEnabled;
+    }
+
+    const charAwarePeekCheckbox = document.getElementById('peek-char-aware-peek-enabled');
+    if (charAwarePeekCheckbox) {
+        charAwarePeekCheckbox.checked = !!peekSettings.charAwarePeek;
     }
 
     // 3. 生成应用图标设置（支持 URL、本地上传、重置）
@@ -406,6 +420,20 @@ function renderPeekSettings() {
             container.appendChild(div);
         });
     }
+}
+
+/** 当角色开启「知晓用户窥屏」时，记录用户刚查看的应用及内容，并更新 lastPeekViewedAt */
+function recordPeekViewedByUser(char, appType) {
+    if (!char || !char.peekScreenSettings?.charAwarePeek) return;
+    const content = char.peekData?.[appType];
+    if (!content) return;
+    const appName = (peekScreenApps[appType] && peekScreenApps[appType].name) ? peekScreenApps[appType].name : appType;
+    if (!char.peekViewedByUser) char.peekViewedByUser = [];
+    const idx = char.peekViewedByUser.findIndex(e => e.appId === appType);
+    const entry = { appId: appType, appName, content: JSON.parse(JSON.stringify(content)) };
+    if (idx >= 0) char.peekViewedByUser[idx] = entry;
+    else char.peekViewedByUser.push(entry);
+    char.lastPeekViewedAt = Date.now();
 }
 
 function renderPeekAlbum(photos) {
@@ -1630,6 +1658,8 @@ async function generateAndRenderPeekContent(appType, options = {}) {
                switchScreen('peek-wallet-screen');
                break;
        }
+       recordPeekViewedByUser(char, appType);
+       await saveData();
        return;
     }
 
@@ -1743,6 +1773,7 @@ async function generateAndRenderPeekContent(appType, options = {}) {
         }
 
         char.peekData[appType] = generatedData;
+        recordPeekViewedByUser(char, appType);
         await saveData(); 
 
         if (appType === 'messages') {

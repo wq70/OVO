@@ -805,11 +805,22 @@
     border-bottom-left-radius: 5px;
 }
 
-.voice-bubble .play-icon {
+.voice-bubble .play-icon,
+.voice-bubble .pause-icon {
     width: 18px;
     height: 18px;
     flex-shrink: 0;
 }
+
+.voice-bubble .pause-icon { display: none; }
+
+/* 播放中：显示暂停图标，点击可暂停 */
+.voice-bubble.playing .play-icon { display: none; }
+.voice-bubble.playing .pause-icon { display: block; }
+
+/* 已暂停：显示播放图标，点击可继续 */
+.voice-bubble.paused .play-icon { display: block; }
+.voice-bubble.paused .pause-icon { display: none; }
 
 .voice-bubble .duration {
     font-size: 13px;
@@ -817,7 +828,8 @@
     white-space: nowrap;
 }
 
-.message-wrapper.sent .play-icon { transform: scaleX(-1); }
+.message-wrapper.sent .play-icon,
+.message-wrapper.sent .pause-icon { transform: scaleX(-1); }
 
 .voice-transcript {
     font-size: 14px;

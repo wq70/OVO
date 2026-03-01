@@ -819,12 +819,10 @@ const VideoCallModule = {
                         await this.handleTTSClick(content);
                     });
                     
-                    // === 自动播放 TTS ===
-                    // 在通话中自动播放 AI 的语音
+                    // === 自动播放 TTS（排队播放，播完一句再播下一句）===
                     if (this.state.isCallActive) {
-                        // 使用 setTimeout 确保 DOM 更新完成后再播放
                         setTimeout(() => {
-                            this.handleTTSClick(content).catch(err => {
+                            this.handleTTSClick(content, true).catch(err => {
                                 console.error('[VideoCall] 自动播放 TTS 失败:', err);
                             });
                         }, 100);
@@ -1459,33 +1457,29 @@ const VideoCallModule = {
     },
 
     // === TTS 功能 ===
-    handleTTSClick: async function(content) {
+    // fromAutoPlay:  true = 通话中自动播放，使用排队接口且不弹 toast
+    handleTTSClick: async function(content, fromAutoPlay) {
         try {
-            // 检查 TTS 服务是否加载
             if (typeof MinimaxTTSService === 'undefined') {
                 console.error('[VideoCall] MinimaxTTSService 未加载');
                 showToast('TTS 服务未加载');
                 return;
             }
 
-            // 未启用 TTS 时静默返回，不提示
             if (!MinimaxTTSService.config.enabled) {
                 return;
             }
-            // 已启用但未配置完整时才提示
             if (!MinimaxTTSService.isConfigured()) {
                 showToast('TTS 未配置或未启用');
                 return;
             }
 
-            // 获取当前角色的 TTS 配置
             const chatId = this.state.currentChat?.id;
             if (!chatId) {
                 showToast('无法获取角色配置');
                 return;
             }
 
-            // 检查 VoiceSelector 是否加载
             if (typeof VoiceSelector === 'undefined') {
                 console.error('[VideoCall] VoiceSelector 未加载');
                 showToast('音色选择器未加载');
@@ -1498,15 +1492,20 @@ const VideoCallModule = {
                 return;
             }
 
-            // 显示播放提示
-            showToast('🔊 正在播放...');
+            const voiceId = voiceConfig.voiceId;
+            const language = voiceConfig.language;
 
-            // 合成并播放
-            await MinimaxTTSService.synthesizeAndPlay(
-                content,
-                voiceConfig.voiceId,
-                voiceConfig.language
-            );
+            // 通话中：排队播放，播完一句再播下一句，不打断、不重复消耗
+            if (fromAutoPlay && this.state.isCallActive) {
+                MinimaxTTSService.synthesizeAndPlayQueued(content, voiceId, language);
+                return;
+            }
+
+            // 手动点击：立即播放并提示
+            if (!fromAutoPlay) {
+                showToast('🔊 正在播放...');
+            }
+            await MinimaxTTSService.synthesizeAndPlay(content, voiceId, language);
 
         } catch (err) {
             console.error('[VideoCall] TTS 播放失败:', err);

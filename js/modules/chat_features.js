@@ -110,6 +110,34 @@ function setupImageRecognition() {
     });
 }
 
+function setupCameraCapture() {
+    const cameraCaptureBtn = document.getElementById('camera-capture-btn');
+    const cameraUploadInput = document.getElementById('camera-upload-input');
+    if (!cameraCaptureBtn || !cameraUploadInput) return;
+
+    cameraCaptureBtn.addEventListener('click', () => {
+        cameraUploadInput.click();
+    });
+    cameraUploadInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            try {
+                const compressedUrl = await compressImage(file, {
+                    quality: 0.8,
+                    maxWidth: 1024,
+                    maxHeight: 1024
+                });
+                sendImageForRecognition(compressedUrl);
+            } catch (error) {
+                console.error('Image compression failed:', error);
+                showToast('图片处理失败，请重试');
+            } finally {
+                e.target.value = null;
+            }
+        }
+    });
+}
+
 async function sendImageForRecognition(base64Data) {
     if (!base64Data || isGenerating) return;
     const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
@@ -522,4 +550,12 @@ const AudioManager = {
 
 function playSound(source) {
     AudioManager.play(source);
+}
+
+if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupCameraCapture);
+    } else {
+        setupCameraCapture();
+    }
 }
