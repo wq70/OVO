@@ -299,15 +299,19 @@ const VoiceSelector = {
             const langKey = isUser ? 'userLanguage' : 'language';
 
             const customVoiceId = chat.ttsConfig[customKey];
+            const speedKey = isUser ? 'userSpeed' : 'speed';
+            const speed = (chat.ttsConfig[speedKey] != null) ? chat.ttsConfig[speedKey] : 1;
             if (customVoiceId && customVoiceId.trim()) {
                 return {
                     voiceId: customVoiceId.trim(),
-                    language: chat.ttsConfig[langKey] || 'auto'
+                    language: chat.ttsConfig[langKey] || 'auto',
+                    speed: Math.min(2, Math.max(0.5, Number(speed) || 1))
                 };
             }
             return {
                 voiceId: chat.ttsConfig[voiceKey] || (isUser ? '' : 'female-shaonv'),
-                language: chat.ttsConfig[langKey] || 'auto'
+                language: chat.ttsConfig[langKey] || 'auto',
+                speed: Math.min(2, Math.max(0.5, Number(speed) || 1))
             };
         } catch (err) {
             console.error('[VoiceSelector] 获取配置失败:', err);

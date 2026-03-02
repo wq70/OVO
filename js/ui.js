@@ -88,6 +88,9 @@ const switchScreen = (targetId) => {
         if (typeof renderContactList === 'function') renderContactList();
         if (typeof renderMyProfile === 'function') renderMyProfile();
     }
+    if (targetId === 'appearance-settings-screen' && typeof renderAppearanceSettingsScreen === 'function') {
+        renderAppearanceSettingsScreen();
+    }
 };
 
 function renderMoreScreen() {
@@ -432,6 +435,10 @@ function setupHomeScreen() {
                     <img src="${getIcon('theater-screen')}" alt="小剧场" class="icon-img">
                     <span class="app-name">${defaultIcons['theater-screen'].name}</span>
                 </a>
+                <a href="#" class="app-icon" data-target="appearance-settings-screen">
+                    <img src="${getIcon('appearance-settings-screen')}" alt="外观" class="icon-img">
+                    <span class="app-name">${defaultIcons['appearance-settings-screen'].name}</span>
+                </a>
              </div>
         </div>
 
@@ -464,7 +471,11 @@ function setupHomeScreen() {
         e.preventDefault();
         applyHomeScreenMode('night');
     });
-    
+    homeScreen.querySelector('.app-icon[data-target="appearance-settings-screen"]')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof showToast === 'function') showToast('正在开发中');
+    });
     document.querySelector('[data-target="world-book-screen"]').addEventListener('click', renderWorldBookList);
     document.querySelector('[data-target="customize-screen"]').addEventListener('click', renderCustomizeForm);
     document.querySelector('[data-target="tutorial-screen"]').addEventListener('click', renderTutorialContent);

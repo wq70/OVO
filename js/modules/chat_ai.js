@@ -1032,6 +1032,70 @@ function generatePrivateSystemPrompt(character) {
         prompt += `${worldBooksAfter}\n`;
     }
     prompt += `</char_settings>\n\n`;
+
+    // 大号小号记忆互通（仅当论坛设置开启「角色小号私信」时注入）
+    const enableCharAltDm = !!(db.forumSettings && db.forumSettings.enableCharAltDm);
+    const syncLimit = Math.max(1, (character.maxMemory != null ? parseInt(character.maxMemory, 10) : 20) || 20);
+
+    if (enableCharAltDm && !linkedChar) {
+        // 大号：注入小号与用户的互动（论坛私信 + 已加好友则含小号聊天记录）
+        const altChars = (db.characters || []).filter(function(c) { return c.source === 'forum' && c.linkedCharId === character.id; });
+        const altForumUserIds = [];
+        altChars.forEach(function(c) { if (c.forumUserId) altForumUserIds.push(c.forumUserId); });
+        if (db.forumStrangerProfiles) {
+            Object.keys(db.forumStrangerProfiles).forEach(function(uid) {
+                if (db.forumStrangerProfiles[uid].linkedCharId === character.id && altForumUserIds.indexOf(uid) === -1) altForumUserIds.push(uid);
+            });
+        }
+        if (altForumUserIds.length > 0) {
+            let altBlock = '\n<alt_shared_memory>\n【小号记忆互通】你在论坛有小号，你与小号记忆互通（互通条数=你的角色上下文条数）。小号与用户在论坛私信的往来、以及若已加好友则加好友后的聊天，你都知道。以下为小号与用户的最近互动（最近' + syncLimit + '条）：\n\n';
+            altForumUserIds.forEach(function(forumUserId) {
+                const profile = db.forumStrangerProfiles && db.forumStrangerProfiles[forumUserId];
+                const altName = (profile && profile.name) ? profile.name : (forumUserId.replace(/^npc_/, ''));
+                const forumMsgs = (db.forumMessages || []).filter(function(m) {
+                    return (m.fromUserId === 'user' && m.toUserId === forumUserId) || (m.fromUserId === forumUserId && m.toUserId === 'user');
+                }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); }).slice(-syncLimit);
+                if (forumMsgs.length > 0) {
+                    altBlock += '[论坛私信] 小号「' + altName + '」与用户：\n';
+                    forumMsgs.forEach(function(m) {
+                        const from = m.fromUserId === 'user' ? '用户' : '小号';
+                        altBlock += '- ' + from + '：' + (m.content || '').trim().slice(0, 200) + (m.content && m.content.length > 200 ? '…' : '') + '\n';
+                    });
+                    altBlock += '\n';
+                }
+                const altChar = altChars.find(function(c) { return c.forumUserId === forumUserId; });
+                if (altChar && altChar.history && altChar.history.length > 0) {
+                    const recentAlt = altChar.history.filter(function(m) { return !m.isContextDisabled; }).slice(-syncLimit);
+                    if (recentAlt.length > 0) {
+                        altBlock += '[加好友后聊天] 小号「' + (altChar.realName || altName) + '」与用户：\n';
+                        recentAlt.forEach(function(m) {
+                            const from = m.role === 'user' ? '用户' : '小号';
+                            const text = (m.content || '').trim().slice(0, 200) + (m.content && m.content.length > 200 ? '…' : '');
+                            altBlock += '- ' + from + '：' + text + '\n';
+                        });
+                        altBlock += '\n';
+                    }
+                }
+            });
+            altBlock += '</alt_shared_memory>\n\n';
+            prompt += altBlock;
+        }
+    } else if (enableCharAltDm && linkedChar && linkedChar.history && linkedChar.history.length > 0) {
+        // 小号：注入主号与用户的最近对话（条数=主号的角色上下文）
+        const mainSyncLimit = Math.max(1, (linkedChar.maxMemory != null ? parseInt(linkedChar.maxMemory, 10) : 20) || 20);
+        const mainRecent = linkedChar.history.filter(function(m) { return !m.isContextDisabled; }).slice(-mainSyncLimit);
+        if (mainRecent.length > 0) {
+            let mainBlock = '\n<main_shared_memory>\n【主号记忆互通】你与主号记忆互通（互通条数=主号的角色上下文条数，即' + mainSyncLimit + '条）。主号在聊天里与用户说的最近对话你都知道。以下为主号与用户的最近' + mainRecent.length + '条：\n\n';
+            mainRecent.forEach(function(m) {
+                const from = m.role === 'user' ? '用户' : '主号(' + (linkedChar.realName || linkedChar.remarkName || '') + ')';
+                const text = (m.content || '').trim().slice(0, 200) + (m.content && m.content.length > 200 ? '…' : '');
+                mainBlock += '- ' + from + '：' + text + '\n';
+            });
+            mainBlock += '\n</main_shared_memory>\n\n';
+            prompt += mainBlock;
+        }
+    }
+
     prompt += `<user_settings>\n`
     if (character.myPersona) {
         prompt += `3. 关于我的人设：${character.myPersona}\n`;

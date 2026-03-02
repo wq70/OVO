@@ -275,6 +275,11 @@ label.btn-primary {
     top: auto;
 }
 
+.toast.simple.toast-muted {
+    background-color: rgba(100, 100, 100, 0.92);
+    color: #f0f0f0;
+}
+
 .toast.simple .toast-avatar {
     display: none;
 }

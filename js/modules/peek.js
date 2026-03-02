@@ -128,7 +128,7 @@ function setupPeekFeature() {
         }
 
         if (!character.peekScreenSettings) {
-            character.peekScreenSettings = { wallpaper: '', customIcons: {}, unlockAvatar: '', unlockCommentsEnabled: false, charAwarePeek: false };
+            character.peekScreenSettings = { wallpaper: '', customIcons: {}, unlockAvatar: '', unlockCommentsEnabled: false, charAwarePeek: false, refreshCounts: {} };
         }
 
         character.peekScreenSettings.wallpaper = document.getElementById('peek-wallpaper-url-input').value.trim();
@@ -153,6 +153,16 @@ function setupPeekFeature() {
         character.peekScreenSettings.unlockCommentsEnabled = document.getElementById('peek-unlock-comments-enabled').checked;
         const charAwarePeekEl = document.getElementById('peek-char-aware-peek-enabled');
         character.peekScreenSettings.charAwarePeek = charAwarePeekEl ? charAwarePeekEl.checked : false;
+
+        // 刷新条数：聊天、时光想说、备忘录
+        if (!character.peekScreenSettings.refreshCounts) character.peekScreenSettings.refreshCounts = {};
+        const parseNum = (id, defaultVal) => {
+            const v = parseInt(document.getElementById(id)?.value, 10);
+            return Number.isFinite(v) ? v : defaultVal;
+        };
+        character.peekScreenSettings.refreshCounts.messages = { min: parseNum('peek-refresh-min-messages', 3), max: parseNum('peek-refresh-max-messages', 5) };
+        character.peekScreenSettings.refreshCounts.timeThoughts = { min: parseNum('peek-refresh-min-timeThoughts', 3), max: parseNum('peek-refresh-max-timeThoughts', 5) };
+        character.peekScreenSettings.refreshCounts.memos = { min: parseNum('peek-refresh-min-memos', 3), max: parseNum('peek-refresh-max-memos', 4) };
 
         await saveData();
         renderPeekScreen(); 
@@ -374,7 +384,7 @@ async function deleteAllPeekData() {
 
 function renderPeekSettings() {
     const character = db.characters.find(c => c.id === currentChatId);
-    const peekSettings = character?.peekScreenSettings || { wallpaper: '', customIcons: {}, unlockAvatar: '', unlockCommentsEnabled: false, charAwarePeek: false };
+    const peekSettings = character?.peekScreenSettings || { wallpaper: '', customIcons: {}, unlockAvatar: '', unlockCommentsEnabled: false, charAwarePeek: false, refreshCounts: {} };
 
     // 1. 设置壁纸输入框
     const wallpaperInput = document.getElementById('peek-wallpaper-url-input');
@@ -420,6 +430,18 @@ function renderPeekSettings() {
             container.appendChild(div);
         });
     }
+
+    // 4. 刷新条数：聊天、时光想说、备忘录
+    const defaults = { messages: { min: 3, max: 5 }, timeThoughts: { min: 3, max: 5 }, memos: { min: 3, max: 4 } };
+    const rc = peekSettings.refreshCounts || {};
+    ['messages', 'timeThoughts', 'memos'].forEach(appType => {
+        const d = defaults[appType];
+        const c = rc[appType] || d;
+        const minEl = document.getElementById(`peek-refresh-min-${appType}`);
+        const maxEl = document.getElementById(`peek-refresh-max-${appType}`);
+        if (minEl) minEl.value = Number.isFinite(c.min) ? c.min : d.min;
+        if (maxEl) maxEl.value = Number.isFinite(c.max) ? c.max : d.max;
+    });
 }
 
 /** 当角色开启「知晓用户窥屏」时，记录用户刚查看的应用及内容，并更新 lastPeekViewedAt */
@@ -1276,7 +1298,6 @@ function renderPeekSteps(data) {
 function extractTransfersFromHistory(history, realName, myName) {
     const privateReceivedTransferRegex = /\[.*?的转账[：:]([\d.,]+)元[；;]备注[：:](.*?)\]/;
     const privateSentTransferRegex = /\[.*?给你转账[：:]([\d.,]+)元[；;]备注[：:](.*?)\]/;
-    const orderRegex = /\[(.*?)为(.*?)下单了[：:](.*?)\|([\d.]+)\|(.*?)\]/;
     const income = [];
     const expense = [];
     const arr = history || [];
@@ -1292,12 +1313,8 @@ function extractTransfersFromHistory(history, realName, myName) {
         if (match && m.role === 'user') {
             income.push({ amount: match[1], remark: (match[2] || '').trim(), time, source: '聊天记录' });
         }
-        // 商城：用户下单送给角色 → 角色收入
+        // 用户商城购买送给角色的订单不计入角色钱包收支（钱是用户出的，角色只收到礼物）
         if (realName && myName) {
-            match = content.match(orderRegex);
-            if (match && m.role === 'user' && match[2].trim() === realName) {
-                income.push({ amount: match[4], remark: '用户下单赠送：' + (match[5] || '').trim(), time, source: '聊天记录' });
-            }
             // 角色同意用户的代付请求 → 角色支出
             if (m.role === 'assistant' && content.includes('同意了') && content.includes('的代付请求')) {
                 const agreedMatch = content.match(new RegExp(`\\[([^\\]]+?)同意了([^\\]]+?)的代付请求\\]`));
@@ -1367,8 +1384,16 @@ function generatePeekContentPrompt(char, appType, mainChatContext) {
     prompt += `现在，我正在偷看Ta手机上的“${appName}”。请你基于Ta的人设和我们最近的聊天内容，生成符合该应用场景的、高度相关且富有沉浸感的内容。\n`;
     prompt += `你的输出必须是一个JSON对象，且只包含JSON内容，不要有任何额外的解释或标记。根据应用类型，JSON结构如下：\n`;
 
+    const defaultRefreshCounts = { messages: { min: 3, max: 5 }, timeThoughts: { min: 3, max: 5 }, memos: { min: 3, max: 4 } };
+    const getRefreshRange = (type) => {
+        const d = defaultRefreshCounts[type];
+        const c = char.peekScreenSettings?.refreshCounts?.[type] || d;
+        return { min: Number.isFinite(c.min) ? c.min : d.min, max: Number.isFinite(c.max) ? c.max : d.max };
+    };
+
     switch (appType) {
-        case 'messages':
+        case 'messages': {
+            const { min: msgMin, max: msgMax } = getRefreshRange('messages');
             prompt += `
             {
               "conversations": [
@@ -1381,8 +1406,9 @@ function generatePeekContentPrompt(char, appType, mainChatContext) {
                 }
               ]
            }
-           请为 ${char.realName} 编造3-5个最近的对话。对话内容需要强烈反映Ta的人设以及和我的聊天上下文。`;
+           请为 ${char.realName} 编造${msgMin}-${msgMax}个最近的对话。对话内容需要强烈反映Ta的人设以及和我的聊天上下文。`;
             break;
+        }
         case 'steps':
             prompt += `
             {
@@ -1409,15 +1435,17 @@ function generatePeekContentPrompt(char, appType, mainChatContext) {
             }
             请为 ${char.realName} 的相册生成5-8个条目（照片或视频）。内容需要与Ta的人设和我们的聊天上下文高度相关。'imageDescription' 是对这张照片/视频的详细文字描述，它将代替真实的图片展示给用户。'description' 是 ${char.realName} 自己对这张照片/视频的一句话批注，会显示在描述下方。`;
             break;
-        case 'memos':
+        case 'memos': {
+            const { min: memoMin, max: memoMax } = getRefreshRange('memos');
             prompt += `
             {
               "memos": [
                 { "id": "memo_1", "title": "备忘录标题", "content": "备忘录内容，可以包含换行符\\n" }
               ]
             }
-            请生成3-4条备忘录，内容要与Ta的人设和我们的聊天上下文相关。`;
+            请生成${memoMin}-${memoMax}条备忘录，内容要与Ta的人设和我们的聊天上下文相关。`;
             break;
+        }
         case 'cart':
             prompt += `
             {
@@ -1455,6 +1483,7 @@ function generatePeekContentPrompt(char, appType, mainChatContext) {
            请为 ${char.realName} 生成4-7条Ta发送给自己的、简短零碎的消息。这些内容应该像是Ta的临时备忘、灵感闪现或随手保存的链接，要与Ta的人设和我们的聊天上下文相关，但比“备忘录”应用的内容更随意、更口语化。`;
            break;
         case 'timeThoughts': {
+           const { min: thMin, max: thMax } = getRefreshRange('timeThoughts');
            const userPersonality = char.myPersona || '用户的性格和背景信息';
            const charPersonality = char.persona || '角色的性格';
            const diaryContext = char.diary && char.diary.length > 0 
@@ -1479,7 +1508,7 @@ ${diaryContext ? `- 长期记忆（日记总结）：\n${diaryContext}` : ''}
 
 ---
 
-任务：想象如果你们在童年时期就认识，会是怎样的场景。请基于角色和用户的真实背景，生成3-5个不同年龄段的"时光想说"。
+任务：想象如果你们在童年时期就认识，会是怎样的场景。请基于角色和用户的真实背景，生成${thMin}-${thMax}个不同年龄段的"时光想说"。
 
 对于每个年龄段：
 1. 选择一个具体年龄（如5岁、8岁、12岁等）- 根据人设灵活选择，不要固定

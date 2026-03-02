@@ -423,4 +423,15 @@
     window.initMusicPlayer = initMusicPlayer;
     window.onShowMusicScreen = onShowMusicScreen;
     window.resumeMusicPlayback = resumeMusicIfPaused;
+
+    // 页面加载完成后自动初始化并尝试播放保活音频（移动端一进应用即可保活，无需先点进音乐页）
+    function startKeepAliveOnLoad() {
+        initMusicPlayer();
+        onShowMusicScreen();
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startKeepAliveOnLoad);
+    } else {
+        setTimeout(startKeepAliveOnLoad, 0);
+    }
 })();

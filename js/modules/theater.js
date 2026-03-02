@@ -108,12 +108,17 @@ function renderTheaterScenarios() {
 
     // 获取所有分类
     const categories = [...new Set(db.theaterScenarios.map(s => s.category || '未分类'))];
+    const currentSelectedCategory = categoryFilter ? categoryFilter.value : '';
+    
     if (categoryFilter) {
         categoryFilter.innerHTML = '<option value="">全部分类</option>';
         categories.forEach(cat => {
             const option = document.createElement('option');
             option.value = cat;
             option.textContent = cat;
+            if (cat === currentSelectedCategory) {
+                option.selected = true;
+            }
             categoryFilter.appendChild(option);
         });
     }
@@ -321,7 +326,7 @@ function showTheaterScenarioDetail(scenario) {
                 ${scenario.isFavorite ? '<span class="theater-favorite-icon" style="color: #ffd700; margin-right: 5px;">★</span>' : ''}
                 ${scenario.isEditingTitle || (isEditing && !scenario.isEditing)
                     ? `<input type="text" id="theater-edit-title" class="theater-edit-title-input" value="${DOMPurify.sanitize(scenario.title || '剧情')}">`
-                    : `<span class="theater-detail-title-text">${DOMPurify.sanitize(scenario.title || '剧情')}</span>${!isEditing ? '<button class="theater-edit-title-btn" id="theater-edit-title-btn" style="margin-left: 10px; padding: 4px 12px; font-size: 13px; background: rgba(255, 192, 203, 0.2); border: 1px solid rgba(255, 192, 203, 0.3); border-radius: 6px; cursor: pointer; color: #666; transition: all 0.2s;">编辑标题</button>' : ''}`
+                    : `<span class="theater-detail-title-text">${DOMPurify.sanitize(scenario.title || '剧情')}</span>${!isEditing ? '<button class="theater-edit-title-btn" id="theater-edit-title-btn">编辑标题</button>' : ''}`
                 }
             </h2>
             <div class="theater-detail-meta">
@@ -333,7 +338,6 @@ function showTheaterScenarioDetail(scenario) {
     
     // 更新按钮显示状态
     const favoriteBtn = document.getElementById('theater-favorite-btn');
-    const editBtn = document.getElementById('theater-edit-btn');
     const saveEditBtn = document.getElementById('theater-save-edit-btn');
     const shareBtn = document.getElementById('theater-share-btn');
     const editCategoryBtn = document.getElementById('theater-edit-category-btn');
@@ -341,9 +345,6 @@ function showTheaterScenarioDetail(scenario) {
     
     if (favoriteBtn) {
         favoriteBtn.textContent = scenario.isFavorite ? '取消收藏' : '收藏';
-    }
-    if (editBtn) {
-        editBtn.style.display = isEditing ? 'none' : 'block';
     }
     if (saveEditBtn) {
         saveEditBtn.style.display = isEditing ? 'block' : 'none';
@@ -547,13 +548,10 @@ async function generateTheaterScenario() {
         const apiSettings = db.apiSettings || {};
         const model = apiSettings.model || 'gpt-4o-mini';
 
-        const systemPrompt = `你是一名擅长写短篇小剧场的编剧，风格贴合当代聊天软件的剧情互动。请根据用户提供的提示词，结合可能的角色设定和世界观，生成一段完整的、小而精彩的剧情脚本。要求：
+        const systemPrompt = `你是一名擅长写短篇小说的作家。请根据用户提供的提示词，结合可能的角色设定和世界观，生成一段完整而精彩的短篇小说。要求：
 1. 剧情结构完整，有开端、发展和结尾。
-2. 台词自然贴近现代网络聊天语气，可以适当加入表情或拟声词，但不要过多。
-3. 若有多个角色，请用“角色名：台词”的格式区分。
-4. 如果提示词中没有明确的世界观和设定，可以根据常见二次元或日常向风格自行补充，但不要偏离提示词的核心需求。
-5. 尽量控制在 400-800 字以内，避免过长。
-6. 直接输出剧本正文，不要输出任何开场白或说明（例如不要输出「好的，编剧。这是一段根据你提供的提示词和设定生成的聊天软件风格短剧脚本。」等句子）。`;
+2. 如果提示词中没有明确的世界观和设定，可以自行补充，但不要偏离提示词的核心需求。
+3. 直接输出剧本正文，不要输出任何开场白或说明（例如不要输出「好的，作家。这是一段根据你提供的提示词和设定生成的短篇小说。」等句子）。`;
 
         let finalPrompt = customPrompt;
 
@@ -569,7 +567,7 @@ async function generateTheaterScenario() {
         if (personaId) {
             const persona = db.myPersonaPresets.find(p => (p.id || p.name) === personaId);
             if (persona) {
-                finalPrompt += `\n\n【附加人设】\n名称：${persona.name}\n内容：${persona.content}`;
+                finalPrompt += `\n\n【用户人设】\n名称：${persona.name}\n人设内容：${persona.content}\n\n注意：在生成的小说中，如果提到用户角色，请使用"${persona.name}"作为用户的名字，或使用{{user_name}}占位符（后续会自动替换）。`;
             }
         }
 
@@ -612,6 +610,33 @@ async function generateTheaterScenario() {
             }
             // 去掉 AI 开场白，只保留剧本正文
             processedContent = stripTheaterIntro(processedContent);
+
+            // 统一变量占位符：
+            // {{user}}/{{USER}}/{{User}}/User/USER/user -> {{user_name}}
+            // {{char}}/{{CHAR}}/{{Char}}/Char/CHAR/char -> {{char_name}}
+            processedContent = processedContent
+                .replace(/\{\{\s*(user|User|USER)\s*\}\}/g, '{{user_name}}')
+                .replace(/\b(user|User|USER)\b/g, '{{user_name}}')
+                .replace(/\{\{\s*(char|Char|CHAR)\s*\}\}/g, '{{char_name}}')
+                .replace(/\b(char|Char|CHAR)\b/g, '{{char_name}}');
+
+            // 替换{{user_name}}为实际的人设名称
+            if (personaId) {
+                const persona = db.myPersonaPresets.find(p => (p.id || p.name) === personaId);
+                if (persona && persona.name) {
+                    // 将{{user_name}}替换为实际选择的人设名称
+                    processedContent = processedContent.replace(/\{\{user_name\}\}/g, persona.name);
+                }
+            }
+            
+            // 替换{{char_name}}为实际的角色名称
+            if (charId) {
+                const char = db.characters.find(c => c.id === charId);
+                const charName = char?.realName || char?.remarkName;
+                if (charName) {
+                    processedContent = processedContent.replace(/\{\{char_name\}\}/g, charName);
+                }
+            }
 
             // 默认标题为"剧情"，用户可以后续编辑
             const scenario = {
@@ -777,39 +802,58 @@ function showShareTheaterModal() {
         }
     }
 
-    // 渲染联系人列表
+    // 渲染联系人 / 群聊列表
     const list = document.getElementById('theater-share-list');
     const searchInput = document.getElementById('theater-share-search-input');
     const closeBtn = document.getElementById('theater-share-modal-close');
 
     if (!list || !searchInput || !closeBtn) return;
 
-    const renderContacts = (keyword = '') => {
+    const renderRecipients = (keyword = '') => {
         const normalizedKeyword = keyword.trim().toLowerCase();
         list.innerHTML = '';
 
         const contacts = db.characters || [];
-        const filtered = normalizedKeyword
+        const groups = db.groups || [];
+
+        const filteredContacts = normalizedKeyword
             ? contacts.filter(c => 
                 (c.remarkName && c.remarkName.toLowerCase().includes(normalizedKeyword)) ||
                 (c.realName && c.realName.toLowerCase().includes(normalizedKeyword))
             )
             : contacts;
+        
+        const filteredGroups = normalizedKeyword
+            ? groups.filter(g => 
+                (g.name && g.name.toLowerCase().includes(normalizedKeyword))
+            )
+            : groups;
 
-        if (filtered.length === 0) {
-            list.innerHTML = '<div style="padding: 10px; font-size: 13px; color: #999;">没有找到匹配的联系人</div>';
+        if (filteredContacts.length === 0 && filteredGroups.length === 0) {
+            list.innerHTML = '<div style="padding: 10px; font-size: 13px; color: #999;">没有找到匹配的联系人或群聊</div>';
             return;
         }
 
-        filtered.forEach(char => {
+        if (filteredContacts.length > 0) {
+            const contactsTitle = document.createElement('div');
+            contactsTitle.className = 'theater-share-section-title';
+            contactsTitle.textContent = '联系人';
+            list.appendChild(contactsTitle);
+        }
+
+        filteredContacts.forEach(char => {
             const item = document.createElement('div');
             item.className = 'theater-share-item';
             item.dataset.id = char.id;
+
+            const rawStatus = char.status || (char.persona ? (char.persona.slice(0, 20) + (char.persona.length > 20 ? '...' : '')) : '');
+            const statusText = rawStatus || '暂无状态';
+
             item.innerHTML = `
                 <img src="${char.avatar || 'https://i.postimg.cc/HLXK1Z0L/chan-120.png'}" alt="${DOMPurify.sanitize(char.remarkName || char.realName || '角色')}" class="theater-share-avatar">
                 <div class="theater-share-info">
                     <div class="theater-share-name">${DOMPurify.sanitize(char.remarkName || char.realName || '角色')}</div>
-                    <div class="theater-share-meta">${DOMPurify.sanitize(char.persona ? (char.persona.slice(0, 20) + (char.persona.length > 20 ? '...' : '')) : '未设定人设')}</div>
+                    <div class="theater-share-meta">${DOMPurify.sanitize(statusText)}</div>
                 </div>
             `;
             item.addEventListener('click', () => {
@@ -818,12 +862,41 @@ function showShareTheaterModal() {
             });
             list.appendChild(item);
         });
+
+        if (filteredGroups.length > 0) {
+            const groupsTitle = document.createElement('div');
+            groupsTitle.className = 'theater-share-section-title';
+            groupsTitle.textContent = '群聊';
+            list.appendChild(groupsTitle);
+        }
+
+        filteredGroups.forEach(group => {
+            const item = document.createElement('div');
+            item.className = 'theater-share-item';
+            item.dataset.id = group.id;
+
+            const memberCount = (group.members && group.members.length) ? group.members.length : 0;
+            const metaText = `成员 ${memberCount} 人`;
+
+            item.innerHTML = `
+                <img src="${group.avatar || 'https://i.postimg.cc/fTLCngk1/image.jpg'}" alt="${DOMPurify.sanitize(group.name || '群聊')}" class="theater-share-avatar">
+                <div class="theater-share-info">
+                    <div class="theater-share-name">${DOMPurify.sanitize(group.name || '群聊')}</div>
+                    <div class="theater-share-meta">${DOMPurify.sanitize(metaText)}</div>
+                </div>
+            `;
+            item.addEventListener('click', () => {
+                shareTheaterToGroup(group.id);
+                modal.classList.remove('visible');
+            });
+            list.appendChild(item);
+        });
     };
 
-    renderContacts();
+    renderRecipients();
 
     searchInput.oninput = (e) => {
-        renderContacts(e.target.value);
+        renderRecipients(e.target.value);
     };
 
     closeBtn.onclick = () => {
@@ -873,6 +946,39 @@ async function shareTheaterToContact(charId) {
 
     await saveData();
     showToast(`已分享给 ${char.remarkName || char.realName || '联系人'}`);
+}
+
+// 分享小剧场到指定群聊
+async function shareTheaterToGroup(groupId) {
+    if (!currentTheaterScenarioId) return;
+
+    const scenario = db.theaterScenarios.find(s => s.id === currentTheaterScenarioId);
+    if (!scenario) {
+        showToast('找不到该剧情');
+        return;
+    }
+
+    const group = (db.groups || []).find(g => g.id === groupId);
+    if (!group) {
+        showToast('找不到群聊');
+        return;
+    }
+
+    const shareText = `[小剧场分享:${scenario.id}]`;
+    const shareMessage = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: shareText,
+        timestamp: Date.now()
+    };
+
+    if (!group.history) {
+        group.history = [];
+    }
+    group.history.push(shareMessage);
+
+    await saveData();
+    showToast(`已分享至群聊「${group.name || '群聊'}」`);
 }
 
 // 保存编辑后的剧情
@@ -1005,6 +1111,138 @@ function applyTheaterPromptPreset() {
     promptInput.value = preset.content || '';
 }
 
+// 管理提示词预设（支持单选/多选删除）
+async function openTheaterPromptPresetManager() {
+    // 创建或获取管理模态框
+    let modal = document.getElementById('theater-preset-manager-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'theater-preset-manager-modal';
+        modal.className = 'theater-preset-manager-modal';
+        modal.innerHTML = `
+            <div class="theater-preset-manager-dialog">
+                <div class="theater-preset-manager-header">
+                    <h3>管理提示词预设</h3>
+                    <button class="theater-preset-manager-close" id="theater-preset-manager-close">×</button>
+                </div>
+                <div class="theater-preset-manager-body">
+                    <div class="theater-preset-manager-toolbar">
+                        <button id="theater-preset-select-all" class="theater-preset-toolbar-btn">全选/全不选</button>
+                        <button id="theater-preset-delete-selected" class="theater-preset-toolbar-btn danger">删除选中</button>
+                    </div>
+                    <div id="theater-preset-manager-list" class="theater-preset-manager-list"></div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    const listEl = modal.querySelector('#theater-preset-manager-list');
+    const closeBtn = modal.querySelector('#theater-preset-manager-close');
+    const selectAllBtn = modal.querySelector('#theater-preset-select-all');
+    const deleteSelectedBtn = modal.querySelector('#theater-preset-delete-selected');
+    if (!listEl || !closeBtn || !selectAllBtn || !deleteSelectedBtn) return;
+
+    const renderList = () => {
+        const presets = db.theaterPromptPresets || [];
+        if (!presets.length) {
+            listEl.innerHTML = '<div class="theater-preset-manager-empty">暂无提示词预设</div>';
+            return;
+        }
+
+        listEl.innerHTML = '';
+        presets.forEach(preset => {
+            const item = document.createElement('div');
+            item.className = 'theater-preset-manager-item';
+
+            const previewContent = (preset.content || '').length > 40
+                ? (preset.content || '').slice(0, 40) + '...'
+                : (preset.content || '');
+
+            item.innerHTML = `
+                <label class="theater-preset-manager-checkbox-wrap">
+                    <input type="checkbox" class="theater-preset-manager-checkbox" data-id="${preset.id}">
+                    <span class="theater-preset-manager-checkbox-mark"></span>
+                </label>
+                <div class="theater-preset-manager-item-main">
+                    <div class="theater-preset-manager-item-name">${DOMPurify.sanitize(preset.name || '')}</div>
+                    <div class="theater-preset-manager-item-preview">${DOMPurify.sanitize(previewContent)}</div>
+                </div>
+                <button class="theater-preset-manager-delete-btn" data-id="${preset.id}">删除</button>
+            `;
+            listEl.appendChild(item);
+        });
+
+        // 绑定删除按钮事件
+        const deleteButtons = listEl.querySelectorAll('.theater-preset-manager-delete-btn');
+        deleteButtons.forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = btn.getAttribute('data-id');
+                if (!id) return;
+                if (!confirm('确定删除该预设吗？')) return;
+
+                if (!db.theaterPromptPresets) {
+                    db.theaterPromptPresets = [];
+                }
+                const index = db.theaterPromptPresets.findIndex(p => p.id === id);
+                if (index === -1) return;
+
+                db.theaterPromptPresets.splice(index, 1);
+                await saveData();
+                showToast('已删除预设');
+                populateTheaterForm();
+                renderList();
+            });
+        });
+    };
+
+    renderList();
+
+    // 关闭事件
+    closeBtn.onclick = () => {
+        modal.classList.remove('visible');
+    };
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('visible');
+        }
+    };
+
+    // 全选 / 全不选
+    selectAllBtn.onclick = () => {
+        const checkboxes = listEl.querySelectorAll('.theater-preset-manager-checkbox');
+        if (!checkboxes.length) return;
+        const hasUnchecked = Array.from(checkboxes).some(cb => !cb.checked);
+        checkboxes.forEach(cb => {
+            cb.checked = hasUnchecked;
+        });
+    };
+
+    // 删除选中的预设（多选删除）
+    deleteSelectedBtn.onclick = async () => {
+        const checkboxes = Array.from(listEl.querySelectorAll('.theater-preset-manager-checkbox')).filter(cb => cb.checked);
+        if (!checkboxes.length) {
+            showToast('请先选择要删除的预设');
+            return;
+        }
+        const ids = checkboxes.map(cb => cb.getAttribute('data-id')).filter(Boolean);
+        if (!ids.length) return;
+        if (!confirm(`确定删除选中的 ${ids.length} 个预设吗？`)) return;
+
+        if (!db.theaterPromptPresets) {
+            db.theaterPromptPresets = [];
+        }
+        db.theaterPromptPresets = db.theaterPromptPresets.filter(p => !ids.includes(p.id));
+        await saveData();
+        showToast('已删除选中预设');
+        populateTheaterForm();
+        renderList();
+    };
+
+    modal.classList.add('visible');
+}
+
 // 初始化小剧场系统
 let theaterSystemInitialized = false;
 function setupTheaterSystem() {
@@ -1039,6 +1277,14 @@ function setupTheaterSystem() {
         });
     }
 
+    const managePromptBtn = document.getElementById('theater-manage-prompt-btn');
+    if (managePromptBtn) {
+        managePromptBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openTheaterPromptPresetManager();
+        });
+    }
+
     // 创建页：世界书下拉
     const worldbookDisplay = document.getElementById('theater-worldbook-display');
     const worldbookDropdown = document.getElementById('theater-worldbook-dropdown');
@@ -1069,7 +1315,6 @@ function setupTheaterSystem() {
 
     // 详情页：按钮绑定
     const favoriteBtn = document.getElementById('theater-favorite-btn');
-    const editBtn = document.getElementById('theater-edit-btn');
     const saveEditBtn = document.getElementById('theater-save-edit-btn');
     const shareBtn = document.getElementById('theater-share-btn');
     const editCategoryBtn = document.getElementById('theater-edit-category-btn');
@@ -1077,16 +1322,6 @@ function setupTheaterSystem() {
 
     if (favoriteBtn) {
         favoriteBtn.addEventListener('click', toggleFavoriteScenario);
-    }
-    if (editBtn) {
-        editBtn.addEventListener('click', () => {
-            if (!currentTheaterScenarioId) return;
-            const scenario = db.theaterScenarios.find(s => s.id === currentTheaterScenarioId);
-            if (scenario) {
-                scenario.isEditing = true;
-                showTheaterScenarioDetail(scenario);
-            }
-        });
     }
     if (saveEditBtn) {
         saveEditBtn.addEventListener('click', saveEditScenario);
@@ -1126,6 +1361,14 @@ function setupTheaterSystem() {
     const cancelMultiBtn = document.getElementById('theater-cancel-multi-btn');
     if (cancelMultiBtn) {
         cancelMultiBtn.addEventListener('click', exitTheaterMultiSelectMode);
+    }
+
+    // 分类筛选器：监听change事件
+    const categoryFilter = document.getElementById('theater-category-filter');
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', () => {
+            renderTheaterScenarios();
+        });
     }
 
     // 初次渲染列表

@@ -52,6 +52,7 @@
     <link rel="stylesheet" href="css/modules/archive.css">
     <link rel="stylesheet" href="css/modules/favorites.css">
     <link rel="stylesheet" href="css/modules/music_player.css">
+    <link rel="stylesheet" href="css/modules/appearance_settings.css">
 
     <!-- Other Styles -->
     <link rel="stylesheet" href="contacts.css">
@@ -3107,6 +3108,14 @@
                                         <span class="kkt-arrow">›</span>
                                     </div>
                                 </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">语速</div>
+                                    <div class="kkt-item-control" style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="range" id="setting-tts-speed" min="0.5" max="2" step="0.1" value="1"
+                                            style="flex:1; min-width:80px;">
+                                        <span id="setting-tts-speed-value" style="min-width: 32px;">1.0</span>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- 用户语音设置（仅当 API 中启用用户 TTS 时显示） -->
@@ -3161,6 +3170,14 @@
                                             <option value="pl">波兰语</option>
                                         </select>
                                         <span class="kkt-arrow">›</span>
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">用户语速</div>
+                                    <div class="kkt-item-control" style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="range" id="setting-user-tts-speed" min="0.5" max="2" step="0.1" value="1"
+                                            style="flex:1; min-width:80px;">
+                                        <span id="setting-user-tts-speed-value" style="min-width: 32px;">1.0</span>
                                     </div>
                                 </div>
                             </div>
@@ -3338,6 +3355,7 @@
                                 <option value="">选择预设提示词</option>
                             </select>
                             <button id="theater-save-prompt-btn" class="theater-save-prompt-btn">保存为预设</button>
+                            <button id="theater-manage-prompt-btn" class="theater-save-prompt-btn">管理预设</button>
                         </div>
                         <textarea id="theater-custom-prompt" class="theater-textarea" placeholder="输入自定义剧情提示词..."></textarea>
                     </div>
@@ -3368,7 +3386,6 @@
                 </div>
                 <div class="theater-detail-actions">
                     <button id="theater-favorite-btn" class="theater-action-btn theater-favorite-btn">收藏</button>
-                    <button id="theater-edit-btn" class="theater-action-btn theater-edit-btn">编辑</button>
                     <button id="theater-save-edit-btn" class="theater-action-btn theater-save-edit-btn" style="display: none;">保存</button>
                     <button id="theater-share-btn" class="theater-action-btn theater-share-btn">分享到聊天框</button>
                     <button id="theater-edit-category-btn" class="theater-action-btn theater-edit-category-btn">修改分类</button>
@@ -4199,6 +4216,16 @@
                         </div>
                     </div>
                     <div class="kkt-group">
+                        <div class="kkt-group-title">私信</div>
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">私信生成NPC个数</div>
+                            <div class="kkt-item-control">
+                                <input type="number" id="forum-dm-count-input" min="1" max="20" value="4" style="border:none; background:transparent; text-align:right; width:60px;">
+                            </div>
+                        </div>
+                        <p style="font-size:12px;color:#888;margin:4px 0 8px 0;">每次点击「生成陌生人私信」时生成的私信条数。若开启角色小号，其中会按占比有一部分是角色小号（占用条数）。</p>
+                    </div>
+                    <div class="kkt-group">
                         <div class="kkt-group-title">角色小号私信</div>
                         <div class="kkt-item">
                             <div class="kkt-item-label">允许角色用小号私信你</div>
@@ -4397,7 +4424,8 @@
             </main>
         </div>
 
-
+        <!-- 外观设置：内容由 js/modules/appearance_settings.js 注入 -->
+        <div id="appearance-settings-screen" class="screen"></div>
 
         <div id="peek-messages-screen" class="screen">
 
@@ -4780,6 +4808,42 @@
                             <label for="peek-char-aware-peek-enabled" style="margin: 0;">角色知晓用户窥屏</label>
                         </div>
                         <p style="font-size: 12px; color: #888; margin: 4px 0 0 0;">开启后，若用户偷看了你的手机并点进了某些应用，你会知道用户看了哪些应用以及其中的内容，并可以据此在对话中自然反应。</p>
+                    </div>
+                </div>
+                <div class="collapsible-section">
+                    <div class="collapsible-header">
+                        <h4>刷新条数</h4>
+                        <span class="collapsible-arrow">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <p style="color: #888; font-size: 13px; margin-bottom: 12px;">设置每个应用每次刷新时生成几条到几条内容（仅影响下次刷新）。</p>
+                        <div class="form-group">
+                            <label>聊天（对话个数）</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="number" id="peek-refresh-min-messages" min="1" max="20" placeholder="最少" style="width: 80px;">
+                                <span>到</span>
+                                <input type="number" id="peek-refresh-max-messages" min="1" max="20" placeholder="最多" style="width: 80px;">
+                                <span style="color:#888;">条</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>时光想说（条数）</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="number" id="peek-refresh-min-timeThoughts" min="1" max="15" placeholder="最少" style="width: 80px;">
+                                <span>到</span>
+                                <input type="number" id="peek-refresh-max-timeThoughts" min="1" max="15" placeholder="最多" style="width: 80px;">
+                                <span style="color:#888;">条</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>备忘录（条数）</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="number" id="peek-refresh-min-memos" min="1" max="15" placeholder="最少" style="width: 80px;">
+                                <span>到</span>
+                                <input type="number" id="peek-refresh-max-memos" min="1" max="15" placeholder="最多" style="width: 80px;">
+                                <span style="color:#888;">条</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="collapsible-section">
@@ -5891,6 +5955,7 @@
     <script src="js/modules/archive.js"></script> <!-- 记忆存档库模块 -->
     <script src="js/modules/piggy_bank.js"></script> <!-- 存钱罐（钱包）模块 -->
     <script src="js/modules/music_player.js"></script> <!-- 音乐播放器（后台保活） -->
+    <script src="js/modules/appearance_settings.js"></script> <!-- 外观设置：整体 UI 切换 -->
 
     <!-- [4. 程序入口] -->
     <script src="js/main.js"></script> <!-- 主入口：初始化(init)、全局事件监听 -->

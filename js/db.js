@@ -89,6 +89,7 @@ const defaultIcons = {
     'piggy-bank-screen': {name: '存钱罐', url: 'https://i.postimg.cc/3RmWRRtS/chan-18.png'},
     'pomodoro-screen': {name: '番茄钟', url: 'https://i.postimg.cc/PrYGRDPF/chan-76.png'},
     'storage-analysis-screen': {name: '存储分析', url: 'https://i.postimg.cc/J0F3Lt0T/chan-107.png'},
+    'appearance-settings-screen': {name: '外观设置', url: 'https://i.postimg.cc/KcgT1wzQ/DF424409FC54EDFF74D78ECB1311E1D7.png'},
     'theater-screen': {name: '小剧场', url: 'https://i.postimg.cc/t4gXjG8P/7632D362A35EC703E7A81F6FF0F8AE34.png'}
 };
 
@@ -169,8 +170,23 @@ const globalSettingKeys = [
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
 
-const appVersion = "1.8.5";
+const appVersion = "3.2";
 const updateLog = [
+    {
+        version: "3.2",
+        date: "2026-03-02",
+        notes: [
+            "感谢豹豹老师再次优化小剧场",
+            "1.修复论坛私聊串来串去的问题",
+            "2.修复论坛角色伪装失败！这次绝对很成功！修复角色头像明显、角色不适用填写好的昵称",
+            "3.互通了论坛大小号的记忆。修复论坛刷新不适用专属论坛API的BUG",
+            "4.修复用户商城赠送也会被算进钱包的BUG",
+            "5.修复记忆转跳弄错CHAR的问题",
+            "6.新增语音语速设置",
+            "7.新增偷看部分APP可以自定义生成条数",
+            "其他更新在做了在做了"
+        ]
+    },
     {
         version: "3.1",
         date: "2026-03-01",

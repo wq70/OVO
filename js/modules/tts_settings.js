@@ -28,6 +28,18 @@ const TTSSettings = {
                 this.saveChatTTSConfig();
             });
         }
+
+        // 语速滑块实时显示
+        const speedInput = document.getElementById('setting-tts-speed');
+        const speedValueSpan = document.getElementById('setting-tts-speed-value');
+        if (speedInput && speedValueSpan) {
+            speedInput.addEventListener('input', () => { speedValueSpan.textContent = speedInput.value; });
+        }
+        const userSpeedInput = document.getElementById('setting-user-tts-speed');
+        const userSpeedValueSpan = document.getElementById('setting-user-tts-speed-value');
+        if (userSpeedInput && userSpeedValueSpan) {
+            userSpeedInput.addEventListener('input', () => { userSpeedValueSpan.textContent = userSpeedInput.value; });
+        }
     },
 
     // 加载 TTS 全局配置（角色 + 用户）
@@ -152,13 +164,17 @@ const TTSSettings = {
 
             const languageSelect = document.getElementById('setting-tts-language');
             const customVoiceIdInput = document.getElementById('setting-custom-voice-id');
+            const speedInput = document.getElementById('setting-tts-speed');
             chat.ttsConfig.language = languageSelect?.value || 'auto';
             chat.ttsConfig.customVoiceId = customVoiceIdInput?.value?.trim() || '';
+            chat.ttsConfig.speed = Math.min(2, Math.max(0.5, parseFloat(speedInput?.value) || 1));
 
             const userLanguageSelect = document.getElementById('setting-user-tts-language');
             const userCustomVoiceIdInput = document.getElementById('setting-user-custom-voice-id');
+            const userSpeedInput = document.getElementById('setting-user-tts-speed');
             if (userLanguageSelect) chat.ttsConfig.userLanguage = userLanguageSelect.value || 'auto';
             if (userCustomVoiceIdInput) chat.ttsConfig.userCustomVoiceId = userCustomVoiceIdInput.value?.trim() || '';
+            if (userSpeedInput) chat.ttsConfig.userSpeed = Math.min(2, Math.max(0.5, parseFloat(userSpeedInput.value) || 1));
 
             await saveData();
             console.log('[TTSSettings] 角色与用户 TTS 配置已保存', chat.ttsConfig);
@@ -178,6 +194,11 @@ const TTSSettings = {
             if (languageSelect) languageSelect.value = (chat.ttsConfig && chat.ttsConfig.language) || 'auto';
             const customVoiceIdInput = document.getElementById('setting-custom-voice-id');
             if (customVoiceIdInput) customVoiceIdInput.value = (chat.ttsConfig && chat.ttsConfig.customVoiceId) || '';
+            const speedInput = document.getElementById('setting-tts-speed');
+            const speedValueSpan = document.getElementById('setting-tts-speed-value');
+            const charSpeed = (chat.ttsConfig && chat.ttsConfig.speed != null) ? chat.ttsConfig.speed : 1;
+            if (speedInput) { speedInput.value = charSpeed; }
+            if (speedValueSpan) speedValueSpan.textContent = String(charSpeed);
 
             const voiceNameSpan = document.getElementById('current-voice-name');
             if (voiceNameSpan) {
@@ -203,6 +224,11 @@ const TTSSettings = {
                 if (userLanguageSelect) userLanguageSelect.value = (chat.ttsConfig && chat.ttsConfig.userLanguage) || 'auto';
                 const userCustomInput = document.getElementById('setting-user-custom-voice-id');
                 if (userCustomInput) userCustomInput.value = (chat.ttsConfig && chat.ttsConfig.userCustomVoiceId) || '';
+                const userSpeedInput = document.getElementById('setting-user-tts-speed');
+                const userSpeedValueSpan = document.getElementById('setting-user-tts-speed-value');
+                const userSpeed = (chat.ttsConfig && chat.ttsConfig.userSpeed != null) ? chat.ttsConfig.userSpeed : 1;
+                if (userSpeedInput) { userSpeedInput.value = userSpeed; }
+                if (userSpeedValueSpan) userSpeedValueSpan.textContent = String(userSpeed);
 
                 const userVoiceNameSpan = document.getElementById('current-user-voice-name');
                 if (userVoiceNameSpan) {

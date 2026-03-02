@@ -1,0 +1,204 @@
+/* --- 外观设置页 (Appearance Settings) --- */
+#appearance-settings-screen {
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 24%, #fff 24%);
+    min-height: 100%;
+}
+
+#appearance-settings-screen .appearance-settings-inner {
+    padding: 0 0 24px;
+    max-width: 100%;
+}
+
+/* 顶部说明卡片 */
+.appearance-hero {
+    margin: 0 20px 20px;
+    padding: 20px 18px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+    border: 1px solid rgba(255,255,255,0.8);
+}
+
+.appearance-hero-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-color, #1e293b);
+    margin: 0 0 6px;
+    letter-spacing: 0.02em;
+}
+
+.appearance-hero-desc {
+    font-size: 13px;
+    color: var(--text-secondary, #64748b);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* 区块标题 */
+.appearance-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 20px 10px;
+    padding-left: 2px;
+}
+
+/* 整体风格选择卡片组 */
+.appearance-mode-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0 20px 24px;
+}
+
+.appearance-mode-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.appearance-mode-card:active {
+    transform: scale(0.99);
+}
+
+.appearance-mode-card.selected {
+    border-color: var(--primary-color, #6C8CD5);
+    box-shadow: 0 0 0 2px rgba(108, 140, 213, 0.25);
+    background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%);
+}
+
+.appearance-mode-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 22px;
+    background: #f1f5f9;
+    color: var(--primary-color, #6C8CD5);
+}
+
+.appearance-mode-card.selected .appearance-mode-card-icon {
+    background: rgba(108, 140, 213, 0.15);
+}
+
+.appearance-mode-card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.appearance-mode-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-color, #1e293b);
+    margin: 0 0 2px;
+}
+
+.appearance-mode-card-desc {
+    font-size: 12px;
+    color: var(--text-secondary, #64748b);
+    line-height: 1.4;
+    margin: 0;
+}
+
+.appearance-mode-card-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.appearance-mode-card.selected .appearance-mode-card-check {
+    border-color: var(--primary-color, #6C8CD5);
+    background: var(--primary-color, #6C8CD5);
+}
+
+.appearance-mode-card.selected .appearance-mode-card-check::after {
+    content: '';
+    width: 6px;
+    height: 10px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin-bottom: 3px;
+}
+
+/* 适用范围说明 */
+.appearance-scope-wrap {
+    margin: 0 20px 24px;
+    padding: 14px 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.appearance-scope-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary, #64748b);
+    margin: 0 0 8px;
+}
+
+.appearance-scope-list {
+    font-size: 13px;
+    color: var(--text-color, #334155);
+    line-height: 1.6;
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+}
+
+.appearance-scope-list li {
+    position: relative;
+    padding-left: 14px;
+    margin-bottom: 4px;
+}
+
+.appearance-scope-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--primary-color, #6C8CD5);
+    opacity: 0.7;
+}
+
+.appearance-scope-list li:last-child {
+    margin-bottom: 0;
+}
+
+.appearance-scope-note {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+/* 占位：后续可加更多区块 */
+.appearance-more {
+    margin: 0 20px;
+    padding: 16px;
+    text-align: center;
+    font-size: 12px;
+    color: #94a3b8;
+}

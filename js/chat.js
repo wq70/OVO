@@ -297,7 +297,7 @@ function setupChatRoom() {
                         if (svc && MinimaxTTSService.isUserConfigured && MinimaxTTSService.isUserConfigured() && typeof VoiceSelector !== 'undefined' && currentChatId) {
                             const userVoiceConfig = VoiceSelector.getVoiceConfig(currentChatId, 'user');
                             if (userVoiceConfig && userVoiceConfig.voiceId) {
-                                Object.assign(opts, { forUser: true });
+                                Object.assign(opts, { forUser: true, speed: userVoiceConfig.speed });
                                 MinimaxTTSService.synthesizeAndPlay(
                                     voiceText,
                                     userVoiceConfig.voiceId,
@@ -313,6 +313,7 @@ function setupChatRoom() {
                         if (svc && MinimaxTTSService.isConfigured() && typeof VoiceSelector !== 'undefined' && currentChatId) {
                             const voiceConfig = VoiceSelector.getVoiceConfig(currentChatId);
                             if (voiceConfig && voiceConfig.voiceId) {
+                                Object.assign(opts, { speed: voiceConfig.speed });
                                 MinimaxTTSService.synthesizeAndPlay(
                                     voiceText,
                                     voiceConfig.voiceId,
@@ -463,6 +464,9 @@ function setupChatRoom() {
 function openChatRoom(chatId, type) {
     const chat = (type === 'private') ? db.characters.find(c => c.id === chatId) : db.groups.find(g => g.id === chatId);
     if (!chat) return;
+
+    currentChatId = chatId;
+    currentChatType = type;
 
     // 迁移旧的私聊数据 (仅群聊)
     if (type === 'group' && chat.privateSessions && typeof migratePrivateSessionsToHistory === 'function') {

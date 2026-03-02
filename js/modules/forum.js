@@ -540,7 +540,11 @@ function getForumGenerationContext() {
 }
 
 async function handleForumRefresh() {
-    let { url, key, model } = db.apiSettings;
+    const forumApiSettings = db.forumApiSettings || {};
+    const apiSettings = forumApiSettings.useForumApi && forumApiSettings.url && forumApiSettings.key && forumApiSettings.model
+        ? forumApiSettings
+        : db.apiSettings;
+    let { url, key, model } = apiSettings;
     if (!url || !key || !model) {
         showToast('请先在API设置中配置好接口信息');
         switchScreen('api-settings-screen');
@@ -598,13 +602,10 @@ ${context}
             systemPrompt += `\n\n重要指令：本次生成的所有帖子标题必须和以下关键词相关：【${keywords}】，同时也需要和之前绑定的设定相关。禁止相似帖子过多，不要特地把关键词标注出来。`;
         }
 
-        const forumApiSettings = db.forumApiSettings || {};
-        const useForumApi = forumApiSettings.useForumApi && forumApiSettings.url && forumApiSettings.key && forumApiSettings.model;
-        const apiToUse = useForumApi ? forumApiSettings : db.apiSettings;
-        const temperature = apiToUse.temperature !== undefined ? apiToUse.temperature : 0.8;
+        const temperature = apiSettings.temperature !== undefined ? apiSettings.temperature : 0.8;
 
         const requestBody = {
-            model: model,
+            model: apiSettings.model,
             messages: [{ role: "user", content: systemPrompt }],
             temperature: temperature,
             response_format: { type: "json_object" },
@@ -613,7 +614,7 @@ ${context}
         const endpoint = `${url}/v1/chat/completions`;
         const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` };
 
-        const contentStr = await fetchAiResponse(db.apiSettings, requestBody, headers, endpoint);
+        const contentStr = await fetchAiResponse(apiSettings, requestBody, headers, endpoint);
 
         const jsonData = JSON.parse(contentStr);
         if (jsonData && Array.isArray(jsonData.posts)) {
@@ -926,12 +927,14 @@ function forumLoadSettings() {
     const maxInput = document.getElementById('forum-comments-max-input');
     const autoReplyInput = document.getElementById('forum-auto-reply-count-input');
     const detailReplyInput = document.getElementById('forum-detail-reply-count-input');
+    const dmCountInput = document.getElementById('forum-dm-count-input');
     
     if (postsInput) postsInput.value = s.postsPerGeneration || 8;
     if (minInput) minInput.value = (s.commentsPerPost && s.commentsPerPost.min) != null ? s.commentsPerPost.min : 4;
     if (maxInput) maxInput.value = (s.commentsPerPost && s.commentsPerPost.max) != null ? s.commentsPerPost.max : 8;
     if (autoReplyInput) autoReplyInput.value = s.autoReplyCount != null ? s.autoReplyCount : 3;
     if (detailReplyInput) detailReplyInput.value = s.detailReplyCount != null ? s.detailReplyCount : 2;
+    if (dmCountInput) dmCountInput.value = Math.max(1, Math.min(20, (s.dmPerGeneration != null ? parseInt(s.dmPerGeneration, 10) : 4)));
     
     const apiSettings = db.forumApiSettings || { useForumApi: false, url: '', key: '', model: '', temperature: 0.9 };
     const useApiToggle = document.getElementById('forum-use-api-toggle');
@@ -1042,11 +1045,15 @@ function forumSaveSettings() {
     
     if (commentsMin > commentsMax) { showToast('最小评论数不能大于最大评论数'); return; }
     
+    const dmCountInput = document.getElementById('forum-dm-count-input');
+    const dmPerGeneration = (dmCountInput && dmCountInput.value != null) ? Math.max(1, Math.min(20, parseInt(dmCountInput.value, 10))) : 4;
+    
     db.forumSettings = db.forumSettings || {};
     db.forumSettings.postsPerGeneration = postsCount;
     db.forumSettings.commentsPerPost = { min: commentsMin, max: commentsMax };
     db.forumSettings.autoReplyCount = autoReplyCount;
     db.forumSettings.detailReplyCount = detailReplyCount;
+    db.forumSettings.dmPerGeneration = dmPerGeneration;
 
     const charAltEnable = document.getElementById('forum-char-alt-enable');
     const charAltProbSlider = document.getElementById('forum-char-alt-prob-slider');
@@ -1280,7 +1287,11 @@ function forumGetDMUserList() {
     const users = new Map();
     (db.forumMessages || []).forEach(m => {
         const other = m.fromUserId === 'user' ? m.toUserId : m.fromUserId;
-        if (other && other !== 'user') users.set(other, { id: other, name: other.replace(/^npc_/, '') });
+        if (other && other !== 'user') {
+            var profile = getForumStrangerProfile(other);
+            var displayName = (profile && profile.name) ? profile.name : other.replace(/^npc_/, '');
+            users.set(other, { id: other, name: displayName });
+        }
     });
     return Array.from(users.values());
 }
@@ -1517,12 +1528,16 @@ function forumRenderDMConversation(userId) {
     const userAvatar = (userProfile.avatar && userProfile.avatar.trim()) ? userProfile.avatar : FORUM_DEFAULT_AVATAR;
     
     const npcColors = ["#FFB6C1", "#87CEFA", "#98FB98", "#F0E68C", "#DDA0DD", "#FFDAB9", "#B0E0E6"];
-    const getRandomColor = () => npcColors[Math.floor(Math.random() * npcColors.length)];
+    const getStableColor = (id) => {
+        var h = 0;
+        for (var i = 0; i < (id || '').length; i++) h = (h * 31 + (id.charCodeAt(i) || 0)) >>> 0;
+        return npcColors[h % npcColors.length];
+    };
     const npcName = userId.replace(/^npc_/, '');
-    const npcFirstChar = npcName.charAt(0).toUpperCase() || '?';
     const npcProfile = getForumStrangerProfile(userId);
-    const npcAvatar = (npcProfile && npcProfile.avatar && npcProfile.avatar.trim()) ? npcProfile.avatar : FORUM_DEFAULT_AVATAR;
-    const npcColor = getRandomColor();
+    const npcDisplayName = (npcProfile && npcProfile.name) ? npcProfile.name : npcName;
+    const npcFirstChar = (npcDisplayName || '').charAt(0).toUpperCase() || '?';
+    const npcColor = getStableColor(userId);
     
     messages.forEach(m => {
         const isUser = m.fromUserId === 'user';
@@ -1532,7 +1547,7 @@ function forumRenderDMConversation(userId) {
         
         const avatarHtml = isUser 
             ? `<img src="${userAvatar}" class="dm-message-avatar" alt="我" />`
-            : `<img src="${npcAvatar}" class="dm-message-avatar" alt="${npcName}" />`;
+            : `<div class="dm-message-avatar" style="width:40px;height:40px;min-width:40px;border-radius:50%;background:${npcColor};color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;">${npcFirstChar}</div>`;
         
         const bubble = document.createElement('div');
         bubble.className = 'dm-message-bubble';
@@ -1698,7 +1713,7 @@ async function forumGenerateStrangerDMs() {
                 userCommentsText += '【评论' + (i + 1) + '】在帖子《' + item.postTitle + '》下的回复：' + item.comment + '\n\n';
             });
         }
-        var strangerCount = 4;
+        var strangerCount = (db.forumSettings && db.forumSettings.dmPerGeneration != null) ? Math.max(1, Math.min(20, parseInt(db.forumSettings.dmPerGeneration, 10))) : 4;
         var generateDetailed = !!(db.forumSettings && db.forumSettings.generateDetailedStranger);
         var enableCharAlt = !!(db.forumSettings && db.forumSettings.enableCharAltDm);
         var charAltIds = (db.forumSettings && db.forumSettings.charAltCharIds) || [];
@@ -1756,11 +1771,32 @@ async function forumGenerateStrangerDMs() {
                 offset = i + 1;
             });
             var altTemplates = ['你好呀，看到你的动态了～', '嗨，来打个招呼', '你好～', '看到你发的了，忍不住来聊两句'];
+            var altNicknames = [];
+            if (altCount > 0) {
+                var fallbackAltNames = ['清风明月', '夜雨声烦', '星河', '柠檬不萌', '夏日微风', '云深不知处', '落叶知秋', '晨曦', '暗香', '浮生若梦', '陌上花开', '北城以念', '南巷清风', '西楼月', '东篱把酒'];
+                try {
+                    var url = apiSettings.url;
+                    if (url.endsWith('/')) url = url.slice(0, -1);
+                    var altPrompt = '你是一位论坛/社区模拟专家。根据以下世界观，生成 ' + altCount + ' 个「看起来像真实论坛用户」的论坛昵称。要求：\n1. 每个昵称 2～8 个字符，像普通人会起的网名（可文艺、可随意、可带符号感），符合该世界观的氛围。\n2. 不要出现「小号」「马甲」等字样，不要像内部 ID。\n3. ' + altCount + ' 个昵称彼此不重复。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"nicknames":["昵称1","昵称2",...]}\n其中 nicknames 数组长度必须为 ' + altCount + '。';
+                    var altRequestBody = { model: apiSettings.model, messages: [{ role: 'user', content: altPrompt }], temperature: 0.8, response_format: { type: 'json_object' } };
+                    var altEndpoint = url + '/v1/chat/completions';
+                    var altHeaders = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiSettings.key };
+                    var altContentStr = await fetchAiResponse(apiSettings, altRequestBody, altHeaders, altEndpoint);
+                    var altJson = JSON.parse(altContentStr);
+                    if (altJson && Array.isArray(altJson.nicknames)) {
+                        altNicknames = altJson.nicknames.slice(0, altCount).map(function(n) { return (n || '').toString().trim().replace(/\s+/g, '_').slice(0, 20) || null; }).filter(Boolean);
+                    }
+                } catch (e) { console.warn('生成角色小号昵称失败，使用备用昵称', e); }
+                while (altNicknames.length < altCount) {
+                    altNicknames.push(fallbackAltNames[(altNicknames.length + altCount) % fallbackAltNames.length] + (altNicknames.length > 0 ? '_' + altNicknames.length : ''));
+                }
+            }
             for (var a = 0; a < altCount; a++) {
                 var charId = charAltIds[a % charAltIds.length];
                 var mainChar = db.characters && db.characters.find(function(c) { return c.id === charId; });
                 if (!mainChar) continue;
-                var altDisplayName = (charAltNames[charId] || (mainChar.remarkName || mainChar.realName || '') + '的小号').trim().replace(/\s+/g, '_') || ('小号_' + (a + 1));
+                var customName = (charAltNames[charId] || '').trim();
+                var altDisplayName = customName ? customName.replace(/\s+/g, '_').slice(0, 20) : ((altNicknames[a] || fallbackAltNames[a % fallbackAltNames.length]).trim().replace(/\s+/g, '_') || ('路人' + (offset + a + 1)));
                 var fromUserId = 'npc_alt_' + charId + '_' + baseTime + '_' + a;
                 db.forumMessages.push({
                     id: 'dm_' + baseTime + '_alt_' + a + '_' + Math.random(),
@@ -1773,7 +1809,7 @@ async function forumGenerateStrangerDMs() {
                 db.forumStrangerProfiles[fromUserId] = {
                     name: altDisplayName,
                     basicPersona: (mainChar.persona || '').trim() || ('论坛用户，昵称：' + altDisplayName),
-                    avatar: (mainChar.avatar && mainChar.avatar.trim()) ? mainChar.avatar : FORUM_DEFAULT_AVATAR,
+                    avatar: FORUM_DEFAULT_AVATAR,
                     linkedCharId: charId
                 };
             }
@@ -1798,6 +1834,7 @@ async function forumGenerateAIDMReply() {
         showToast('请先选择私信对象');
         return;
     }
+    const targetUserId = forumCurrentDMUserId;
     
     const forumApiSettings = db.forumApiSettings || {};
     let apiSettings = forumApiSettings.useForumApi ? forumApiSettings : db.apiSettings;
@@ -1813,9 +1850,9 @@ async function forumGenerateAIDMReply() {
     showToast('AI正在生成回复...');
     
     try {
-        const npcName = forumCurrentDMUserId.replace(/^npc_/, '');
+        const npcName = targetUserId.replace(/^npc_/, '');
         const npcPosts = (db.forumPosts || []).filter(p => p.username === npcName);
-        const npcProfile = getForumStrangerProfile(forumCurrentDMUserId);
+        const npcProfile = getForumStrangerProfile(targetUserId);
         
         const worldContext = getForumGenerationContext();
         
@@ -1835,8 +1872,8 @@ async function forumGenerateAIDMReply() {
         const userContext = `用户资料:\n昵称: ${userProfile.username}\n简介: ${userProfile.bio || '无'}`;
         
         const conversation = (db.forumMessages || [])
-            .filter(m => (m.fromUserId === 'user' && m.toUserId === forumCurrentDMUserId) || 
-                         (m.fromUserId === forumCurrentDMUserId && m.toUserId === 'user'))
+            .filter(m => (m.fromUserId === 'user' && m.toUserId === targetUserId) || 
+                         (m.fromUserId === targetUserId && m.toUserId === 'user'))
             .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
             .slice(-10);
         
@@ -1867,8 +1904,8 @@ ${userContext}
 ${conversationText}
 
 ===== 好友状态（重要） =====
-当前是否已是好友：${forumIsFriend(forumCurrentDMUserId) ? '是' : '否'}。
-用户是否已点击「添加好友」并发送了好友申请（等待你同意）：${forumHasPendingFriendRequestFromUser(forumCurrentDMUserId) ? '是' : '否'}。
+当前是否已是好友：${forumIsFriend(targetUserId) ? '是' : '否'}。
+用户是否已点击「添加好友」并发送了好友申请（等待你同意）：${forumHasPendingFriendRequestFromUser(targetUserId) ? '是' : '否'}。
 - 若用户**已发送**好友申请：请在本轮回复中表示同意加好友（如「好呀」「通过啦」等），系统会在本轮后自动加为好友。
 - 若用户**尚未发送**好友申请（只是聊天里说想加好友）：请勿说「通过了」「已同意」等，应说「好呀，你点一下右上角添加好友吧」或「好呀，你加我还是我加你？」引导用户去点按钮发送申请。
 
@@ -1908,7 +1945,7 @@ ${conversationText}
             jsonData.replies.forEach((replyContent, index) => {
                 const newMessage = {
                     id: 'dm_' + Date.now() + '_' + Math.random(),
-                    fromUserId: forumCurrentDMUserId,
+                    fromUserId: targetUserId,
                     toUserId: 'user',
                     content: (replyContent && replyContent.trim) ? replyContent.trim() : String(replyContent),
                     timestamp: Date.now() + index,
@@ -1918,20 +1955,20 @@ ${conversationText}
             });
             
             await saveData();
-            forumRenderDMConversation(forumCurrentDMUserId);
+            if (forumCurrentDMUserId === targetUserId) forumRenderDMConversation(targetUserId);
             showToast(`${npcName}发来了${jsonData.replies.length}条消息`);
             
-            if (forumHasPendingFriendRequestFromUser(forumCurrentDMUserId)) {
-                const profile = getForumStrangerProfile(forumCurrentDMUserId) || { name: npcName, avatar: '', basicPersona: '' };
-                forumAddForumNPCAsCharacter(profile, forumCurrentDMUserId);
-                forumSetPendingFriendRequestFromUser(forumCurrentDMUserId, false);
+            if (forumHasPendingFriendRequestFromUser(targetUserId)) {
+                const profile = getForumStrangerProfile(targetUserId) || { name: npcName, avatar: '', basicPersona: '' };
+                forumAddForumNPCAsCharacter(profile, targetUserId);
+                forumSetPendingFriendRequestFromUser(targetUserId, false);
                 showToast('已加为好友');
                 var addFriendBtn = document.getElementById('forum-dm-add-friend-btn');
                 if (addFriendBtn) { addFriendBtn.style.display = 'none'; }
-            } else if (jsonData.suggestFriend && !forumIsFriend(forumCurrentDMUserId)) {
-                const profile = getForumStrangerProfile(forumCurrentDMUserId) || {};
+            } else if (jsonData.suggestFriend && !forumIsFriend(targetUserId)) {
+                const profile = getForumStrangerProfile(targetUserId) || {};
                 forumShowFriendRequestModal({
-                    fromUserId: forumCurrentDMUserId,
+                    fromUserId: targetUserId,
                     fromName: profile.name || npcName,
                     fromAvatar: (profile.avatar && profile.avatar.trim()) ? profile.avatar : FORUM_DEFAULT_AVATAR
                 });

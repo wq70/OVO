@@ -3,31 +3,39 @@
 #theater-screen,
 #theater-create-screen,
 #theater-detail-screen {
-    background-color: #f9f9f9;
+    /* 仿 iOS 的柔和浅色渐变背景 */
+    background: linear-gradient(180deg, #f7f8fc 0%, #f2f3f7 40%, #eff1f5 100%);
 }
 
 #theater-screen .app-header,
 #theater-create-screen .app-header,
 #theater-detail-screen .app-header {
-    background-color: rgba(255, 255, 255, 0.95);
+    /* 顶部导航做成 iOS 风格的毛玻璃栏 */
+    background-color: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 0.5px 0 rgba(15, 23, 42, 0.12);
 }
 
 .theater-content {
-    padding: 15px;
+    padding: 16px 18px 20px;
 }
 
 /* 主页样式 */
 .theater-filter-bar {
     margin-bottom: 15px;
+    display: flex;
+    align-items: center;
 }
 
 .theater-filter-select {
     width: 100%;
     padding: 10px 15px;
-    border: 1px solid rgba(255, 192, 203, 0.3);
-    background-color: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(8px);
-    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background-color: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 999px;
     font-size: 15px;
     color: #333;
     outline: none;
@@ -36,7 +44,7 @@
 
 .theater-filter-select:focus {
     border-color: rgba(255, 128, 171, 0.5);
-    box-shadow: 0 3px 15px rgba(255, 128, 171, 0.15);
+    box-shadow: 0 0 0 3px rgba(255, 128, 171, 0.1), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .theater-scenarios-list {
@@ -46,17 +54,22 @@
 }
 
 .theater-scenario-card {
-    background-color: #ffffff;
-    border-radius: 12px;
-    padding: 18px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background-color: rgba(255, 255, 255, 0.96);
+    border-radius: 18px;
+    padding: 18px 16px;
+    border: 0.5px solid rgba(148, 163, 184, 0.25);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.10);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
     cursor: pointer;
 }
 
 .theater-scenario-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.16);
+    border-color: rgba(148, 163, 184, 0.4);
+    background-color: rgba(255, 255, 255, 0.98);
 }
 
 .theater-scenario-header {
@@ -71,14 +84,15 @@
     font-weight: 600;
     color: #333;
     flex: 1;
+    letter-spacing: 0.01em;
 }
 
 .theater-scenario-badge {
     font-size: 12px;
     padding: 4px 10px;
-    background: linear-gradient(135deg, #ff80ab 0%, #ffb3d1 100%);
-    color: #fff;
-    border-radius: 12px;
+    background: rgba(148, 163, 184, 0.18);
+    color: #475569;
+    border-radius: 999px;
     font-weight: 500;
 }
 
@@ -109,9 +123,14 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 15px;
-    background: rgba(255, 255, 255, 0.98);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-bottom: 0.5px solid rgba(148, 163, 184, 0.35);
     gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
 }
 
 .theater-multi-select-bar.visible {
@@ -130,9 +149,47 @@
 }
 
 .theater-multi-select-actions .btn {
-    padding: 6px 12px;
-    font-size: 13px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
     width: auto;
+    border-radius: 8px;
+    border: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.theater-multi-select-actions .btn-primary {
+    background: linear-gradient(135deg, #ff80ab 0%, #ffb3d1 100%);
+    color: #ffffff;
+}
+
+.theater-multi-select-actions .btn-primary:hover {
+    background: linear-gradient(135deg, #ff6b9d 0%, #ff9fbf 100%);
+    box-shadow: 0 3px 10px rgba(255, 128, 171, 0.25);
+    transform: translateY(-1px);
+}
+
+.theater-multi-select-actions .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(255, 128, 171, 0.2);
+}
+
+.theater-multi-select-actions .btn-secondary {
+    background: rgba(255, 240, 245, 0.8);
+    color: #d63384;
+    border: 1px solid rgba(255, 182, 193, 0.4);
+}
+
+.theater-multi-select-actions .btn-secondary:hover {
+    background: rgba(255, 240, 245, 1);
+    box-shadow: 0 3px 10px rgba(255, 128, 171, 0.15);
+    transform: translateY(-1px);
+}
+
+.theater-multi-select-actions .btn-secondary:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(255, 128, 171, 0.1);
 }
 
 /* 列表项多选态 */
@@ -278,44 +335,45 @@
 .theater-select,
 .theater-input {
     width: 100%;
-    padding: 12px 15px;
-    border: 1px solid rgba(255, 192, 203, 0.3);
-    background-color: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(8px);
+    padding: 14px 16px;
+    border: 0.5px solid rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
     border-radius: 12px;
     font-size: 15px;
-    color: #333;
+    color: #1d1d1f;
     outline: none;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     box-sizing: border-box;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .theater-select:focus,
 .theater-input:focus {
     border-color: rgba(255, 128, 171, 0.5);
-    box-shadow: 0 3px 15px rgba(255, 128, 171, 0.15);
+    box-shadow: 0 0 0 3px rgba(255, 128, 171, 0.1), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .theater-textarea {
     width: 100%;
-    min-height: 120px;
-    padding: 12px 15px;
-    border: 1px solid rgba(255, 192, 203, 0.3);
-    background-color: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(8px);
+    min-height: 140px;
+    padding: 14px 16px;
+    border: 0.5px solid rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
     border-radius: 12px;
     font-size: 15px;
-    color: #333;
+    color: #1d1d1f;
     outline: none;
     resize: vertical;
     font-family: inherit;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     box-sizing: border-box;
+    line-height: 1.6;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .theater-textarea:focus {
     border-color: rgba(255, 128, 171, 0.5);
-    box-shadow: 0 3px 15px rgba(255, 128, 171, 0.15);
+    box-shadow: 0 0 0 3px rgba(255, 128, 171, 0.1), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 /* 世界书多选下拉列表 */
@@ -326,25 +384,26 @@
 
 .theater-multiselect-display {
     width: 100%;
-    padding: 12px 15px;
-    border: 1px solid rgba(255, 192, 203, 0.3);
-    background-color: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(8px);
+    padding: 14px 16px;
+    border: 0.5px solid rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
     border-radius: 12px;
     font-size: 15px;
-    color: #333;
+    color: #1d1d1f;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     box-sizing: border-box;
-    min-height: 44px;
+    min-height: 48px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .theater-multiselect-display:active {
     border-color: rgba(255, 128, 171, 0.5);
-    box-shadow: 0 3px 15px rgba(255, 128, 171, 0.15);
+    box-shadow: 0 0 0 3px rgba(255, 128, 171, 0.1), 0 1px 3px rgba(0, 0, 0, 0.04);
+    background-color: rgba(255, 240, 245, 0.5);
 }
 
 .theater-multiselect-placeholder {
@@ -471,43 +530,71 @@
 }
 
 .theater-detail-body {
-    font-size: 14px;
-    color: #444;
-    line-height: 1.7;
+    font-size: 15px;
+    color: #1d1d1f;
+    line-height: 1.75;
     white-space: pre-wrap;
     word-wrap: break-word;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 16px;
+    margin: 16px 0;
+    border: 0.5px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .theater-detail-body strong,
 .theater-detail-body b {
-    font-weight: 700;
-    color: #2c2c2c;
+    font-weight: 600;
+    color: #000000;
 }
 
 .theater-detail-body em,
 .theater-detail-body i {
     font-style: italic;
+    color: #3a3a3c;
 }
 
 .theater-detail-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 16px;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 0.5px solid rgba(0, 0, 0, 0.08);
 }
 
-/* 详情页操作按钮统一样式（与收藏/教程等界面风格一致） */
+/* 详情页操作按钮统一样式 - iOS风格，与正文明显区分 */
 .theater-detail-actions .theater-action-btn {
-    padding: 10px 16px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 500;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.25s ease;
-    border: 1px solid transparent;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
     white-space: nowrap;
     flex-shrink: 0;
     min-width: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.theater-detail-actions .theater-action-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.2);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.theater-detail-actions .theater-action-btn:active::before {
+    opacity: 1;
 }
 
 .theater-detail-actions .btn {
@@ -515,60 +602,107 @@
     min-width: 0;
 }
 
-/* 编辑、分享：中性主色 */
-.theater-edit-btn,
+/* 编辑、分享：浅粉色风格按钮 */
 .theater-share-btn {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 248, 250, 0.98) 100%);
-    color: #444;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    background: rgba(255, 240, 245, 0.8);
+    color: #d63384;
+    border: 1px solid rgba(255, 182, 193, 0.4);
+    box-shadow: 0 2px 8px rgba(255, 128, 171, 0.15);
 }
 
-.theater-edit-btn:hover,
 .theater-share-btn:hover {
-    background: linear-gradient(135deg, rgba(255, 240, 245, 0.6) 0%, rgba(255, 255, 255, 0.98) 100%);
-    border-color: rgba(255, 128, 171, 0.25);
-    box-shadow: 0 4px 12px rgba(255, 128, 171, 0.12);
-    color: #333;
+    background: rgba(255, 240, 245, 1);
+    box-shadow: 0 4px 12px rgba(255, 128, 171, 0.2);
+    transform: translateY(-1px);
 }
 
-/* 删除：危险操作 */
+.theater-share-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(255, 128, 171, 0.15);
+}
+
+/* 删除：危险操作 - 浅粉色风格 */
 .theater-delete-btn {
-    background: linear-gradient(135deg, rgba(255, 235, 238, 0.95) 0%, rgba(255, 245, 245, 0.98) 100%);
+    background: rgba(255, 235, 238, 0.95);
     color: #c62828;
-    border: 1px solid rgba(244, 67, 54, 0.2);
-    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.06);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.15);
 }
 
 .theater-delete-btn:hover {
-    background: linear-gradient(135deg, rgba(255, 205, 210, 0.9) 0%, rgba(255, 235, 238, 0.98) 100%);
-    border-color: rgba(244, 67, 54, 0.35);
-    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.15);
-    color: #b71c1c;
+    background: rgba(255, 205, 210, 0.9);
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.2);
+    transform: translateY(-1px);
+}
+
+.theater-delete-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(244, 67, 54, 0.15);
 }
 
 .theater-edit-textarea {
     width: 100%;
     min-height: 200px;
-    padding: 12px 15px;
-    border: 1px solid rgba(255, 192, 203, 0.3);
-    background-color: rgba(255, 255, 255, 0.7);
+    padding: 16px;
+    border: 0.5px solid rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
     border-radius: 12px;
-    font-size: 14px;
-    color: #333;
+    font-size: 15px;
+    color: #1d1d1f;
     outline: none;
     resize: vertical;
     font-family: inherit;
+    line-height: 1.6;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
+}
+
+.theater-edit-textarea:focus {
+    border-color: rgba(255, 128, 171, 0.5);
+    box-shadow: 0 0 0 3px rgba(255, 128, 171, 0.1);
 }
 
 .theater-edit-title-input {
-    padding: 4px 8px;
-    border: 1px solid rgba(255, 192, 203, 0.5);
-    border-radius: 6px;
-    font-size: 16px;
-    color: #333;
+    padding: 6px 12px;
+    border: 0.5px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d1d1f;
     outline: none;
     min-width: 120px;
+    background: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.theater-edit-title-input:focus {
+    border-color: rgba(255, 128, 171, 0.5);
+    box-shadow: 0 0 0 3px rgba(255, 128, 171, 0.1);
+}
+
+.theater-edit-title-btn {
+    margin-left: 10px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    background: rgba(255, 240, 245, 0.8);
+    border: 1px solid rgba(255, 182, 193, 0.4);
+    border-radius: 8px;
+    cursor: pointer;
+    color: #d63384;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 4px rgba(255, 128, 171, 0.15);
+}
+
+.theater-edit-title-btn:hover {
+    background: rgba(255, 240, 245, 1);
+    box-shadow: 0 2px 6px rgba(255, 128, 171, 0.2);
+    transform: translateY(-1px);
+}
+
+.theater-edit-title-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(255, 128, 171, 0.15);
 }
 
 /* 分享弹窗样式 */
@@ -634,7 +768,196 @@
     color: #999;
 }
 
-/* 详情页与编辑态按钮样式（与收藏/教程等界面统一） */
+.theater-share-section-title {
+    padding: 4px 2px;
+    font-size: 12px;
+    color: #999;
+}
+/* 提示词预设管理弹窗 */
+.theater-preset-manager-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    backdrop-filter: blur(5px);
+}
+
+.theater-preset-manager-modal.visible {
+    display: flex;
+}
+
+.theater-preset-manager-dialog {
+    background: #fff;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 420px;
+    max-height: 80vh;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
+    display: flex;
+    flex-direction: column;
+}
+
+.theater-preset-manager-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.theater-preset-manager-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.theater-preset-manager-close {
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    cursor: pointer;
+    color: #999;
+}
+
+.theater-preset-manager-body {
+    padding: 12px 20px 18px;
+    overflow-y: auto;
+}
+
+.theater-preset-manager-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.theater-preset-toolbar-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 192, 203, 0.5);
+    background: rgba(255, 192, 203, 0.12);
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.theater-preset-toolbar-btn:hover {
+    background: rgba(255, 192, 203, 0.22);
+}
+
+.theater-preset-toolbar-btn.danger {
+    border-color: rgba(244, 67, 54, 0.45);
+    background: rgba(244, 67, 54, 0.04);
+    color: #c62828;
+}
+
+.theater-preset-toolbar-btn.danger:hover {
+    background: rgba(244, 67, 54, 0.12);
+}
+.theater-preset-manager-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.theater-preset-manager-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.theater-preset-manager-item:last-child {
+    border-bottom: none;
+}
+
+.theater-preset-manager-item-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.theater-preset-manager-checkbox-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+}
+
+.theater-preset-manager-checkbox {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.theater-preset-manager-checkbox-mark {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    border: 1px solid rgba(255, 192, 203, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #fff;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+.theater-preset-manager-checkbox:checked + .theater-preset-manager-checkbox-mark {
+    background: linear-gradient(135deg, #ff80ab 0%, #ffb3d1 100%);
+    border-color: #ff80ab;
+}
+
+.theater-preset-manager-checkbox:checked + .theater-preset-manager-checkbox-mark::after {
+    content: '✓';
+}
+
+.theater-preset-manager-item-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.theater-preset-manager-item-preview {
+    font-size: 12px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.theater-preset-manager-delete-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(244, 67, 54, 0.35);
+    background: rgba(244, 67, 54, 0.06);
+    color: #c62828;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.theater-preset-manager-delete-btn:hover {
+    background: rgba(244, 67, 54, 0.14);
+}
+
+.theater-preset-manager-empty {
+    padding: 16px 4px;
+    font-size: 13px;
+    color: #999;
+    text-align: center;
+}
+
+/* 详情页与编辑态按钮样式 - 浅粉色风格 */
 .theater-favorite-btn {
     background: linear-gradient(135deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 193, 7, 0.2) 100%);
     color: #e65100;
@@ -646,32 +969,48 @@
     background: linear-gradient(135deg, rgba(255, 215, 0, 0.35) 0%, rgba(255, 193, 7, 0.3) 100%);
     border-color: rgba(255, 193, 7, 0.5);
     box-shadow: 0 4px 12px rgba(255, 152, 0, 0.15);
+    transform: translateY(-1px);
+}
+
+.theater-favorite-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(255, 152, 0, 0.1);
 }
 
 .theater-save-edit-btn {
-    background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
-    color: #fff;
-    border: none;
-    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    background: linear-gradient(135deg, rgba(255, 182, 193, 0.6) 0%, rgba(255, 192, 203, 0.5) 100%);
+    color: #c2185b;
+    border: 1px solid rgba(255, 128, 171, 0.4);
+    box-shadow: 0 2px 8px rgba(255, 128, 171, 0.2);
 }
 
 .theater-save-edit-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+    background: linear-gradient(135deg, rgba(255, 182, 193, 0.75) 0%, rgba(255, 192, 203, 0.65) 100%);
+    box-shadow: 0 4px 12px rgba(255, 128, 171, 0.3);
+    transform: translateY(-1px);
+}
+
+.theater-save-edit-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(255, 128, 171, 0.2);
 }
 
 .theater-edit-category-btn {
-    background: linear-gradient(135deg, rgba(255, 182, 193, 0.4) 0%, rgba(255, 192, 203, 0.3) 100%);
-    color: #666;
-    border: 1px solid rgba(255, 182, 193, 0.5);
-    box-shadow: 0 2px 8px rgba(255, 128, 171, 0.06);
+    background: rgba(255, 240, 245, 0.8);
+    color: #d63384;
+    border: 1px solid rgba(255, 182, 193, 0.4);
+    box-shadow: 0 2px 8px rgba(255, 128, 171, 0.15);
 }
 
 .theater-edit-category-btn:hover {
-    background: linear-gradient(135deg, rgba(255, 182, 193, 0.55) 0%, rgba(255, 192, 203, 0.45) 100%);
-    color: #333;
-    border-color: rgba(255, 128, 171, 0.4);
-    box-shadow: 0 4px 12px rgba(255, 128, 171, 0.12);
+    background: rgba(255, 240, 245, 1);
+    box-shadow: 0 4px 12px rgba(255, 128, 171, 0.2);
+    transform: translateY(-1px);
+}
+
+.theater-edit-category-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(255, 128, 171, 0.15);
 }
 
 /* 提示词工具栏与按钮（对齐 ovo 版本） */
@@ -701,46 +1040,78 @@
 
 .theater-save-prompt-btn {
     padding: 10px 20px;
-    background: rgba(255, 192, 203, 0.3);
-    color: #666;
-    border: 1px solid rgba(255, 192, 203, 0.3);
-    border-radius: 12px;
+    background: rgba(255, 240, 245, 0.8);
+    color: #d63384;
+    border: 1px solid rgba(255, 182, 193, 0.4);
+    border-radius: 10px;
     font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(255, 128, 171, 0.15);
 }
 
 .theater-save-prompt-btn:hover {
-    background: rgba(255, 192, 203, 0.5);
-    color: #333;
+    background: rgba(255, 240, 245, 1);
+    box-shadow: 0 3px 10px rgba(255, 128, 171, 0.2);
+    transform: translateY(-1px);
 }
 
-/* 生成按钮样式（对齐 ovo 版本） */
+.theater-save-prompt-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(255, 128, 171, 0.15);
+}
+
+/* 生成按钮样式 - 浅粉色风格，与表单内容明显区分 */
 .theater-generate-btn {
     width: 100%;
-    padding: 14px;
+    padding: 16px;
     background: linear-gradient(135deg, #ff80ab 0%, #ffb3d1 100%);
-    color: #fff;
+    color: #ffffff;
     border: none;
     border-radius: 12px;
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(255, 128, 171, 0.3);
-    margin-top: 10px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 14px rgba(255, 128, 171, 0.35);
+    margin-top: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.theater-generate-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.2);
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
 
 .theater-generate-btn:hover {
-    transform: translateY(-2px);
+    background: linear-gradient(135deg, #ff6b9d 0%, #ff9fbf 100%);
     box-shadow: 0 6px 20px rgba(255, 128, 171, 0.4);
+    transform: translateY(-2px);
+}
+
+.theater-generate-btn:hover::before {
+    opacity: 1;
 }
 
 .theater-generate-btn:active {
     transform: translateY(0);
-}.theater-generate-btn:disabled {
-    opacity: 0.6;
+    box-shadow: 0 2px 8px rgba(255, 128, 171, 0.3);
+}
+
+.theater-generate-btn:disabled {
+    opacity: 0.5;
     cursor: not-allowed;
     transform: none;
+    background: #bdbdbd;
+    box-shadow: none;
 }

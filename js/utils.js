@@ -131,27 +131,35 @@ function processToastQueue() {
     const messageEl = toastElement.querySelector('.toast-message');
 
     const isRichNotification = typeof notification === 'object' && notification !== null && notification.name;
+    const isMutedSimple = typeof notification === 'object' && notification !== null && notification.muted && notification.text != null;
 
     if (isRichNotification) {
-        toastElement.classList.remove('simple');
+        toastElement.classList.remove('simple', 'toast-muted');
         avatarEl.style.display = 'block';
         nameEl.style.display = 'block';
         messageEl.style.textAlign = 'left';
         avatarEl.src = notification.avatar || 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg';
         nameEl.textContent = notification.name;
         messageEl.textContent = notification.message;
-    } else {
-        toastElement.classList.add('simple');
+    } else if (isMutedSimple) {
+        toastElement.classList.add('simple', 'toast-muted');
         avatarEl.style.display = 'none';
         nameEl.style.display = 'none';
         messageEl.style.textAlign = 'center';
-        messageEl.textContent = notification;
+        messageEl.textContent = notification.text;
+    } else {
+        toastElement.classList.add('simple');
+        toastElement.classList.remove('toast-muted');
+        avatarEl.style.display = 'none';
+        nameEl.style.display = 'none';
+        messageEl.style.textAlign = 'center';
+        messageEl.textContent = typeof notification === 'string' ? notification : (notification && notification.text) || '';
     }
 
     toastElement.classList.add('show');
 
     setTimeout(() => {
-        toastElement.classList.remove('show');
+        toastElement.classList.remove('show', 'toast-muted');
         setTimeout(() => {
             isToastVisible = false;
             processToastQueue();

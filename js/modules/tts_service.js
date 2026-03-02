@@ -164,8 +164,10 @@ const MinimaxTTSService = {
             throw new Error('文本为空');
         }
 
-        // 检查缓存（用户与角色分开）
-        const cacheKey = (forUser ? 'user_' : '') + `${cleanText}_${voiceId}_${language}`;
+        const speed = Math.min(2, Math.max(0.5, Number(options.speed) || 1));
+
+        // 检查缓存（用户与角色分开，语速参与 key）
+        const cacheKey = (forUser ? 'user_' : '') + `${cleanText}_${voiceId}_${language}_${speed}`;
         if (this.audioCache.has(cacheKey)) {
             console.log('[TTS] 使用缓存:', cacheKey);
             return this.audioCache.get(cacheKey);
@@ -181,7 +183,7 @@ const MinimaxTTSService = {
                 stream: false,
                 voice_setting: {
                     voice_id: voiceId,
-                    speed: 1,
+                    speed: speed,
                     vol: 1,
                     pitch: 0
                 },
@@ -360,7 +362,7 @@ const MinimaxTTSService = {
         const item = this.playQueue.shift();
         this.isPlaying = true;
         const self = this;
-        const opts = item.forUser ? { forUser: true } : {};
+        const opts = item.options || (item.forUser ? { forUser: true } : {});
         this.synthesizeAndPlay(item.text, item.voiceId, item.language, opts)
             .catch(err => {
                 console.error('[TTS] 队列播放失败:', err);
@@ -381,7 +383,7 @@ const MinimaxTTSService = {
         const cleanText = this.cleanText(text);
         if (!cleanText) return;
 
-        const item = { text, voiceId, language: language || 'auto', forUser };
+        const item = { text, voiceId, language: language || 'auto', forUser, options };
         if (this.isPlaying) {
             this.playQueue.push(item);
             return;

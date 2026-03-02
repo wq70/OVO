@@ -1494,10 +1494,12 @@ const VideoCallModule = {
 
             const voiceId = voiceConfig.voiceId;
             const language = voiceConfig.language;
+            const speed = voiceConfig.speed;
+            const opts = speed != null ? { speed: speed } : {};
 
             // 通话中：排队播放，播完一句再播下一句，不打断、不重复消耗
             if (fromAutoPlay && this.state.isCallActive) {
-                MinimaxTTSService.synthesizeAndPlayQueued(content, voiceId, language);
+                MinimaxTTSService.synthesizeAndPlayQueued(content, voiceId, language, opts);
                 return;
             }
 
@@ -1505,7 +1507,7 @@ const VideoCallModule = {
             if (!fromAutoPlay) {
                 showToast('🔊 正在播放...');
             }
-            await MinimaxTTSService.synthesizeAndPlay(content, voiceId, language);
+            await MinimaxTTSService.synthesizeAndPlay(content, voiceId, language, opts);
 
         } catch (err) {
             console.error('[VideoCall] TTS 播放失败:', err);
