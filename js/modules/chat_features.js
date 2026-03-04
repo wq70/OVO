@@ -200,7 +200,21 @@ function setupWalletSystem() {
         }
         if (typeof addPiggyTransaction === 'function') {
             const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
-            const toName = currentChatType === 'private' ? (chat && chat.realName) : (chat && chat.me && chat.me.nickname);
+            let toName = '';
+            if (currentChatType === 'private') {
+                toName = chat && chat.realName;
+            } else {
+                // 群聊中，获取所有接收转账的角色名称
+                if (typeof currentGroupAction !== 'undefined' && currentGroupAction.recipients && currentGroupAction.recipients.length > 0) {
+                    const recipientNames = currentGroupAction.recipients.map(recipientId => {
+                        const recipient = chat.members.find(m => m.id === recipientId);
+                        return recipient ? (recipient.realName || recipient.groupNickname || '') : '';
+                    }).filter(name => name).join('、');
+                    toName = recipientNames || '';
+                } else {
+                    toName = chat && chat.me && chat.me.nickname;
+                }
+            }
             addPiggyTransaction({ type: 'expense', amount: totalDeduct, remark: remark || '转账', source: '转账', charName: toName || '' });
         }
         sendMyTransfer(amountStr, remark);
@@ -237,7 +251,8 @@ function sendMyTransfer(amount, remark) {
                             content: content,
                             parts: [{type: 'text', text: content}],
                             timestamp: Date.now(),
-                            senderId: 'user_me'
+                            senderId: 'user_me',
+                            transferStatus: 'pending'
                         };
                         chat.history.push(message);
                         addMessageBubble(message, currentChatId, currentChatType);
@@ -263,41 +278,100 @@ function parseTransferAmountFromContent(content) {
 
 async function respondToTransfer(action) {
     if (!currentTransferMessageId) return;
-    const character = db.characters.find(c => c.id === currentChatId);
-    const message = character.history.find(m => m.id === currentTransferMessageId);
-    if (message) {
-        message.transferStatus = action;
-        const cardOnScreen = messageArea.querySelector(`.message-wrapper[data-id="${currentTransferMessageId}"] .transfer-card`);
-        if (cardOnScreen) {
-            cardOnScreen.classList.remove('received', 'returned');
-            cardOnScreen.classList.add(action);
-            cardOnScreen.querySelector('.transfer-status').textContent = action === 'received' ? '已收款' : '已退回';
-            cardOnScreen.style.cursor = 'default';
-        }
-        if (typeof addPiggyTransaction === 'function' && action === 'received') {
-            const amount = parseTransferAmountFromContent(message.content);
-            if (amount > 0) {
-                addPiggyTransaction({
-                    type: 'income',
-                    amount,
-                    remark: '收款',
-                    source: '聊天',
-                    charName: character.realName || ''
-                });
+    
+    if (currentChatType === 'private') {
+        const character = db.characters.find(c => c.id === currentChatId);
+        const message = character.history.find(m => m.id === currentTransferMessageId);
+        if (message) {
+            message.transferStatus = action;
+            const cardOnScreen = messageArea.querySelector(`.message-wrapper[data-id="${currentTransferMessageId}"] .transfer-card`);
+            if (cardOnScreen) {
+                cardOnScreen.classList.remove('received', 'returned');
+                cardOnScreen.classList.add(action);
+                cardOnScreen.querySelector('.transfer-status').textContent = action === 'received' ? '已收款' : '已退回';
+                cardOnScreen.style.cursor = 'default';
             }
+            if (typeof addPiggyTransaction === 'function' && action === 'received') {
+                const amount = parseTransferAmountFromContent(message.content);
+                if (amount > 0) {
+                    addPiggyTransaction({
+                        type: 'income',
+                        amount,
+                        remark: '收款',
+                        source: '聊天',
+                        charName: character.realName || ''
+                    });
+                }
+            }
+            let contextMessageContent = (action === 'received') ? `[${character.myName}接收${character.realName}的转账]` : `[${character.myName}退回${character.realName}的转账]`;
+            const contextMessage = {
+                id: `msg_${Date.now()}`,
+                role: 'user',
+                content: contextMessageContent,
+                parts: [{type: 'text', text: contextMessageContent}],
+                timestamp: Date.now()
+            };
+            character.history.push(contextMessage);
+            await saveData();
+            renderChatList();
         }
-        let contextMessageContent = (action === 'received') ? `[${character.myName}接收${character.realName}的转账]` : `[${character.myName}退回${character.realName}的转账]`;
-        const contextMessage = {
-            id: `msg_${Date.now()}`,
-            role: 'user',
-            content: contextMessageContent,
-            parts: [{type: 'text', text: contextMessageContent}],
-            timestamp: Date.now()
-        };
-        character.history.push(contextMessage);
-        await saveData();
-        renderChatList();
+    } else if (currentChatType === 'group') {
+        const group = db.groups.find(g => g.id === currentChatId);
+        const message = group.history.find(m => m.id === currentTransferMessageId);
+        if (message) {
+            message.transferStatus = action;
+            const cardOnScreen = messageArea.querySelector(`.message-wrapper[data-id="${currentTransferMessageId}"] .transfer-card`);
+            if (cardOnScreen) {
+                cardOnScreen.classList.remove('received', 'returned');
+                cardOnScreen.classList.add(action);
+                cardOnScreen.querySelector('.transfer-status').textContent = action === 'received' ? '已收款' : '已退回';
+                cardOnScreen.style.cursor = 'default';
+            }
+            
+            // 解析转账信息（只处理用户接收角色转账的情况）
+            const groupTransferRegex = /\[(.*?)\s*向\s*(.*?)\s*转账：([\d.,]+)元；备注：(.*?)\]/;
+            const transferMatch = message.content.match(groupTransferRegex);
+            if (transferMatch) {
+                const from = transferMatch[1];
+                const to = transferMatch[2];
+                const amount = parseTransferAmountFromContent(message.content);
+                const myName = group.me.nickname;
+                
+                // 只处理角色向用户转账的情况（用户接收角色转账）
+                if (message.role === 'assistant' && to === myName) {
+                    if (typeof addPiggyTransaction === 'function' && action === 'received' && amount > 0) {
+                        // 用户接收角色转账
+                        const sender = group.members.find(m => (m.realName === from || m.groupNickname === from));
+                        addPiggyTransaction({
+                            type: 'income',
+                            amount,
+                            remark: '收款',
+                            source: '聊天',
+                            charName: sender ? (sender.realName || '') : ''
+                        });
+                    }
+                    
+                    // 创建上下文消息
+                    const contextMessageContent = (action === 'received') 
+                        ? `[${myName}接收${from}的转账]` 
+                        : `[${myName}退回${from}的转账]`;
+                    const contextMessage = {
+                        id: `msg_${Date.now()}`,
+                        role: 'user',
+                        content: contextMessageContent,
+                        parts: [{type: 'text', text: contextMessageContent}],
+                        timestamp: Date.now(),
+                        senderId: 'user_me'
+                    };
+                    group.history.push(contextMessage);
+                }
+            }
+            
+            await saveData();
+            renderChatList();
+        }
     }
+    
     document.getElementById('receive-transfer-actionsheet').classList.remove('visible');
     currentTransferMessageId = null;
 }

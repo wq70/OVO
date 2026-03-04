@@ -159,20 +159,38 @@ const DEFAULT_COT_PRESETS = [
 ];
 
 const globalSettingKeys = [
-    'apiSettings', 'summaryApiSettings', 'backgroundApiSettings', 'supplementPersonaApiSettings', 'wallpaper', 'homeScreenMode', 'fontUrl', 'customIcons',
+    'apiSettings', 'summaryApiSettings', 'backgroundApiSettings', 'supplementPersonaApiSettings', 'wallpaper', 'homeScreenMode', 'fontUrl', 'customIcons', 'customAppNames', 'namePresets',
     'apiPresets', 'summaryApiPresets', 'backgroundApiPresets', 'supplementPersonaApiPresets', 'bubbleCssPresets', 'myPersonaPresets', 'globalCss',
     'globalCssPresets', 'fontPresets', 'homeSignature', 'forumPosts', 'forumBindings', 'forumUserProfile', 'forumSettings', 'forumApiSettings', 'forumMessages', 'forumStrangerProfiles', 'forumFriendRequests', 'forumPendingRequestFromUser', 'pomodoroTasks', 'pomodoroSettings', 'insWidgetSettings', 'homeWidgetSettings',
-    'chatFolders', 'fontSizeScale', 'activePersonaId', 'moreProfileCardBg', 'statusBarPresets', 'themeSettings', 'themePresets', 'savedKeyboardHeight',
-    'globalSendSound', 'globalReceiveSound', 'globalIncomingCallSound', 'multiMsgSoundEnabled', 'soundPresets', 'galleryPresets', 'iconPresets', 'homeWidgetPresets', 'widgetWallpaperPresets',
+    'chatFolders', 'fontSizeScale', 'activePersonaId', 'moreProfileCardBg', 'statusBarPresets', 'regexFilterPresets', 'themeSettings', 'themePresets', 'savedKeyboardHeight',
+    'globalSendSound', 'globalReceiveSound', 'globalIncomingCallSound', 'multiMsgSoundEnabled', 'soundPresets', 'galleryPresets', 'iconPresets', 'homeWidgetPresets', 'widgetWallpaperPresets', 'voicePresets',
     'cotSettings', 'cotPresets', 'hasSeenVideoCallDisclaimer', 'hasSeenVideoCallAvatarHint',
     'favorites', 'piggyBank',
     'theaterScenarios', 'theaterPromptPresets',
-    'theaterHtmlScenarios', 'theaterHtmlPromptPresets', 'theaterMode'
+    'theaterHtmlScenarios', 'theaterHtmlPromptPresets', 'theaterMode',
+    'theaterApiSettings'
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
 
-const appVersion = "3.2";
+const appVersion = "3.4";
 const updateLog = [
+    {
+        version: "3.4",
+        date: "2026-03-04",
+        notes: [
+            "3.4微量更新：（临时起意想要更新，所以没有什么）",
+            "感谢豹豹老师再再再再次优化小剧场，现在小剧场可以HTML和独立API了！包括群聊问题、转账问题也感谢豹豹老师修复了！",
+            "————",
+            "1.稍微优化了一点点音乐界面吧，然后可以在线搜索听着玩，单独一个APP是准备后面和角色一起听分开，想做个听歌匹配陌生人",
+            "2.新增图标名字自定义，导出屏幕自定义的时候也可以导出偷看里面的APP了",
+            "3.修复冗余数据清除错误问题，修复记忆存档删除后，导入备份再次出现的问题",
+            "4.新增正则功能，主要是用来过滤八股的",
+            "5.新增删除消息的同时删除对应的状态栏和思维链",
+            "6.修复超过1000条的回顶全部点不动的BUG",
+            "7.新增时间戳样式，新增输入框增高开关",
+            "8.优化了一点点日记保存按钮样式，更加明显方便点击"
+        ]
+    },
     {
         version: "3.2",
         date: "2026-03-02",
@@ -448,6 +466,7 @@ var db = {
     worldBooks: [],
     fontUrl: '',
     customIcons: {},
+    customAppNames: {},
     apiPresets: [],
     summaryApiPresets: [],
     backgroundApiPresets: [],
@@ -486,6 +505,7 @@ var db = {
     activePersonaId: null,
     moreProfileCardBg: 'https://i.postimg.cc/XvFDdTKY/Smart-Select-20251013-023208.jpg',
     statusBarPresets: [],
+    regexFilterPresets: [],
     themeSettings: {
         global: {
             iconColor: '#000000',
@@ -698,6 +718,7 @@ const loadData = async () => {
             homeScreenMode: 'night',
             fontUrl: '',
             customIcons: {},
+            customAppNames: {},
             apiPresets: [],
             summaryApiPresets: [],
             backgroundApiPresets: [],
@@ -742,7 +763,8 @@ const loadData = async () => {
             theaterPromptPresets: [],
             theaterHtmlScenarios: [],
             theaterHtmlPromptPresets: [],
-            theaterMode: 'text'
+            theaterMode: 'text',
+            theaterApiSettings: { useTheaterApi: false, url: '', key: '', model: '' }
         };
         db[key] = settings[key] !== undefined ? settings[key] : (defaultValue[key] !== undefined ? JSON.parse(JSON.stringify(defaultValue[key])) : undefined);
     });
@@ -783,6 +805,12 @@ const loadData = async () => {
                 currentStatusRaw: '',
                 currentStatusHtml: '',
                 history: []
+            };
+        }
+        if (!c.regexFilter) {
+            c.regexFilter = {
+                enabled: false,
+                rules: []
             };
         }
         if (!c.autoReply) {

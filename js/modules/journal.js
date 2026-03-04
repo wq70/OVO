@@ -8,6 +8,7 @@ function setupMemoryJournalScreen() {
     const generateJournalForm = document.getElementById('generate-journal-form');
     const journalListContainer = document.getElementById('journal-list-container');
     const editDetailBtn = document.getElementById('edit-journal-detail-btn');
+    const saveDetailBtn = document.getElementById('save-journal-detail-btn');
     const bindWorldBookBtn = document.getElementById('bind-journal-worldbook-btn');
     // 新增元素引用
     const journalStyleModal = document.getElementById('journal-style-selection-modal');
@@ -372,7 +373,8 @@ function setupMemoryJournalScreen() {
         contentEl.style.border = 'none';
         titleEl.style.padding = '0';
         contentEl.style.padding = '0';
-        editDetailBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z" /></svg>`;
+        editDetailBtn.style.display = '';
+        saveDetailBtn.style.display = 'none';
 
         titleEl.textContent = journal.title;
         document.getElementById('journal-detail-meta').textContent = `创建于 ${formattedDate} | 消息范围: ${journal.range.start}-${journal.range.end}`;
@@ -381,42 +383,48 @@ function setupMemoryJournalScreen() {
         switchScreen('memory-journal-detail-screen');
     });
 
-    editDetailBtn.addEventListener('click', async () => {
+    editDetailBtn.addEventListener('click', () => {
         if (!currentJournalDetailId) return;
 
         const titleEl = document.getElementById('journal-detail-title');
         const contentEl = document.getElementById('journal-detail-content');
-        const isEditing = titleEl.isContentEditable;
 
-        if (isEditing) {
-            const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
-            if (!chat) return;
-            const journal = chat.memoryJournals.find(j => j.id === currentJournalDetailId);
-            if (!journal) return;
+        titleEl.setAttribute('contenteditable', 'true');
+        contentEl.setAttribute('contenteditable', 'true');
+        titleEl.style.border = '1px dashed #ccc';
+        titleEl.style.padding = '5px';
+        contentEl.style.border = '1px dashed #ccc';
+        contentEl.style.padding = '10px';
+        editDetailBtn.style.display = 'none';
+        saveDetailBtn.style.display = '';
+        titleEl.focus();
+    });
 
-            journal.title = titleEl.textContent.trim();
-            journal.content = contentEl.textContent.trim();
-            await saveData();
+    saveDetailBtn.addEventListener('click', async () => {
+        if (!currentJournalDetailId) return;
 
-            titleEl.isContentEditable = false;
-            contentEl.isContentEditable = false;
-            titleEl.style.border = 'none';
-            contentEl.style.border = 'none';
-            titleEl.style.padding = '0';
-            contentEl.style.padding = '0';
-            editDetailBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z" /></svg>`;
-            showToast('日记已保存');
-            renderJournalList(); 
-        } else {
-            titleEl.setAttribute('contenteditable', 'true');
-            contentEl.setAttribute('contenteditable', 'true');
-            titleEl.style.border = '1px dashed #ccc';
-            titleEl.style.padding = '5px';
-            contentEl.style.border = '1px dashed #ccc';
-            contentEl.style.padding = '10px';
-            editDetailBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z" /></svg>`; 
-            titleEl.focus();
-        }
+        const titleEl = document.getElementById('journal-detail-title');
+        const contentEl = document.getElementById('journal-detail-content');
+
+        const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
+        if (!chat) return;
+        const journal = chat.memoryJournals.find(j => j.id === currentJournalDetailId);
+        if (!journal) return;
+
+        journal.title = titleEl.textContent.trim();
+        journal.content = contentEl.textContent.trim();
+        await saveData();
+
+        titleEl.isContentEditable = false;
+        contentEl.isContentEditable = false;
+        titleEl.style.border = 'none';
+        contentEl.style.border = 'none';
+        titleEl.style.padding = '0';
+        contentEl.style.padding = '0';
+        saveDetailBtn.style.display = 'none';
+        editDetailBtn.style.display = '';
+        showToast('日记已保存');
+        renderJournalList();
     });
 }
 

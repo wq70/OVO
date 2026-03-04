@@ -574,7 +574,55 @@ async function deleteSelectedMessages() {
     if (selectedMessageIds.size === 0) return;
     const deletedCount = selectedMessageIds.size;
     const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
-    chat.history = chat.history.filter(m => !selectedMessageIds.has(m.id));
+
+    // 收集需要一并删除的关联消息 ID（思维链 + 状态栏消息）
+    const idsToDelete = new Set(selectedMessageIds);
+
+    for (const msgId of selectedMessageIds) {
+        const msgIndex = chat.history.findIndex(m => m.id === msgId);
+        if (msgIndex === -1) continue;
+        const msg = chat.history[msgIndex];
+
+        // 1. 如果删除的是普通 assistant 消息，查找紧邻其前面的 isThinking 消息一并删除
+        if (msg.role === 'assistant' && !msg.isThinking) {
+            for (let i = msgIndex - 1; i >= 0; i--) {
+                const prev = chat.history[i];
+                // 找到紧邻的思维链消息（时间差在 30 秒内，属于同一轮对话）
+                if (prev.isThinking && prev.role === 'assistant' && (msg.timestamp - prev.timestamp) < 30000) {
+                    idsToDelete.add(prev.id);
+                }
+                // 遇到非 thinking 的 assistant 消息或 user 消息就停止向前搜索
+                if (!prev.isThinking) break;
+            }
+            // 同时查找紧邻其后面的 isStatusUpdate 消息
+            for (let i = msgIndex + 1; i < chat.history.length; i++) {
+                const next = chat.history[i];
+                if (next.isStatusUpdate && next.role === 'assistant' && (next.timestamp - msg.timestamp) < 5000) {
+                    idsToDelete.add(next.id);
+                }
+                if (!next.isStatusUpdate && !next.isThinking) break;
+            }
+        }
+
+        // 2. 如果删除的消息带有状态栏快照，清理 statusPanel.history 中对应的条目
+        if (msg.isStatusUpdate && msg.statusSnapshot && chat.statusPanel && chat.statusPanel.history) {
+            const msgContent = msg.content;
+            chat.statusPanel.history = chat.statusPanel.history.filter(h => {
+                // 通过 raw 内容匹配：如果状态栏历史的 raw 文本包含在被删消息中，则移除
+                return !msgContent.includes(h.raw);
+            });
+            // 更新当前状态为最新的历史记录，或清空
+            if (chat.statusPanel.history.length > 0) {
+                chat.statusPanel.currentStatusHtml = chat.statusPanel.history[0].html;
+                chat.statusPanel.currentStatusRaw = chat.statusPanel.history[0].raw;
+            } else {
+                chat.statusPanel.currentStatusHtml = '';
+                chat.statusPanel.currentStatusRaw = '';
+            }
+        }
+    }
+
+    chat.history = chat.history.filter(m => !idsToDelete.has(m.id));
 
     if (currentChatType === 'private') {
         recalculateChatStatus(chat);
@@ -853,6 +901,24 @@ function setupDeleteHistoryChunk() {
             if (!pendingDeleteRange) return;
             
             const { chat, startIndex, count } = pendingDeleteRange;
+
+            // 清理被删除消息中关联的状态栏历史
+            if (currentChatType === 'private' && chat.statusPanel && chat.statusPanel.history) {
+                const deletedMsgs = chat.history.slice(startIndex, startIndex + count);
+                for (const msg of deletedMsgs) {
+                    if (msg.isStatusUpdate && msg.statusSnapshot) {
+                        chat.statusPanel.history = chat.statusPanel.history.filter(h => !msg.content.includes(h.raw));
+                    }
+                }
+                if (chat.statusPanel.history.length > 0) {
+                    chat.statusPanel.currentStatusHtml = chat.statusPanel.history[0].html;
+                    chat.statusPanel.currentStatusRaw = chat.statusPanel.history[0].raw;
+                } else {
+                    chat.statusPanel.currentStatusHtml = '';
+                    chat.statusPanel.currentStatusRaw = '';
+                }
+            }
+
             chat.history.splice(startIndex, count);
 
             if (currentChatType === 'private') {

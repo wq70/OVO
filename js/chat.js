@@ -221,8 +221,11 @@ function setupChatRoom() {
             messageInput.focus();
         }, 50);
     });
-    messageInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !isGenerating) sendMessage();
+    messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey && !isGenerating) {
+            e.preventDefault();
+            sendMessage();
+        }
     });
 
     // 监听输入框聚焦事件：自动收起底部面板，避免与键盘冲突
@@ -266,6 +269,8 @@ function setupChatRoom() {
 
         if (e.target && e.target.id === 'load-more-btn') {
             loadMoreMessages();
+        } else if (e.target && e.target.id === 'load-newer-btn') {
+            loadNewerMessages();
         } else if (isInMultiSelectMode) {
             const messageWrapper = e.target.closest('.message-wrapper');
             if (messageWrapper) {
@@ -284,6 +289,15 @@ function setupChatRoom() {
                     const playKey = wrapper ? wrapper.dataset.id : null;
                     const svc = typeof MinimaxTTSService !== 'undefined' ? MinimaxTTSService : null;
                     const state = svc ? svc.getPlayState() : {};
+
+                    // 检查角色是否启用了 TTS
+                    if (svc && currentChatId && typeof db !== 'undefined' && db.characters) {
+                        const _chat = db.characters.find(c => c.id === currentChatId);
+                        if (!_chat || !_chat.ttsConfig || !_chat.ttsConfig.chatTtsEnabled) {
+                            showToast('该角色未启用 TTS 语音');
+                            return;
+                        }
+                    }
 
                     // 当前正在播的就是这条：切换暂停/恢复，避免重复读
                     if (svc && state.currentPlayKey === playKey && state.isPlaying) {
@@ -354,13 +368,32 @@ function setupChatRoom() {
                 }
             }
             const transferCard = e.target.closest('.transfer-card.received-transfer');
-            if (transferCard && currentChatType === 'private') {
+            if (transferCard) {
                 const messageWrapper = transferCard.closest('.message-wrapper');
                 const messageId = messageWrapper.dataset.id;
-                const character = db.characters.find(c => c.id === currentChatId);
-                const message = character.history.find(m => m.id === messageId);
-                if (message && message.transferStatus === 'pending') {
-                    handleReceivedTransferClick(messageId);
+                
+                if (currentChatType === 'private') {
+                    const character = db.characters.find(c => c.id === currentChatId);
+                    const message = character.history.find(m => m.id === messageId);
+                    if (message && message.transferStatus === 'pending') {
+                        handleReceivedTransferClick(messageId);
+                    }
+                } else if (currentChatType === 'group') {
+                    const group = db.groups.find(g => g.id === currentChatId);
+                    const message = group.history.find(m => m.id === messageId);
+                    if (message && message.transferStatus === 'pending') {
+                        // 检查是否是发给用户的转账（角色向用户转账）
+                        const groupTransferRegex = /\[(.*?)\s*向\s*(.*?)\s*转账：([\d.,]+)元；备注：(.*?)\]/;
+                        const transferMatch = message.content.match(groupTransferRegex);
+                        if (transferMatch) {
+                            const to = transferMatch[2];
+                            const myName = group.me.nickname;
+                            // 只有发给用户的转账（角色向用户转账）可以点击接收
+                            if (to === myName && message.role === 'assistant') {
+                                handleReceivedTransferClick(messageId);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -388,13 +421,13 @@ function setupChatRoom() {
 
     messageArea.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        if (e.target.id === 'load-more-btn' || isInMultiSelectMode) return;
+        if (e.target.id === 'load-more-btn' || e.target.id === 'load-newer-btn' || isInMultiSelectMode) return;
         const messageWrapper = e.target.closest('.message-wrapper');
         if (!messageWrapper) return;
         handleMessageLongPress(messageWrapper, e.clientX, e.clientY);
     });
     messageArea.addEventListener('touchstart', (e) => {
-        if (e.target.id === 'load-more-btn') return;
+        if (e.target.id === 'load-more-btn' || e.target.id === 'load-newer-btn') return;
         const messageWrapper = e.target.closest('.message-wrapper');
         if (!messageWrapper) return;
         longPressTimer = setTimeout(() => {
@@ -507,6 +540,8 @@ function openChatRoom(chatId, type) {
         chatRoomScreen.classList.remove('disable-blur');
     }
 
+    applyInputExpand(chat.inputExpandEnabled || false);
+
     if (chat.showTimestamp) {
         chatRoomScreen.classList.add('show-timestamp');
     } else {
@@ -596,7 +631,8 @@ function openChatRoom(chatId, type) {
 async function sendMessage() {
     const text = messageInput.value.trim();
     if (!text || isGenerating) return;
-    messageInput.value = ''; 
+    messageInput.value = '';
+    messageInput.style.height = '';
     const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
 
     if (!chat) return;

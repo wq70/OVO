@@ -61,15 +61,27 @@ function setTheaterPromptPresets(list) {
  * 之前这里调用了未定义的 callChatCompletion，导致 “callChatCompletion is not defined”。
  * 这里复用 utils.js 的 fetchAiResponse() 发请求，然后包装成 {choices:[{message:{content}}]}。
  */
-async function callChatCompletion(apiPayload) {
-    const settings = (typeof db !== 'undefined' && db && db.apiSettings) ? db.apiSettings : null;
-    if (!settings) throw new Error('未找到 API 设置(db.apiSettings)');
+async function callChatCompletion(apiPayload, overrideSettings) {
+    // 如果提供了独立API覆盖设置，则优先使用
+    let settings;
+    if (overrideSettings && overrideSettings.url && overrideSettings.key && overrideSettings.model) {
+        settings = {
+            url: overrideSettings.url,
+            key: overrideSettings.key,
+            model: overrideSettings.model,
+            provider: 'newapi',  // 独立API默认使用 newapi 兼容模式
+            temperature: (db.apiSettings && db.apiSettings.temperature !== undefined) ? db.apiSettings.temperature : 1.0
+        };
+    } else {
+        settings = (typeof db !== 'undefined' && db && db.apiSettings) ? db.apiSettings : null;
+        if (!settings) throw new Error('未找到 API 设置(db.apiSettings)');
+    }
 
     let { url, key, model, provider } = settings;
     if (!model) model = apiPayload?.model;
 
     if (!url || !key || !model) {
-        throw new Error('请先在“api”应用中完成设置（Base URL / Key / Model）');
+        throw new Error('请先在"api"应用中完成设置（Base URL / Key / Model）');
     }
 
     const blockedDomains = (typeof BLOCKED_API_DOMAINS !== 'undefined') ? BLOCKED_API_DOMAINS : [];
@@ -222,6 +234,13 @@ function renderTheaterScenarios() {
         const category = scenario.category || '未分类';
         const checked = theaterSelectedIds.has(scenario.id);
 
+        // HTML 模式下：在卡片底部添加 iframe 缩略预览
+        const htmlPreviewHtml = (isHtml && scenario.content)
+            ? `<div class="theater-scenario-html-preview">
+                    <iframe class="theater-scenario-preview-frame" data-scenario-id="${scenario.id}" sandbox="allow-forms" referrerpolicy="no-referrer" scrolling="no" tabindex="-1"></iframe>
+               </div>`
+            : '';
+
         const cardBody = `
             <div class="theater-scenario-header">
                 <div class="theater-scenario-title">
@@ -234,7 +253,7 @@ function renderTheaterScenarios() {
                 <span>角色：${DOMPurify.sanitize(charName)}</span>
                 <span>${dateStr}</span>
             </div>
-            <div class="theater-scenario-content">${DOMPurify.sanitize(scenario.content)}</div>
+            ${isHtml ? htmlPreviewHtml : `<div class="theater-scenario-content">${DOMPurify.sanitize(scenario.content)}</div>`}
         `;
 
         if (isMultiSelect) {
@@ -271,6 +290,19 @@ function renderTheaterScenarios() {
         }
 
         scenariosList.appendChild(card);
+
+        // HTML 模式：为预览 iframe 注入内容
+        if (isHtml && scenario.content) {
+            const previewFrame = card.querySelector('.theater-scenario-preview-frame');
+            if (previewFrame) {
+                const htmlContent = String(scenario.content || '');
+                const hasBodyTag = /<body[\s>]/i.test(htmlContent);
+                const wrapped = hasBodyTag
+                    ? `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{pointer-events:none;overflow:hidden;}</style></head>${htmlContent}</html>`
+                    : `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{pointer-events:none;overflow:hidden;}</style></head><body style="margin:0;padding:8px;box-sizing:border-box;">${htmlContent}</body></html>`;
+                previewFrame.srcdoc = wrapped;
+            }
+        }
     });
 
     updateTheaterMultiSelectBar();
@@ -652,6 +684,55 @@ function populateTheaterForm() {
         contextOptions.style.display = 'none';
     }
 
+    // 恢复独立API开关状态
+    const apiToggle = document.getElementById('theater-api-toggle');
+    const apiConfigDiv = document.getElementById('theater-api-config');
+    if (apiToggle && apiConfigDiv) {
+        const savedApi = db.theaterApiSettings || {};
+        const isApiOn = savedApi.useTheaterApi || false;
+        apiToggle.setAttribute('aria-checked', String(isApiOn));
+        apiConfigDiv.style.display = isApiOn ? '' : 'none';
+        // 恢复字段值
+        const urlEl = document.getElementById('theater-api-url');
+        const keyEl = document.getElementById('theater-api-key');
+        const modelEl = document.getElementById('theater-api-model');
+        if (urlEl && savedApi.url) urlEl.value = savedApi.url;
+        if (keyEl && savedApi.key) keyEl.value = savedApi.key;
+        if (modelEl && savedApi.model) {
+            // 只在有值时重置，否则保留上次拉取的列表
+            if (savedApi.model && !modelEl.querySelector(`option[value="${savedApi.model}"]`)) {
+                modelEl.innerHTML = `<option value="${savedApi.model}">${savedApi.model}</option>`;
+            }
+            modelEl.value = savedApi.model;
+        }
+        // 刷新预设下拉
+        const presetSel = document.getElementById('theater-api-preset-select');
+        if (presetSel) {
+            presetSel.innerHTML = '<option value="">— 选择预设配置 —</option>';
+            const mainPresets = db.apiPresets || [];
+            mainPresets.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = JSON.stringify(p.data);
+                opt.textContent = p.name + '（主API预设）';
+                presetSel.appendChild(opt);
+            });
+            const subKeys = [
+                { key: 'summaryApiPresets', label: '总结API' },
+                { key: 'backgroundApiPresets', label: '后台API' },
+                { key: 'supplementPersonaApiPresets', label: '补齐人设API' }
+            ];
+            subKeys.forEach(({ key, label }) => {
+                const presets = db[key] || [];
+                presets.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = JSON.stringify(p.data);
+                    opt.textContent = p.name + `（${label}预设）`;
+                    presetSel.appendChild(opt);
+                });
+            });
+        }
+    }
+
     // 根据模式更新标题和占位文本
     const createTitle = document.getElementById('theater-create-title');
     const promptLabel = document.getElementById('theater-prompt-label');
@@ -812,15 +893,40 @@ async function generateTheaterScenario() {
             }
         }
 
+        // 检查是否使用独立API
+        const theaterApiToggleEl = document.getElementById('theater-api-toggle');
+        const useTheaterApi = theaterApiToggleEl && theaterApiToggleEl.getAttribute('aria-checked') === 'true';
+        let effectiveModel = model;
+        let overrideSettings = null;
+
+        if (useTheaterApi) {
+            const tUrl = (document.getElementById('theater-api-url')?.value || '').trim();
+            const tKey = (document.getElementById('theater-api-key')?.value || '').trim();
+            const tModel = (document.getElementById('theater-api-model')?.value || '').trim();
+            if (tUrl && tKey && tModel) {
+                overrideSettings = { url: tUrl, key: tKey, model: tModel };
+                effectiveModel = tModel;
+            } else {
+                // 也尝试从已保存的设置中读取
+                const saved = db.theaterApiSettings || {};
+                if (saved.useTheaterApi && saved.url && saved.key && saved.model) {
+                    overrideSettings = { url: saved.url, key: saved.key, model: saved.model };
+                    effectiveModel = saved.model;
+                } else {
+                    showToast('独立API配置不完整，将使用主API');
+                }
+            }
+        }
+
         const apiPayload = {
             messages: [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: finalPrompt }
             ],
-            model
+            model: effectiveModel
         };
 
-        const response = await callChatCompletion(apiPayload);
+        const response = await callChatCompletion(apiPayload, overrideSettings);
         if (response && response.choices && response.choices[0] && response.choices[0].message) {
             const content = response.choices[0].message.content.trim();
 
@@ -1969,6 +2075,181 @@ function setupTheaterSystem() {
     const htmlDeleteBtn = document.getElementById('theater-html-delete-btn');
     if (htmlDeleteBtn) {
         htmlDeleteBtn.addEventListener('click', deleteCurrentScenario);
+    }
+
+    // ====== 独立API设置 ======
+    const theaterApiToggle = document.getElementById('theater-api-toggle');
+    const theaterApiConfig = document.getElementById('theater-api-config');
+    if (theaterApiToggle && theaterApiConfig) {
+        // 恢复已保存的状态
+        const savedTheaterApi = db.theaterApiSettings || {};
+        if (savedTheaterApi.useTheaterApi) {
+            theaterApiToggle.setAttribute('aria-checked', 'true');
+            theaterApiConfig.style.display = '';
+        }
+
+        if (!theaterApiToggle._theaterApiBound) {
+            theaterApiToggle._theaterApiBound = true;
+            const toggleHandler = () => {
+                const isOn = theaterApiToggle.getAttribute('aria-checked') === 'true';
+                const newState = !isOn;
+                theaterApiToggle.setAttribute('aria-checked', String(newState));
+                theaterApiConfig.style.display = newState ? '' : 'none';
+            };
+            theaterApiToggle.addEventListener('click', toggleHandler);
+            theaterApiToggle.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleHandler(); }
+            });
+        }
+    }
+
+    // 填充 API 预设下拉（读取主 API 预设 + 各副 API 预设）
+    const theaterApiPresetSelect = document.getElementById('theater-api-preset-select');
+    if (theaterApiPresetSelect) {
+        theaterApiPresetSelect.innerHTML = '<option value="">— 选择预设配置 —</option>';
+        const mainPresets = db.apiPresets || [];
+        mainPresets.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = JSON.stringify(p.data);
+            opt.textContent = p.name + '（主API预设）';
+            theaterApiPresetSelect.appendChild(opt);
+        });
+
+        // 也加入副API预设
+        const subKeys = [
+            { key: 'summaryApiPresets', label: '总结API' },
+            { key: 'backgroundApiPresets', label: '后台API' },
+            { key: 'supplementPersonaApiPresets', label: '补齐人设API' }
+        ];
+        subKeys.forEach(({ key, label }) => {
+            const presets = db[key] || [];
+            presets.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = JSON.stringify(p.data);
+                opt.textContent = p.name + `（${label}预设）`;
+                theaterApiPresetSelect.appendChild(opt);
+            });
+        });
+
+        theaterApiPresetSelect.addEventListener('change', () => {
+            if (!theaterApiPresetSelect.value) return;
+            try {
+                const data = JSON.parse(theaterApiPresetSelect.value);
+                const urlEl = document.getElementById('theater-api-url');
+                const keyEl = document.getElementById('theater-api-key');
+                const modelEl = document.getElementById('theater-api-model');
+                if (urlEl && data.apiUrl !== undefined) urlEl.value = data.apiUrl || data.url || '';
+                if (urlEl && data.url !== undefined && !data.apiUrl) urlEl.value = data.url || '';
+                if (keyEl && data.apiKey !== undefined) keyEl.value = data.apiKey || data.key || '';
+                if (keyEl && data.key !== undefined && !data.apiKey) keyEl.value = data.key || '';
+                if (modelEl && (data.model)) {
+                    modelEl.innerHTML = `<option value="${data.model}">${data.model}</option>`;
+                    modelEl.value = data.model;
+                }
+                showToast('已应用预设配置');
+            } catch (err) {
+                console.error('应用预设失败', err);
+            }
+        });
+    }
+
+    // 恢复已保存的独立API字段值
+    const savedTheaterApiSettings = db.theaterApiSettings || {};
+    if (savedTheaterApiSettings.url) {
+        const urlEl = document.getElementById('theater-api-url');
+        if (urlEl) urlEl.value = savedTheaterApiSettings.url;
+    }
+    if (savedTheaterApiSettings.key) {
+        const keyEl = document.getElementById('theater-api-key');
+        if (keyEl) keyEl.value = savedTheaterApiSettings.key;
+    }
+    if (savedTheaterApiSettings.model) {
+        const modelEl = document.getElementById('theater-api-model');
+        if (modelEl) {
+            modelEl.innerHTML = `<option value="${savedTheaterApiSettings.model}">${savedTheaterApiSettings.model}</option>`;
+            modelEl.value = savedTheaterApiSettings.model;
+        }
+    }
+
+    // 拉取模型按钮
+    const theaterApiFetchBtn = document.getElementById('theater-api-fetch-models-btn');
+    if (theaterApiFetchBtn) {
+        theaterApiFetchBtn.addEventListener('click', async () => {
+            const urlEl = document.getElementById('theater-api-url');
+            const keyEl = document.getElementById('theater-api-key');
+            const modelEl = document.getElementById('theater-api-model');
+            if (!urlEl || !keyEl || !modelEl) return;
+
+            let apiUrl = urlEl.value.trim();
+            const apiKey = keyEl.value.trim();
+            if (!apiUrl || !apiKey) {
+                showToast('请先填写API地址和密钥！');
+                return;
+            }
+
+            const blockedDomains = (typeof BLOCKED_API_DOMAINS !== 'undefined') ? BLOCKED_API_DOMAINS : [];
+            if (blockedDomains.some(domain => apiUrl.includes(domain))) {
+                showToast('该API站点已被屏蔽，无法使用！');
+                return;
+            }
+
+            if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
+            const endpoint = `${apiUrl}/v1/models`;
+
+            theaterApiFetchBtn.disabled = true;
+            const origText = theaterApiFetchBtn.textContent;
+            theaterApiFetchBtn.textContent = '拉取中...';
+
+            try {
+                const resp = await fetch(endpoint, {
+                    headers: { 'Authorization': `Bearer ${apiKey}` }
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                const models = (json.data || []).map(m => m.id).filter(Boolean).sort();
+                if (models.length === 0) {
+                    showToast('未找到可用模型');
+                    return;
+                }
+                const currentVal = modelEl.value;
+                modelEl.innerHTML = '';
+                models.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m;
+                    modelEl.appendChild(opt);
+                });
+                if (models.includes(currentVal)) {
+                    modelEl.value = currentVal;
+                }
+                showToast(`成功拉取 ${models.length} 个模型`);
+            } catch (err) {
+                console.error('拉取模型失败', err);
+                showToast('拉取模型失败：' + (err.message || '未知错误'));
+            } finally {
+                theaterApiFetchBtn.disabled = false;
+                theaterApiFetchBtn.textContent = origText;
+            }
+        });
+    }
+
+    // 保存独立API设置
+    const theaterApiSaveBtn = document.getElementById('theater-api-save-btn');
+    if (theaterApiSaveBtn) {
+        theaterApiSaveBtn.addEventListener('click', async () => {
+            const toggle = document.getElementById('theater-api-toggle');
+            const urlEl = document.getElementById('theater-api-url');
+            const keyEl = document.getElementById('theater-api-key');
+            const modelEl = document.getElementById('theater-api-model');
+            db.theaterApiSettings = {
+                useTheaterApi: toggle ? toggle.getAttribute('aria-checked') === 'true' : false,
+                url: (urlEl && urlEl.value.trim()) || '',
+                key: (keyEl && keyEl.value.trim()) || '',
+                model: (modelEl && modelEl.value.trim()) || ''
+            };
+            await saveData();
+            showToast('独立API设置已保存！');
+        });
     }
 
     // 初次渲染列表

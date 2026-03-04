@@ -1,5 +1,18 @@
 // --- 消息渲染模块 ---
 
+// 根据时间戳格式设置生成时间字符串
+function formatTimestampByFormat(timestamp, chat) {
+    const d = new Date(timestamp);
+    const fmt = chat.timestampFormat || 'hm';
+    if (fmt === 'hms') {
+        return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+    if (fmt === 'ymd') {
+        return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
+    }
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function renderMessages(isLoadMore = false, forceScrollToBottom = false) {
     const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
     if (!chat || !chat.history) return;
@@ -80,6 +93,8 @@ function renderMessages(isLoadMore = false, forceScrollToBottom = false) {
     });
     const existingLoadBtn = document.getElementById('load-more-btn');
     if (existingLoadBtn) existingLoadBtn.remove();
+    const existingLoadNewerBtn = document.getElementById('load-newer-btn');
+    if (existingLoadNewerBtn) existingLoadNewerBtn.remove();
     messageArea.prepend(fragment);
     
     if (totalMessages > currentPage * pageSize) {
@@ -88,6 +103,14 @@ function renderMessages(isLoadMore = false, forceScrollToBottom = false) {
         loadMoreButton.className = 'load-more-btn';
         loadMoreButton.textContent = '加载更早的消息';
         messageArea.prepend(loadMoreButton);
+    }
+    // 当不在最新页时，显示"加载更新的消息"按钮
+    if (currentPage > 1) {
+        const loadNewerButton = document.createElement('button');
+        loadNewerButton.id = 'load-newer-btn';
+        loadNewerButton.className = 'load-more-btn';
+        loadNewerButton.textContent = '加载更新的消息';
+        messageArea.appendChild(loadNewerButton);
     }
     if (forceScrollToBottom) {
         setTimeout(() => {
@@ -109,6 +132,16 @@ function loadMoreMessages() {
     renderMessages(true, false);
 }
 
+function loadNewerMessages() {
+    if (currentPage > 1) {
+        currentPage--;
+        renderMessages(false, false);
+        // 滚动到顶部以便用户从上往下阅读
+        const area = document.getElementById('message-area');
+        if (area) area.scrollTop = 0;
+    }
+}
+
 function createMessageBubbleElement(message, isContinuous = false) {
     const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
     // 这里需要把 isThinking 从 message 里解构出来
@@ -123,8 +156,8 @@ function createMessageBubbleElement(message, isContinuous = false) {
         isThinking = true;
     }
 
-    // 拦截：如果是状态更新或思考过程，且没开调试模式，直接不渲染
-    if ((isStatusUpdate || isThinking) && !isDebugMode) return null;
+    // 拦截：如果是状态更新、思考过程或转账指令消息，且没开调试模式，直接不渲染
+    if ((isStatusUpdate || isThinking || message.isTransferAction) && !isDebugMode) return null;
 
     // ... 后续代码不变 ...
 
@@ -214,7 +247,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
 
         const bubbleRow = document.createElement('div');
         bubbleRow.className = 'message-bubble-row';
-        const timeString = `${pad(new Date(timestamp).getHours())}:${pad(new Date(timestamp).getMinutes())}`;
+        const timeString = formatTimestampByFormat(timestamp, chat);
         
         const bubbleElement = document.createElement('div');
         bubbleElement.className = 'message-bubble received bilingual-bubble';
@@ -427,7 +460,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
         }
         bubbleTheme = theme.received;
     }
-    const timeString = `${pad(new Date(timestamp).getHours())}:${pad(new Date(timestamp).getMinutes())}`;
+    const timeString = formatTimestampByFormat(timestamp, chat);
     wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
     if (message.isContextDisabled) wrapper.classList.add('context-disabled');
     if (currentChatType === 'group' && !isSent) {
@@ -913,7 +946,22 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
             statusText = '已退回';
             bubbleElement.classList.add('returned');
         }
-        if ((transferStatus !== 'pending' && currentChatType === 'private') || currentChatType === 'group') {
+        // 在群聊中，如果是待处理的转账且是发给用户的，应该可以点击
+        if (currentChatType === 'group') {
+            if (transferStatus === 'pending' && groupTransferMatch) {
+                const to = groupTransferMatch[2];
+                const myName = chat.me.nickname;
+                const isToMe = (to === myName);
+                // 只有发给用户的转账（角色向用户转账）可以点击接收
+                if (isToMe && !isSent) {
+                    bubbleElement.style.cursor = 'pointer';
+                } else {
+                    bubbleElement.style.cursor = 'default';
+                }
+            } else {
+                bubbleElement.style.cursor = 'default';
+            }
+        } else if (transferStatus !== 'pending' && currentChatType === 'private') {
             bubbleElement.style.cursor = 'default';
         }
         const remarkHTML = remarkText ? `<p class="transfer-remark">${remarkText}</p>` : '';
@@ -1425,6 +1473,89 @@ function addMessageBubble(message, targetChatId, targetChatType) {
         }
     } else { 
         const group = db.groups.find(g => g.id === currentChatId);
+        
+        // 处理群聊中的转账接收/退回（角色接收用户转账）
+        if (message.role === 'assistant') {
+            // 检查是否是角色接收/退回转账的消息格式：[角色名接收用户名的转账] 或 [角色名退回用户名的转账]
+            const transferActionRegex = /\[(.*?)(接收|退回)(.*?)的转账\]/;
+            const actionMatch = message.content.match(transferActionRegex);
+            
+            if (actionMatch) {
+                const receiverName = actionMatch[1].trim();
+                const action = actionMatch[2];
+                const senderName = actionMatch[3].trim();
+                const statusToSet = action === '接收' ? 'received' : 'returned';
+                
+                // 查找最近的待处理转账消息（用户向角色转账）
+                const groupTransferRegex = /\[(.*?)\s*向\s*(.*?)\s*转账：([\d.,]+)元；备注：(.*?)\]/;
+                const lastPendingTransferIndex = group.history.slice().reverse().findIndex(m => {
+                    if (m.id === message.id) return false; // 排除当前消息
+                    const mTransferMatch = m.content.match(groupTransferRegex);
+                    if (!mTransferMatch) return false;
+                    
+                    const mFrom = mTransferMatch[1].trim();
+                    const mTo = mTransferMatch[2].trim();
+                    
+                    // 查找用户向角色转账的待处理消息
+                    // 需要匹配：1. 是用户发送的消息 2. 发送者是用户 3. 接收者是角色（通过名称匹配） 4. 状态是pending
+                    const isUserMessage = m.role === 'user' && m.senderId === 'user_me';
+                    const isFromUser = mFrom === group.me.nickname;
+                    
+                    // 检查接收者名称是否匹配角色名（支持 realName 和 groupNickname）
+                    const isToReceiver = group.members.some(mem => {
+                        const memRealName = (mem.realName || '').trim();
+                        const memGroupNickname = (mem.groupNickname || '').trim();
+                        const toName = (mTo || '').trim();
+                        const receiverNameTrimmed = (receiverName || '').trim();
+                        
+                        // 转账消息中的接收者名称匹配角色的 realName 或 groupNickname
+                        const toMatchesChar = (toName === memRealName || toName === memGroupNickname);
+                        // 接收转账消息中的角色名匹配角色的 realName 或 groupNickname
+                        const receiverMatchesChar = (receiverNameTrimmed === memRealName || receiverNameTrimmed === memGroupNickname);
+                        
+                        return toMatchesChar && receiverMatchesChar;
+                    });
+                    
+                    const isPending = m.transferStatus === 'pending';
+                    
+                    return isUserMessage && isFromUser && isToReceiver && isPending;
+                });
+                
+                if (lastPendingTransferIndex !== -1) {
+                    const actualIndex = group.history.length - 1 - lastPendingTransferIndex;
+                    const transferMsg = group.history[actualIndex];
+                    transferMsg.transferStatus = statusToSet;
+                    
+                    // 如果是退回，需要更新存钱罐（退回给用户）
+                    if (statusToSet === 'returned' && typeof addPiggyTransaction === 'function') {
+                        const amountMatch = transferMsg.content && transferMsg.content.match(/转账[：:]\s*([\d.,]+)\s*元/);
+                        const amount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '.')) : 0;
+                        if (amount > 0) {
+                            addPiggyTransaction({ 
+                                type: 'income', 
+                                amount, 
+                                remark: '转账退回', 
+                                source: '聊天', 
+                                charName: receiverName || '' 
+                            });
+                        }
+                    }
+                    
+                    // 更新界面上的转账卡片
+                    const transferCardOnScreen = messageArea.querySelector(`.message-wrapper[data-id="${transferMsg.id}"] .transfer-card`);
+                    if (transferCardOnScreen) {
+                        transferCardOnScreen.classList.remove('received', 'returned');
+                        transferCardOnScreen.classList.add(statusToSet);
+                        const statusElem = transferCardOnScreen.querySelector('.transfer-status');
+                        if (statusElem) statusElem.textContent = statusToSet === 'received' ? '已收款' : '已退回';
+                        transferCardOnScreen.style.cursor = 'default';
+                    }
+                }
+                // 转账指令消息本身不渲染为可见气泡，直接返回
+                return;
+            }
+        }
+        
         let isContinuous = false;
         let invisibleRegex;
         if (group.showStatusUpdateMsg) {

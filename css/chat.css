@@ -1368,7 +1368,8 @@
     align-items: center;
 }
 
-.message-input-area input {
+.message-input-area input,
+.message-input-area textarea#message-input {
     width: 100%;
     border: none;
     padding: 8px 12px;
@@ -1378,11 +1379,31 @@
     min-width: 0;
     font-size: calc(16px * var(--app-font-scale));
     height: 36px;
+    font-family: inherit;
+    resize: none;
+    overflow: hidden;
+    line-height: 20px;
+    box-sizing: border-box;
 }
 
-.message-input-area input:focus {
+.message-input-area input:focus,
+.message-input-area textarea#message-input:focus {
     outline: none;
     background-color: #ebebeb;
+}
+
+.message-input-area:has(textarea#message-input.input-expand-active) {
+    align-items: flex-end;
+}
+
+.message-input-area:has(textarea#message-input.input-expand-active) .input-wrapper {
+    align-items: flex-end;
+}
+
+.message-input-area textarea#message-input.input-expand-active {
+    min-height: 36px;
+    max-height: 120px;
+    overflow-y: auto;
 }
 
 .message-input-area .icon-btn {

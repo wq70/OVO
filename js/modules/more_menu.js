@@ -15,9 +15,10 @@ function initMoreMenu() {
         }
     }
 
-    const menuGrid = document.querySelector('.menu-grid');
-    if (!menuGrid) return;
+    const menuGrids = document.querySelectorAll('.menu-grid');
+    if (!menuGrids.length) return;
 
+    menuGrids.forEach(menuGrid => {
     menuGrid.addEventListener('click', (e) => {
         const item = e.target.closest('.menu-item');
         if (!item) return;
@@ -30,7 +31,11 @@ function initMoreMenu() {
         } else if (action === 'star') {
             if (typeof openFavoritesScreen === 'function') openFavoritesScreen();
             else showToast('收藏功能加载中…');
+        } else if (action === 'regex-filter') {
+            if (typeof openRegexFilterManager === 'function') openRegexFilterManager();
+            else showToast('正则过滤功能加载中…');
         }
+    });
     });
 
     // 绑定状态栏管理界面的按钮事件
@@ -56,6 +61,9 @@ function initMoreMenu() {
 initStatusBarPreview();
 
     if (typeof initFavoritesScreen === 'function') initFavoritesScreen();
+
+    // 初始化正则过滤模块
+    if (typeof initRegexFilter === 'function') initRegexFilter();
 }
 
 // 简单的 HTML 转义函数

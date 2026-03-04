@@ -233,6 +233,25 @@
     min-width: 0;
 }
 
+/* HTML 模式列表卡片内的 iframe 缩略预览 */
+.theater-scenario-html-preview {
+    margin-top: 10px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 0.5px solid rgba(0, 0, 0, 0.06);
+    background: #ffffff;
+    height: 180px;
+    position: relative;
+}
+
+.theater-scenario-preview-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    pointer-events: none;
+    display: block;
+}
+
 .theater-empty-state {
     text-align: center;
     padding: 40px 20px;
@@ -600,8 +619,8 @@
 
 .theater-detail-actions {
     display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
+    flex-wrap: nowrap;
+    gap: 8px;
     margin-top: 24px;
     padding-top: 20px;
     border-top: 0.5px solid rgba(0, 0, 0, 0.08);
@@ -609,19 +628,20 @@
 
 /* 详情页操作按钮统一样式 - iOS风格，与正文明显区分 */
 .theater-detail-actions .theater-action-btn {
-    padding: 12px 20px;
+    padding: 10px 0;
     border-radius: 10px;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
     white-space: nowrap;
-    flex-shrink: 0;
+    flex: 1;
     min-width: 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     position: relative;
     overflow: hidden;
+    text-align: center;
 }
 
 .theater-detail-actions .theater-action-btn::before {
@@ -640,9 +660,12 @@
     opacity: 1;
 }
 
-.theater-detail-actions .btn {
-    flex: 1;
-    min-width: 0;
+/* 隐藏的保存按钮不占空间 */
+.theater-detail-actions .theater-action-btn[style*="display: none"] {
+    flex: 0;
+    padding: 0;
+    border: none;
+    box-shadow: none;
 }
 
 /* 编辑、分享：浅粉色风格按钮 */
@@ -1351,4 +1374,31 @@
     color: #1d1d1f;
     line-height: 1.75;
     word-wrap: break-word;
+}
+
+/* 独立API设置区域 */
+.theater-api-config {
+    margin-top: 12px;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 0.5px solid rgba(255, 192, 203, 0.3);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: theaterSlideDown 0.25s ease;
+}
+
+.theater-api-preset-row,
+.theater-api-field-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.theater-api-preset-row label,
+.theater-api-field-row label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #555;
 }

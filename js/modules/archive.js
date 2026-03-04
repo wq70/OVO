@@ -57,6 +57,7 @@ async function loadArchive(archiveId) {
 async function deleteArchives(archiveIds) {
     if (!archiveIds || archiveIds.length === 0) return;
     db.archives = db.archives.filter(a => !archiveIds.includes(a.id));
+    if (dexieDB.archives) await dexieDB.archives.bulkDelete(archiveIds);
     await saveData();
     selectedArchiveIds.clear();
     archiveMultiSelectMode = false;

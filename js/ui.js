@@ -342,6 +342,7 @@ let currentPageIndex = 0;
 
 function setupHomeScreen() {
     const getIcon = (id) => db.customIcons[id] || defaultIcons[id].url;
+    const getName = (id) => (db.customAppNames && db.customAppNames[id]) || defaultIcons[id].name;
     if (!db.insWidgetSettings) {
         db.insWidgetSettings = {
             avatar1: 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg',
@@ -403,12 +404,12 @@ function setupHomeScreen() {
                         </div>
                    </div>
                 </div>
-                <a href="#" class="app-icon" data-target="chat-list-screen"><img src="${getIcon('chat-list-screen')}" alt="404" class="icon-img"><span class="app-name">${defaultIcons['chat-list-screen'].name}</span></a>
-                <a href="#" class="app-icon" data-target="api-settings-screen"><img src="${getIcon('api-settings-screen')}" alt="API" class="icon-img"><span class="app-name">${defaultIcons['api-settings-screen'].name}</span></a>
-                <a href="#" class="app-icon" data-target="wallpaper-screen"><img src="${getIcon('wallpaper-screen')}" alt="Wallpaper" class="icon-img"><span class="app-name">${defaultIcons['wallpaper-screen'].name}</span></a>
-                <a href="#" class="app-icon" data-target="world-book-screen"><img src="${getIcon('world-book-screen')}" alt="World Book" class="icon-img"><span class="app-name">${defaultIcons['world-book-screen'].name}</span></a>
-                <a href="#" class="app-icon" data-target="customize-screen"><img src="${getIcon('customize-screen')}" alt="Customize" class="icon-img"><span class="app-name">${defaultIcons['customize-screen'].name}</span></a>
-                <a href="#" class="app-icon" data-target="tutorial-screen"><img src="${getIcon('tutorial-screen')}" alt="Tutorial" class="icon-img"><span class="app-name">${defaultIcons['tutorial-screen'].name}</span></a>
+                <a href="#" class="app-icon" data-target="chat-list-screen"><img src="${getIcon('chat-list-screen')}" alt="404" class="icon-img"><span class="app-name">${getName('chat-list-screen')}</span></a>
+                <a href="#" class="app-icon" data-target="api-settings-screen"><img src="${getIcon('api-settings-screen')}" alt="API" class="icon-img"><span class="app-name">${getName('api-settings-screen')}</span></a>
+                <a href="#" class="app-icon" data-target="wallpaper-screen"><img src="${getIcon('wallpaper-screen')}" alt="Wallpaper" class="icon-img"><span class="app-name">${getName('wallpaper-screen')}</span></a>
+                <a href="#" class="app-icon" data-target="world-book-screen"><img src="${getIcon('world-book-screen')}" alt="World Book" class="icon-img"><span class="app-name">${getName('world-book-screen')}</span></a>
+                <a href="#" class="app-icon" data-target="customize-screen"><img src="${getIcon('customize-screen')}" alt="Customize" class="icon-img"><span class="app-name">${getName('customize-screen')}</span></a>
+                <a href="#" class="app-icon" data-target="tutorial-screen"><img src="${getIcon('tutorial-screen')}" alt="Tutorial" class="icon-img"><span class="app-name">${getName('tutorial-screen')}</span></a>
                 <div class="heart-photo-widget"></div>
             </div>
         </div>
@@ -417,27 +418,27 @@ function setupHomeScreen() {
              <div class="app-grid">
                 <a href="#" class="app-icon" data-target="pomodoro-screen">
                     <img src="${getIcon('pomodoro-screen')}" alt="番茄钟" class="icon-img">
-                    <span class="app-name">${defaultIcons['pomodoro-screen'].name}</span>
+                    <span class="app-name">${getName('pomodoro-screen')}</span>
                 </a>
                 <a href="#" class="app-icon" data-target="forum-screen">
                     <img src="${getIcon('forum-screen')}" alt="论坛" class="icon-img">
-                    <span class="app-name">${defaultIcons['forum-screen'].name}</span>
+                    <span class="app-name">${getName('forum-screen')}</span>
                 </a>
                 <a href="#" class="app-icon" data-target="piggy-bank-screen">
                     <img src="${getIcon('piggy-bank-screen')}" alt="存钱罐" class="icon-img">
-                    <span class="app-name">${defaultIcons['piggy-bank-screen'].name}</span>
+                    <span class="app-name">${getName('piggy-bank-screen')}</span>
                 </a>
                 <a href="#" class="app-icon" data-target="music-screen">
                     <img src="${getIcon('music-screen')}" alt="音乐" class="icon-img">
-                    <span class="app-name">${defaultIcons['music-screen'].name}</span>
+                    <span class="app-name">${getName('music-screen')}</span>
                 </a>
                 <a href="#" class="app-icon" data-target="theater-screen">
                     <img src="${getIcon('theater-screen')}" alt="小剧场" class="icon-img">
-                    <span class="app-name">${defaultIcons['theater-screen'].name}</span>
+                    <span class="app-name">${getName('theater-screen')}</span>
                 </a>
                 <a href="#" class="app-icon" data-target="appearance-settings-screen">
                     <img src="${getIcon('appearance-settings-screen')}" alt="外观" class="icon-img">
-                    <span class="app-name">${defaultIcons['appearance-settings-screen'].name}</span>
+                    <span class="app-name">${getName('appearance-settings-screen')}</span>
                 </a>
              </div>
         </div>
@@ -714,6 +715,28 @@ function applyGlobalCss(css) {
 
 function applyFontSize(scale) {
     document.documentElement.style.setProperty('--app-font-scale', scale);
+}
+
+// 输入框增高：切换自动增高模式
+function applyInputExpand(enabled) {
+    const ta = document.getElementById('message-input');
+    if (!ta) return;
+    if (enabled) {
+        ta.classList.add('input-expand-active');
+        ta.removeEventListener('input', _autoResizeInput);
+        ta.addEventListener('input', _autoResizeInput);
+        // 立即调整当前内容高度
+        _autoResizeInput.call(ta);
+    } else {
+        ta.classList.remove('input-expand-active');
+        ta.removeEventListener('input', _autoResizeInput);
+        ta.style.height = '';
+    }
+}
+
+function _autoResizeInput() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 }
 
 // 统一面板控制函数

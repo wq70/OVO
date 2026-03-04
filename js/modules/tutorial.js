@@ -890,6 +890,24 @@ function renderTutorialContent() {
             let cleanCount = 0;
             const report = [];
 
+            // 先收集世界书引用（在删除角色/群聊之前），避免误删被引用的世界书
+            const usedWorldBookIds = new Set();
+            if (db.characters && Array.isArray(db.characters)) {
+                db.characters.forEach(char => {
+                    if (char.worldBookIds && Array.isArray(char.worldBookIds)) {
+                        char.worldBookIds.forEach(id => usedWorldBookIds.add(id));
+                    }
+                });
+            }
+            if (db.groups && Array.isArray(db.groups)) {
+                db.groups.forEach(group => {
+                    if (group.worldBookIds && Array.isArray(group.worldBookIds)) {
+                        group.worldBookIds.forEach(id => usedWorldBookIds.add(id));
+                    }
+                });
+            }
+
+            // 清理完全没有聊天记录的角色（保留有greeting等至少1条消息的角色）
             if (db.characters && Array.isArray(db.characters)) {
                 const beforeCount = db.characters.length;
                 db.characters = db.characters.filter(char => {
@@ -916,22 +934,8 @@ function renderTutorialContent() {
                 }
             }
 
+            // 使用之前收集的引用来清理世界书
             if (db.worldBooks && Array.isArray(db.worldBooks)) {
-                const usedWorldBookIds = new Set();
-                if (db.characters) {
-                    db.characters.forEach(char => {
-                        if (char.worldBookIds && Array.isArray(char.worldBookIds)) {
-                            char.worldBookIds.forEach(id => usedWorldBookIds.add(id));
-                        }
-                    });
-                }
-                if (db.groups) {
-                    db.groups.forEach(group => {
-                        if (group.worldBookIds && Array.isArray(group.worldBookIds)) {
-                            group.worldBookIds.forEach(id => usedWorldBookIds.add(id));
-                        }
-                    });
-                }
                 const beforeCount = db.worldBooks.length;
                 db.worldBooks = db.worldBooks.filter(wb => usedWorldBookIds.has(wb.id));
                 const removed = beforeCount - db.worldBooks.length;
@@ -941,10 +945,14 @@ function renderTutorialContent() {
                 }
             }
 
+            // 表情包：只清理真正无效的（无data字段或data为空）
             if (db.myStickers && Array.isArray(db.myStickers)) {
                 const beforeCount = db.myStickers.length;
                 db.myStickers = db.myStickers.filter(sticker => {
-                    return sticker && sticker.url && String(sticker.url).trim() !== '';
+                    if (!sticker) return false;
+                    const hasData = sticker.data && String(sticker.data).trim() !== '';
+                    const hasUrl = sticker.url && String(sticker.url).trim() !== '';
+                    return hasData || hasUrl;
                 });
                 const removed = beforeCount - db.myStickers.length;
                 if (removed > 0) {
@@ -1286,13 +1294,15 @@ async function importPartialBackupData(data) {
 async function importBackupData(data) {
     const startTime = Date.now();
     try {
-        await Promise.all([
+        const clearTasks = [
             dexieDB.characters.clear(),
             dexieDB.groups.clear(),
             dexieDB.worldBooks.clear(),
             dexieDB.myStickers.clear(),
             dexieDB.globalSettings.clear()
-        ]);
+        ];
+        if (dexieDB.archives) clearTasks.push(dexieDB.archives.clear());
+        await Promise.all(clearTasks);
         showToast('正在清空旧数据...');
 
         let convertedData = data;

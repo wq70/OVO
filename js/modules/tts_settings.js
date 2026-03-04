@@ -165,9 +165,11 @@ const TTSSettings = {
             const languageSelect = document.getElementById('setting-tts-language');
             const customVoiceIdInput = document.getElementById('setting-custom-voice-id');
             const speedInput = document.getElementById('setting-tts-speed');
+            const chatTtsEnabledInput = document.getElementById('setting-chat-tts-enabled');
             chat.ttsConfig.language = languageSelect?.value || 'auto';
             chat.ttsConfig.customVoiceId = customVoiceIdInput?.value?.trim() || '';
             chat.ttsConfig.speed = Math.min(2, Math.max(0.5, parseFloat(speedInput?.value) || 1));
+            chat.ttsConfig.chatTtsEnabled = chatTtsEnabledInput?.checked || false;
 
             const userLanguageSelect = document.getElementById('setting-user-tts-language');
             const userCustomVoiceIdInput = document.getElementById('setting-user-custom-voice-id');
@@ -194,6 +196,8 @@ const TTSSettings = {
             if (languageSelect) languageSelect.value = (chat.ttsConfig && chat.ttsConfig.language) || 'auto';
             const customVoiceIdInput = document.getElementById('setting-custom-voice-id');
             if (customVoiceIdInput) customVoiceIdInput.value = (chat.ttsConfig && chat.ttsConfig.customVoiceId) || '';
+            const chatTtsEnabledInput = document.getElementById('setting-chat-tts-enabled');
+            if (chatTtsEnabledInput) chatTtsEnabledInput.checked = (chat.ttsConfig && chat.ttsConfig.chatTtsEnabled) || false;
             const speedInput = document.getElementById('setting-tts-speed');
             const speedValueSpan = document.getElementById('setting-tts-speed-value');
             const charSpeed = (chat.ttsConfig && chat.ttsConfig.speed != null) ? chat.ttsConfig.speed : 1;

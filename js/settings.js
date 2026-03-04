@@ -551,10 +551,12 @@ function loadSettingsToSidebar() {
         };
 
         document.getElementById('setting-bubble-blur').checked = e.bubbleBlurEnabled !== false; 
+        document.getElementById('setting-input-expand').checked = e.inputExpandEnabled || false;
 
         document.getElementById('setting-title-layout').value = e.titleLayout || 'left';
         document.getElementById('setting-show-timestamp').checked = e.showTimestamp || false;
         document.getElementById('setting-timestamp-style').value = e.timestampStyle || 'bubble';
+        document.getElementById('setting-timestamp-format').value = e.timestampFormat || 'hm';
         document.getElementById('setting-show-status').checked = e.showStatus !== false;
         document.getElementById('setting-show-status-update-msg').checked = e.showStatusUpdateMsg || false;
 
@@ -575,6 +577,23 @@ function loadSettingsToSidebar() {
                 statusPanelContainer.style.paddingBottom = '0';
             }
         }
+
+        // 加载角色正则过滤设置
+        const rf = e.regexFilter || {};
+        document.getElementById('setting-regex-filter-enabled').checked = rf.enabled || false;
+        const rfRulesText = (rf.rules || []).map(r => r.replace ? `${r.pattern}|||${r.replace}` : r.pattern).join('\n');
+        document.getElementById('setting-regex-filter-rules').value = rfRulesText;
+        const regexFilterContainer = document.getElementById('regex-filter-settings-container');
+        if (regexFilterContainer) {
+            if (rf.enabled) {
+                regexFilterContainer.style.maxHeight = '5000px';
+                regexFilterContainer.style.paddingBottom = '20px';
+            } else {
+                regexFilterContainer.style.maxHeight = '0';
+                regexFilterContainer.style.paddingBottom = '0';
+            }
+        }
+        if (typeof populateRegexFilterPresetSelect === 'function') populateRegexFilterPresetSelect();
 
         document.getElementById('setting-shop-interaction-enabled').checked = e.shopInteractionEnabled !== false;
 
@@ -680,6 +699,8 @@ async function saveSettingsFromSidebar() {
         e.avatarRadius = parseInt(document.getElementById('setting-avatar-radius').value, 10);
 
         e.bubbleBlurEnabled = document.getElementById('setting-bubble-blur').checked;
+        e.inputExpandEnabled = document.getElementById('setting-input-expand').checked;
+        applyInputExpand(e.inputExpandEnabled);
         const chatScreen = document.getElementById('chat-room-screen');
         if (e.bubbleBlurEnabled) {
             chatScreen.classList.remove('disable-blur');
@@ -708,6 +729,8 @@ async function saveSettingsFromSidebar() {
         chatScreen.classList.remove('timestamp-style-bubble', 'timestamp-style-avatar');
         chatScreen.classList.add(`timestamp-style-${e.timestampStyle || 'bubble'}`);
 
+        e.timestampFormat = document.getElementById('setting-timestamp-format').value;
+
         e.showStatus = document.getElementById('setting-show-status').checked;
         const subtitle = document.getElementById('chat-room-subtitle');
         if (subtitle) {
@@ -723,6 +746,12 @@ async function saveSettingsFromSidebar() {
         e.statusPanel.replacePattern = document.getElementById('setting-status-replace').value;
         const historyLimitInput = parseInt(document.getElementById('setting-status-history-limit').value, 10);
         e.statusPanel.historyLimit = isNaN(historyLimitInput) ? 3 : historyLimitInput;
+
+        // 保存角色正则过滤设置
+        if (!e.regexFilter) e.regexFilter = {};
+        e.regexFilter.enabled = document.getElementById('setting-regex-filter-enabled').checked;
+        const rfRulesText = document.getElementById('setting-regex-filter-rules').value;
+        e.regexFilter.rules = (typeof parseRegexFilterRulesText === 'function') ? parseRegexFilterRulesText(rfRulesText) : [];
 
         e.shopInteractionEnabled = document.getElementById('setting-shop-interaction-enabled').checked;
 
@@ -1983,6 +2012,16 @@ function setupPresetFeatures() {
         document.getElementById('icon-presets-modal').style.display = 'none';
     });
 
+    const voicePresetModalClose = document.getElementById('voice-presets-close-modal');
+    if (voicePresetModalClose) voicePresetModalClose.addEventListener('click', () => {
+        document.getElementById('voice-presets-modal').style.display = 'none';
+    });
+
+    const namePresetModalClose = document.getElementById('name-presets-close-modal');
+    if (namePresetModalClose) namePresetModalClose.addEventListener('click', () => {
+        document.getElementById('name-presets-modal').style.display = 'none';
+    });
+
     const widgetWallpaperModalClose = document.getElementById('widget-wallpaper-presets-close-modal');
     if (widgetWallpaperModalClose) widgetWallpaperModalClose.addEventListener('click', () => {
         document.getElementById('widget-wallpaper-presets-modal').style.display = 'none';
@@ -2026,6 +2065,98 @@ function setupWallpaperApp() {
                     showToast('壁纸压缩失败');
                 }
             }
+        });
+    }
+    // 音乐播放器壁纸（在壁纸APP中管理）
+    setupMusicWallpaperInWallpaperScreen();
+}
+
+function setupMusicWallpaperInWallpaperScreen() {
+    const MUSIC_BG_KEY = 'music_player_bg';
+    const MUSIC_BG_COVER_KEY = 'music_player_bg_cover_vinyl';
+    const preview = document.getElementById('music-wallpaper-preview');
+    const previewText = document.getElementById('music-wallpaper-preview-text');
+    const localBtn = document.getElementById('music-wallpaper-local-btn');
+    const urlBtn = document.getElementById('music-wallpaper-url-btn');
+    const resetBtn = document.getElementById('music-wallpaper-reset-btn');
+    const urlRow = document.getElementById('music-wallpaper-url-row');
+    const urlInput = document.getElementById('music-wallpaper-url-input');
+    const urlApply = document.getElementById('music-wallpaper-url-apply');
+    const fileInput = document.getElementById('music-wallpaper-file-input');
+    const coverVinylCheck = document.getElementById('music-wallpaper-cover-vinyl');
+
+    function loadMBg() { try { return localStorage.getItem(MUSIC_BG_KEY) || ''; } catch (_) { return ''; } }
+    function saveMBg(v) { try { localStorage.setItem(MUSIC_BG_KEY, v || ''); } catch (_) {} }
+    function loadCover() { try { return localStorage.getItem(MUSIC_BG_COVER_KEY) === 'true'; } catch (_) { return false; } }
+    function saveCover(v) { try { localStorage.setItem(MUSIC_BG_COVER_KEY, v ? 'true' : 'false'); } catch (_) {} }
+
+    function refreshPreview() {
+        var url = loadMBg();
+        if (preview) {
+            if (url) {
+                preview.style.backgroundImage = 'url(' + url + ')';
+                if (previewText) previewText.style.display = 'none';
+            } else {
+                preview.style.backgroundImage = '';
+                if (previewText) previewText.style.display = '';
+            }
+        }
+        if (coverVinylCheck) coverVinylCheck.checked = loadCover();
+        // 同步到音乐播放器
+        if (typeof window.applyMusicBgFromWallpaper === 'function') window.applyMusicBgFromWallpaper();
+    }
+
+    refreshPreview();
+
+    if (localBtn && fileInput) {
+        localBtn.addEventListener('click', function () { fileInput.click(); });
+        fileInput.addEventListener('change', async function () {
+            var file = this.files && this.files[0];
+            if (!file) return;
+            try {
+                var dataUrl = await compressImage(file, { quality: 0.85, maxWidth: 1080, maxHeight: 1920 });
+                saveMBg(dataUrl);
+                refreshPreview();
+                showToast('音乐壁纸已更新');
+            } catch (_) {
+                showToast('图片压缩失败');
+            }
+            this.value = '';
+        });
+    }
+
+    if (urlBtn) {
+        urlBtn.addEventListener('click', function () {
+            if (urlRow) urlRow.style.display = urlRow.style.display === 'none' ? 'flex' : 'none';
+            if (urlRow && urlRow.style.display === 'flex' && urlInput) urlInput.focus();
+        });
+    }
+
+    if (urlApply && urlInput) {
+        urlApply.addEventListener('click', function () {
+            var url = urlInput.value.trim();
+            if (!url) return;
+            if (!url.startsWith('http')) { showToast('请输入有效的 http/https 链接'); return; }
+            saveMBg(url);
+            refreshPreview();
+            if (urlRow) urlRow.style.display = 'none';
+            showToast('音乐壁纸已更新');
+        });
+    }
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+            saveMBg('');
+            saveCover(false);
+            refreshPreview();
+            showToast('已恢复默认音乐背景');
+        });
+    }
+
+    if (coverVinylCheck) {
+        coverVinylCheck.addEventListener('change', function () {
+            saveCover(this.checked);
+            refreshPreview();
         });
     }
 }
@@ -2240,6 +2371,161 @@ function openSoundManageModal() {
     modal.style.display = 'flex';
 }
 
+// ========== 音色预设库 ==========
+function _getVoicePresets() {
+    return db.voicePresets || [];
+}
+function _saveVoicePresets(arr) {
+    db.voicePresets = arr || [];
+    saveData();
+}
+
+function populateVoicePresetSelect() {
+    const sel = document.getElementById('voice-preset-select');
+    if (!sel) return;
+    const presets = _getVoicePresets();
+    sel.innerHTML = '<option value="">— 选择 —</option>';
+    presets.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+    });
+}
+
+function saveCurrentVoiceAsPreset() {
+    if (typeof currentChatId === 'undefined' || !currentChatId) return showToast('请先打开一个角色');
+    const chat = db.characters && db.characters.find(c => c.id === currentChatId);
+    if (!chat || !chat.ttsConfig) return showToast('当前角色无语音配置');
+
+    const tc = chat.ttsConfig;
+    const preset = {
+        voiceId: tc.voiceId || '',
+        customVoiceId: tc.customVoiceId || '',
+        language: tc.language || 'auto',
+        speed: tc.speed != null ? tc.speed : 1,
+        userVoiceId: tc.userVoiceId || '',
+        userCustomVoiceId: tc.userCustomVoiceId || '',
+        userLanguage: tc.userLanguage || 'auto',
+        userSpeed: tc.userSpeed != null ? tc.userSpeed : 1
+    };
+
+    const name = prompt('请输入音色预设名称（将覆盖同名预设）：');
+    if (!name) return;
+
+    const presets = _getVoicePresets();
+    const idx = presets.findIndex(p => p.name === name);
+    const entry = { name, ...preset };
+    if (idx >= 0) presets[idx] = entry;
+    else presets.push(entry);
+
+    _saveVoicePresets(presets);
+    populateVoicePresetSelect();
+    showToast('音色预设已保存');
+}
+
+function applyVoicePreset(name) {
+    if (typeof currentChatId === 'undefined' || !currentChatId) return showToast('请先打开一个角色');
+    const chat = db.characters && db.characters.find(c => c.id === currentChatId);
+    if (!chat) return showToast('未找到角色');
+
+    const presets = _getVoicePresets();
+    const p = presets.find(x => x.name === name);
+    if (!p) return showToast('未找到该预设');
+
+    if (!chat.ttsConfig) chat.ttsConfig = {};
+    chat.ttsConfig.voiceId = p.voiceId || '';
+    chat.ttsConfig.customVoiceId = p.customVoiceId || '';
+    chat.ttsConfig.language = p.language || 'auto';
+    chat.ttsConfig.speed = p.speed != null ? p.speed : 1;
+    chat.ttsConfig.userVoiceId = p.userVoiceId || '';
+    chat.ttsConfig.userCustomVoiceId = p.userCustomVoiceId || '';
+    chat.ttsConfig.userLanguage = p.userLanguage || 'auto';
+    chat.ttsConfig.userSpeed = p.userSpeed != null ? p.userSpeed : 1;
+
+    saveData();
+
+    // 刷新表单 UI
+    if (typeof TTSSettings !== 'undefined') TTSSettings.loadChatTTSConfig(currentChatId);
+
+    showToast('已应用音色预设：' + name);
+}
+
+function openVoicePresetManageModal() {
+    const modal = document.getElementById('voice-presets-modal');
+    const list = document.getElementById('voice-presets-list');
+    if (!modal || !list) return;
+
+    list.innerHTML = '';
+    const presets = _getVoicePresets();
+    if (!presets.length) list.innerHTML = '<p style="color:#888;margin:6px 0;">暂无预设</p>';
+
+    presets.forEach((p, idx) => {
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.justifyContent = 'space-between';
+        row.style.alignItems = 'center';
+        row.style.padding = '8px 0';
+        row.style.borderBottom = '1px solid #f0f0f0';
+
+        const nameDiv = document.createElement('div');
+        nameDiv.style.flex = '1';
+        nameDiv.style.whiteSpace = 'nowrap';
+        nameDiv.style.overflow = 'hidden';
+        nameDiv.style.textOverflow = 'ellipsis';
+        // 显示预设名 + 简要信息
+        const voiceLabel = p.customVoiceId || p.voiceId || '未设置';
+        nameDiv.innerHTML = '<div>' + p.name + '</div><div style="font-size:11px;color:#999;">' + voiceLabel + '</div>';
+        row.appendChild(nameDiv);
+
+        const btnWrap = document.createElement('div');
+        btnWrap.style.display = 'flex';
+        btnWrap.style.gap = '6px';
+
+        const applyBtn = document.createElement('button');
+        applyBtn.className = 'btn btn-primary';
+        applyBtn.style.padding = '6px 8px;border-radius:8px';
+        applyBtn.textContent = '应用';
+        applyBtn.onclick = function () { applyVoicePreset(p.name); modal.style.display = 'none'; };
+
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'btn';
+        renameBtn.style.padding = '6px 8px;border-radius:8px';
+        renameBtn.textContent = '重命名';
+        renameBtn.onclick = function () {
+            const newName = prompt('输入新名称：', p.name);
+            if (!newName) return;
+            const all = _getVoicePresets();
+            all[idx].name = newName;
+            _saveVoicePresets(all);
+            openVoicePresetManageModal();
+            populateVoicePresetSelect();
+        };
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn';
+        deleteBtn.style.padding = '6px 8px;border-radius:8px;color:#e53935';
+        deleteBtn.textContent = '删除';
+        deleteBtn.onclick = function () {
+            if (!confirm('确认删除该预设？')) return;
+            const all = _getVoicePresets();
+            all.splice(idx, 1);
+            _saveVoicePresets(all);
+            openVoicePresetManageModal();
+            populateVoicePresetSelect();
+        };
+
+        btnWrap.appendChild(applyBtn);
+        btnWrap.appendChild(renameBtn);
+        btnWrap.appendChild(deleteBtn);
+        row.appendChild(btnWrap);
+
+        list.appendChild(row);
+    });
+
+    modal.style.display = 'flex';
+}
+
 function _getWidgetPresets() {
     return db.homeWidgetPresets || [];
 }
@@ -2358,12 +2644,22 @@ function _saveWidgetWallpaperPresets(arr) {
 }
 
 function _captureCurrentWidgetWallpaperScheme() {
+    // 收集当前角色的偷看图标
+    let peekCustomIcons = {};
+    if (typeof currentChatId !== 'undefined' && db.characters) {
+        const char = db.characters.find(c => c.id === currentChatId);
+        if (char && char.peekScreenSettings && char.peekScreenSettings.customIcons) {
+            peekCustomIcons = JSON.parse(JSON.stringify(char.peekScreenSettings.customIcons));
+        }
+    }
     return {
         wallpaper: db.wallpaper || DEFAULT_WALLPAPER_URL,
         homeWidgetSettings: JSON.parse(JSON.stringify(db.homeWidgetSettings || {})),
         homeSignature: db.homeSignature !== undefined ? db.homeSignature : DEFAULT_HOME_SIGNATURE,
         insWidgetSettings: JSON.parse(JSON.stringify(db.insWidgetSettings || DEFAULT_INS_WIDGET)),
-        customIcons: JSON.parse(JSON.stringify(db.customIcons || {}))
+        customIcons: JSON.parse(JSON.stringify(db.customIcons || {})),
+        customAppNames: JSON.parse(JSON.stringify(db.customAppNames || {})),
+        peekCustomIcons: peekCustomIcons
     };
 }
 
@@ -2405,6 +2701,21 @@ function applyWidgetWallpaperPreset(name) {
     db.insWidgetSettings = JSON.parse(JSON.stringify(p.insWidgetSettings || DEFAULT_INS_WIDGET));
     if (p.customIcons && typeof p.customIcons === 'object') {
         db.customIcons = JSON.parse(JSON.stringify(p.customIcons));
+    }
+    if (p.customAppNames && typeof p.customAppNames === 'object') {
+        db.customAppNames = JSON.parse(JSON.stringify(p.customAppNames));
+    }
+    // 应用偷看图标
+    if (p.peekCustomIcons && typeof p.peekCustomIcons === 'object' && Object.keys(p.peekCustomIcons).length > 0) {
+        if (typeof currentChatId !== 'undefined' && db.characters) {
+            const char = db.characters.find(c => c.id === currentChatId);
+            if (char) {
+                if (!char.peekScreenSettings) {
+                    char.peekScreenSettings = { wallpaper: '', customIcons: {}, unlockAvatar: '', unlockCommentsEnabled: false, charAwarePeek: false, refreshCounts: {} };
+                }
+                char.peekScreenSettings.customIcons = JSON.parse(JSON.stringify(p.peekCustomIcons));
+            }
+        }
     }
     saveData();
     if (typeof setupHomeScreen === 'function') setupHomeScreen();
@@ -2485,15 +2796,22 @@ function exportWidgetWallpaperScheme() {
     if (chosen) {
         const p = presets.find(x => x.name === chosen);
         if (!p) return showToast('未找到所选方案');
-        payload = { type: 'widget-wallpaper-scheme', version: 1, preset: p };
+        const schemeName = prompt('请输入导出方案名称（留空则使用预设名称）：', p.name);
+        if (schemeName === null) return; // 用户取消
+        const exportPreset = JSON.parse(JSON.stringify(p));
+        if (schemeName.trim()) exportPreset.name = schemeName.trim();
+        payload = { type: 'widget-wallpaper-scheme', version: 1, preset: exportPreset };
     } else {
         const current = _captureCurrentWidgetWallpaperScheme();
-        payload = { type: 'widget-wallpaper-scheme', version: 1, preset: { name: '当前主屏', ...current } };
+        const schemeName = prompt('请输入导出方案名称（留空则使用默认名称）：', '当前主屏');
+        if (schemeName === null) return; // 用户取消
+        const finalName = schemeName.trim() || '当前主屏';
+        payload = { type: 'widget-wallpaper-scheme', version: 1, preset: { name: finalName, ...current } };
     }
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = '小组件壁纸方案.json';
+    a.download = (payload.preset.name || '小组件壁纸方案') + '.json';
     a.click();
     URL.revokeObjectURL(a.href);
     showToast('方案已导出');
@@ -2513,7 +2831,7 @@ function importWidgetWallpaperScheme(file) {
             const name = preset.name || '导入的方案';
             const presets = _getWidgetWallpaperPresets();
             const existingIdx = presets.findIndex(p => p.name === name);
-            const toAdd = { name, wallpaper: preset.wallpaper, homeWidgetSettings: preset.homeWidgetSettings || {}, homeSignature: preset.homeSignature, insWidgetSettings: preset.insWidgetSettings || {}, customIcons: preset.customIcons || {} };
+            const toAdd = { name, wallpaper: preset.wallpaper, homeWidgetSettings: preset.homeWidgetSettings || {}, homeSignature: preset.homeSignature, insWidgetSettings: preset.insWidgetSettings || {}, customIcons: preset.customIcons || {}, customAppNames: preset.customAppNames || {}, peekCustomIcons: preset.peekCustomIcons || {} };
             if (existingIdx >= 0) presets[existingIdx] = toAdd;
             else presets.push(toAdd);
             _saveWidgetWallpaperPresets(presets);
@@ -2538,6 +2856,14 @@ function resetWidgetWallpaperToDefault() {
     db.homeSignature = DEFAULT_HOME_SIGNATURE;
     db.insWidgetSettings = JSON.parse(JSON.stringify(DEFAULT_INS_WIDGET));
     db.customIcons = {};
+    db.customAppNames = {};
+    // 同时清除当前角色的偷看图标
+    if (typeof currentChatId !== 'undefined' && db.characters) {
+        const char = db.characters.find(c => c.id === currentChatId);
+        if (char && char.peekScreenSettings) {
+            char.peekScreenSettings.customIcons = {};
+        }
+    }
     saveData();
     if (typeof setupHomeScreen === 'function') setupHomeScreen();
     const preview = document.getElementById('wallpaper-preview');
@@ -2665,6 +2991,108 @@ function openIconPresetManageModal() {
     modal.style.display = 'flex';
 }
 
+function _getNamePresets() {
+    return db.namePresets || [];
+}
+function _saveNamePresets(arr) {
+    db.namePresets = arr || [];
+    saveData();
+}
+
+function populateNamePresetSelect() {
+    const sel = document.getElementById('name-preset-select');
+    if (!sel) return;
+    const presets = _getNamePresets();
+    sel.innerHTML = '<option value="">— 选择预设 —</option>';
+    presets.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+    });
+}
+
+function saveCurrentNamesAsPreset() {
+    const customAppNames = db.customAppNames ? JSON.parse(JSON.stringify(db.customAppNames)) : {};
+    if (!Object.keys(customAppNames).length) return showToast('当前没有自定义名称，无法保存');
+    const name = prompt('请输入预设名称（将覆盖同名预设）：');
+    if (!name) return;
+    const presets = _getNamePresets();
+    const idx = presets.findIndex(p => p.name === name);
+    const preset = { name, customAppNames };
+    if (idx >= 0) presets[idx] = preset;
+    else presets.push(preset);
+    _saveNamePresets(presets);
+    populateNamePresetSelect();
+    showToast('名称预设已保存');
+}
+
+function applyNamePreset(name) {
+    const presets = _getNamePresets();
+    const p = presets.find(x => x.name === name);
+    if (!p) return showToast('未找到该预设');
+    db.customAppNames = p.customAppNames ? JSON.parse(JSON.stringify(p.customAppNames)) : {};
+    saveData();
+    if (typeof setupHomeScreen === 'function') setupHomeScreen();
+    renderCustomizeForm();
+    showToast('已应用名称预设');
+}
+
+function openNamePresetManageModal() {
+    const modal = document.getElementById('name-presets-modal');
+    const list = document.getElementById('name-presets-list');
+    if (!modal || !list) return;
+    list.innerHTML = '';
+    const presets = _getNamePresets();
+    if (!presets.length) list.innerHTML = '<p style="color:#888;margin:6px 0;">暂无预设</p>';
+    presets.forEach((p, idx) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;';
+        const nameDiv = document.createElement('div');
+        nameDiv.style.cssText = 'flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+        nameDiv.textContent = p.name;
+        row.appendChild(nameDiv);
+        const btnWrap = document.createElement('div');
+        btnWrap.style.cssText = 'display:flex;gap:6px;';
+        const applyBtn = document.createElement('button');
+        applyBtn.className = 'btn btn-primary';
+        applyBtn.style.cssText = 'padding:6px 8px;border-radius:8px';
+        applyBtn.textContent = '应用';
+        applyBtn.onclick = function(){ applyNamePreset(p.name); modal.style.display = 'none'; };
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'btn';
+        renameBtn.style.cssText = 'padding:6px 8px;border-radius:8px';
+        renameBtn.textContent = '重命名';
+        renameBtn.onclick = function(){
+            const newName = prompt('输入新名称：', p.name);
+            if (!newName) return;
+            const all = _getNamePresets();
+            all[idx].name = newName;
+            _saveNamePresets(all);
+            openNamePresetManageModal();
+            populateNamePresetSelect();
+        };
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn';
+        deleteBtn.style.cssText = 'padding:6px 8px;border-radius:8px;color:#e53935';
+        deleteBtn.textContent = '删除';
+        deleteBtn.onclick = function(){
+            if (!confirm('确认删除该预设？')) return;
+            const all = _getNamePresets();
+            all.splice(idx, 1);
+            _saveNamePresets(all);
+            openNamePresetManageModal();
+            populateNamePresetSelect();
+        };
+        btnWrap.appendChild(applyBtn);
+        btnWrap.appendChild(renameBtn);
+        btnWrap.appendChild(deleteBtn);
+        row.appendChild(btnWrap);
+        list.appendChild(row);
+    });
+    modal.style.display = 'flex';
+}
+
 function setupCustomizeApp() {
     const customizeForm = document.getElementById('customize-form');
     
@@ -2689,6 +3117,27 @@ function setupCustomizeApp() {
             renderCustomizeForm();
             setupHomeScreen();
             showToast('图标已重置');
+        }
+
+        if (target.matches('.reset-name-btn')) {
+            const nameId = target.dataset.nameResetId;
+            if (db.customAppNames) {
+                delete db.customAppNames[nameId];
+            }
+            await saveData();
+            renderCustomizeForm();
+            setupHomeScreen();
+            showToast('名称已重置');
+        }
+
+        if (target.matches('#reset-all-names-btn')) {
+            if (confirm('确定要将所有应用名称恢复为默认吗？')) {
+                db.customAppNames = {};
+                await saveData();
+                renderCustomizeForm();
+                setupHomeScreen();
+                showToast('所有名称已恢复默认');
+            }
         }
 
         if (target.matches('#reset-widget-btn')) {
@@ -2884,6 +3333,32 @@ function setupCustomizeApp() {
             openIconPresetManageModal();
         }
 
+        if (target.matches('#voice-apply-preset-btn')) {
+            const select = document.getElementById('voice-preset-select');
+            const presetName = select && select.value;
+            if (!presetName) return showToast('请选择一个预设');
+            applyVoicePreset(presetName);
+        }
+        if (target.matches('#voice-save-preset-btn')) {
+            saveCurrentVoiceAsPreset();
+        }
+        if (target.matches('#voice-manage-presets-btn')) {
+            openVoicePresetManageModal();
+        }
+
+        if (target.matches('#name-apply-preset-btn')) {
+            const select = document.getElementById('name-preset-select');
+            const presetName = select && select.value;
+            if (!presetName) return showToast('请选择一个预设');
+            applyNamePreset(presetName);
+        }
+        if (target.matches('#name-save-preset-btn')) {
+            saveCurrentNamesAsPreset();
+        }
+        if (target.matches('#name-manage-presets-btn')) {
+            openNamePresetManageModal();
+        }
+
         if (target.matches('#test-send-sound-btn')) {
             const url = document.getElementById('global-send-sound-url').value;
             if (url) {
@@ -2960,6 +3435,18 @@ function setupCustomizeApp() {
             await saveData();
             setupHomeScreen();
         } 
+        else if (target.dataset.nameId) {
+            const nameId = target.dataset.nameId;
+            const newName = target.value.trim();
+            if (!db.customAppNames) db.customAppNames = {};
+            if (newName) {
+                db.customAppNames[nameId] = newName;
+            } else {
+                delete db.customAppNames[nameId];
+            }
+            await saveData();
+            setupHomeScreen();
+        }
         else if (target.dataset.widgetPart) {
             const part = target.dataset.widgetPart;
             const prop = target.dataset.widgetProp;
@@ -3213,6 +3700,48 @@ function renderCustomizeForm() {
         </div>
     </div>
     `;
+
+    let namesContentHTML = '';
+    iconOrder.forEach(id => {
+        const { name } = defaultIcons[id];
+        const currentName = (db.customAppNames && db.customAppNames[id]) || '';
+        namesContentHTML += `
+        <div class="kkt-item">
+            <div class="kkt-item-label">
+                <span style="font-size:14px;">${name}</span>
+            </div>
+            <div class="kkt-item-control" style="gap: 8px;">
+                <input type="text" placeholder="${name}" value="${currentName}" data-name-id="${id}" style="text-align:right; border:none; background:transparent; width: 120px; font-size: 13px; color: #888;">
+                <button type="button" class="reset-name-btn btn btn-small" data-name-reset-id="${id}" style="padding: 4px 8px; font-size: 12px; margin: 0; background-color: #f0f0f0; color: #666; border:none;">↺</button>
+            </div>
+        </div>`;
+    });
+
+    const namesSectionHTML = `
+    <div class="kkt-group collapsible-section" style="background-color: #fff; border: none; margin-bottom: 15px;">
+        <div class="kkt-item collapsible-header" style="background-color: #fff; border-bottom: 1px solid #f5f5f5; cursor: pointer; padding: 15px;">
+            <div class="kkt-item-label" style="font-weight:bold; color:#333; font-size: 15px;">应用名称自定义</div>
+            <span class="collapsible-arrow">▼</span>
+        </div>
+        <div class="collapsible-content">
+            ${namesContentHTML}
+            <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin:15px 15px 15px 15px; border: 1px solid #f0f0f0;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                    <label for="name-preset-select" style="width:auto;color:#666;font-size:13px;">名称预设库</label>
+                    <select id="name-preset-select" style="flex:1;padding:6px;border-radius:6px;border:1px solid #ddd;font-size:13px; background: transparent;"><option value="">— 选择 —</option></select>
+                </div>
+                <div style="display:flex;gap:8px;justify-content: flex-end;">
+                    <button type="button" id="name-apply-preset-btn" class="btn btn-small btn-primary" style="padding:4px 8px;">应用</button>
+                    <button type="button" id="name-save-preset-btn" class="btn btn-small" style="padding:4px 8px;">保存</button>
+                    <button type="button" id="name-manage-presets-btn" class="btn btn-small" style="padding:4px 8px;">管理</button>
+                </div>
+            </div>
+            <div style="padding: 15px; display: flex; justify-content: flex-end;">
+                <button type="button" id="reset-all-names-btn" class="btn btn-neutral btn-small" style="width: auto;">全部重置</button>
+            </div>
+        </div>
+    </div>
+    `;
     
     const widgetSectionHTML = `
     <div class="kkt-group collapsible-section" style="background-color: #fff; border: none; margin-bottom: 15px;">
@@ -3250,7 +3779,7 @@ function renderCustomizeForm() {
         </div>
         <div class="collapsible-content">
             <div class="kkt-item" style="display:block; padding: 15px;">
-                <p style="font-size: 13px; color: #888; margin-bottom: 12px; line-height: 1.5;">将当前主屏幕的「所有小组件 + 壁纸 + 应用图标」保存为方案，可导出分享或导入他人方案；一键恢复默认。与下方「应用图标自定义」中的图标预设库相互独立。</p>
+                <p style="font-size: 13px; color: #888; margin-bottom: 12px; line-height: 1.5;">将当前主屏幕的「所有小组件 + 壁纸 + 应用图标 + 偷看图标」保存为方案，可导出分享或导入他人方案；一键恢复默认。与下方「应用图标自定义」中的图标预设库相互独立。</p>
                 <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:12px; border: 1px solid #f0f0f0;">
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
                         <label for="widget-wallpaper-preset-select" style="width:auto;color:#666;font-size:13px;">方案预设库</label>
@@ -3467,7 +3996,7 @@ margin-left: auto !important;
     </div>
     `;
     
-    container.innerHTML = iconsSectionHTML + widgetSectionHTML + widgetWallpaperSectionHTML + fontsSectionHTML + soundSectionHTML + globalCssSectionHTML;
+    container.innerHTML = iconsSectionHTML + namesSectionHTML + widgetSectionHTML + widgetWallpaperSectionHTML + fontsSectionHTML + soundSectionHTML + globalCssSectionHTML;
     customizeForm.appendChild(container);
 
     populateGlobalCssPresetSelect();
@@ -3476,6 +4005,8 @@ margin-left: auto !important;
     populateWidgetPresetSelect();
     populateWidgetWallpaperPresetSelect();
     populateIconPresetSelect();
+    populateNamePresetSelect();
+    populateVoicePresetSelect();
 
     const fontSizeSlider = document.getElementById('font-size-slider');
     const fontSizeValue = document.getElementById('font-size-value');

@@ -114,7 +114,8 @@ function setupGroupChatSystem() {
     const groupAutoSaveChanges = [
         'setting-group-theme-color', 'setting-group-use-custom-css', 'setting-group-show-timestamp',
         'setting-group-show-notice', 'setting-group-allow-gossip', 'setting-group-avatar-radius',
-        'setting-group-bilingual-mode', 'setting-group-bilingual-style', 'setting-group-auto-journal-enabled'
+        'setting-group-bilingual-mode', 'setting-group-bilingual-style', 'setting-group-auto-journal-enabled',
+        'setting-group-timestamp-format', 'setting-group-input-expand'
     ];
     groupAutoSaveChanges.forEach(id => {
         const el = document.getElementById(id);
@@ -985,6 +986,7 @@ function loadGroupSettingsToSidebar() {
     document.getElementById('setting-group-title-layout').value = group.titleLayout || 'left';
     document.getElementById('setting-group-show-timestamp').checked = group.showTimestamp || false;
     document.getElementById('setting-group-timestamp-style').value = group.timestampStyle || 'bubble';
+    document.getElementById('setting-group-timestamp-format').value = group.timestampFormat || 'hm';
     document.getElementById('setting-group-allow-gossip').checked = group.allowGossip || false;
 
     const bilingualModeCheckbox = document.getElementById('setting-group-bilingual-mode');
@@ -1014,6 +1016,7 @@ function loadGroupSettingsToSidebar() {
     const avatarRadius = group.avatarRadius !== undefined ? group.avatarRadius : 50;
     document.getElementById('setting-group-avatar-radius').value = avatarRadius;
     document.getElementById('setting-group-avatar-radius-value').textContent = `${avatarRadius}%`;
+    document.getElementById('setting-group-input-expand').checked = group.inputExpandEnabled || false;
     
     const radiusSlider = document.getElementById('setting-group-avatar-radius');
     const radiusValue = document.getElementById('setting-group-avatar-radius-value');
@@ -1164,9 +1167,12 @@ async function saveGroupSettingsFromSidebar(showToastFlag = true) {
     }
 
     group.avatarRadius = parseInt(document.getElementById('setting-group-avatar-radius').value, 10);
+    group.inputExpandEnabled = document.getElementById('setting-group-input-expand').checked;
+    applyInputExpand(group.inputExpandEnabled);
 
     group.showTimestamp = document.getElementById('setting-group-show-timestamp').checked;
     group.timestampStyle = document.getElementById('setting-group-timestamp-style').value;
+    group.timestampFormat = document.getElementById('setting-group-timestamp-format').value;
     
     const oldAllowGossip = group.allowGossip || false;
     const newAllowGossip = document.getElementById('setting-group-allow-gossip').checked;
@@ -1453,7 +1459,10 @@ function generateGroupSystemPrompt(group) {
         prompt += `✨双语模式特别指令✨：当群成员的母语为中文以外的语言时，其消息回复**必须**严格遵循双语模式下的普通消息格式：\`[{成员真名}的消息：{外语原文}「中文翻译」]\`。例如: \`[Alice的消息：Of course, I'd love to.「当然，我很乐意。」]\`。中文翻译文本视为系统自翻译，不视为角色的原话。当角色想要说中文时，请使用标准格式：\`[{成员真名}的消息：{中文消息内容}]\`。这条规则的优先级非常高，请务必遵守。\n\n`;
     }
 
-    prompt += `   - **重要**: 群聊不支持AI成员接收/退回转账或接收礼物的特殊指令（即你不能发送[已接收]指令，但可以用语言表达感谢），也不支持更新状态。你只需要通过普通消息来回应我发送的转账或礼物即可。\n\n`;
+    prompt += `   - **重要**: 群聊不支持AI成员接收礼物的特殊指令（即你不能发送[已接收礼物]指令，但可以用语言表达感谢），也不支持更新状态。你只需要通过普通消息来回应我发送的礼物即可。\n`;
+    prompt += `   - ✨**极其重要**✨: 当我（${group.me.nickname}）向群内某个成员转账时，**被转账的成员必须**对此做出回应。该成员有两个选择，且必须严格遵循以下格式之一（这条指令消息本身不会显示给用户，但会触发转账状态的变化）。该成员可以在发送这条指令后，再附带一条普通的聊天消息来表达想法：\n`;
+    prompt += `     a) 接收转账: \`[{被转账成员真名}接收${group.me.nickname}的转账]\`\n`;
+    prompt += `     b) 退回转账: \`[{被转账成员真名}退回${group.me.nickname}的转账]\`\n\n`;
 
     prompt += `5. **模拟群聊氛围**: 为了让群聊看起来真实、活跃且混乱，你的每一次回复都必须遵循以下随机性要求：\n`;
     const numMembers = group.members.length;

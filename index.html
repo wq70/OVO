@@ -473,7 +473,7 @@
                         </svg>
                     </button>
                     <div class="input-wrapper">
-                        <input type="text" id="message-input" autocomplete="off" placeholder="">
+                        <textarea id="message-input" autocomplete="off" placeholder="" rows="1"></textarea>
                         <button id="sticker-toggle-btn" class="icon-btn input-inner-btn">
                             <img src="https://i.postimg.cc/prRC31Gk/retouch-2025110902080890.png" alt="表情">
                         </button>
@@ -695,36 +695,64 @@
             </div>
         </div> <!-- 这里是 chat-room-screen 的结束标签 -->
 
-        <!-- 后台保活 · 音乐播放器 -->
-        <div id="music-screen" class="screen">
-            <header class="app-header">
-                <button class="back-btn" data-target="home-screen" type="button">‹</button>
+        <!-- 后台保活 · 音乐播放器（黑胶深色主题） -->
+        <div id="music-screen" class="screen music-screen-theme">
+            <div class="music-bg-layer" id="music-bg-layer"></div>
+            <header class="app-header music-header">
+                <button class="back-btn" data-target="home-screen" type="button" aria-label="返回">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
                 <div class="title-container">
-                    <h1 class="title">音乐</h1>
+                    <h1 class="title" id="music-header-title">未选择音频</h1>
                 </div>
-                <div class="placeholder"></div>
+                <div class="music-header-actions">
+                    <button type="button" class="music-theme-toggle" id="music-theme-toggle" aria-label="切换日间/夜间" title="日间/夜间">
+                        <svg class="music-theme-icon music-theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22" style="display:none;"><path d="M12 3v2.25M12 18.75v2.25M4.5 12h-2.25M21 12h-2.25M18.364 5.636l-1.59 1.59M7.227 16.773l-1.59 1.59M18.364 18.364l-1.59-1.59M7.227 7.227L5.636 5.636M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <svg class="music-theme-icon music-theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                    </button>
+                    <button type="button" class="music-header-upload-btn" id="music-header-upload-btn" aria-label="添加音频" title="添加音频">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M12 5v14M5 12h14"/></svg>
+                    </button>
+                </div>
             </header>
+            <div class="music-tonearm" aria-hidden="true">
+                <svg class="tonearm-svg" viewBox="0 0 120 140" fill="currentColor" stroke="currentColor" stroke-width="10" stroke-linecap="round">
+                    <path class="tonearm-line" d="M90 8 L90 28 Q90 75 55 95 L48 98" fill="none"/>
+                    <circle class="tonearm-pivot" cx="90" cy="8" r="6"/>
+                    <ellipse class="tonearm-cartridge" cx="48" cy="98" rx="7" ry="5"/>
+                </svg>
+            </div>
             <main class="content music-player-content">
                 <div class="music-hero">
-                    <button type="button" class="music-cover-wrap" id="music-cover-wrap">
-                        <div class="music-cover-placeholder" id="music-cover-placeholder">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13M9 9l12-2"/></svg>
-                            <span class="music-cover-hint">点击选择音频来源</span>
+                    <div class="music-vinyl" id="music-vinyl-wrap">
+                        <button type="button" class="music-cover-wrap" id="music-cover-wrap">
+                            <div class="music-cover-placeholder" id="music-cover-placeholder">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13M9 9l12-2"/></svg>
+                                <span class="music-cover-hint">点击选择音频</span>
+                            </div>
+                            <img class="music-cover-img" id="music-cover-img" src="" alt="" style="display:none;">
+                        </button>
+                    </div>
+                    <div class="music-lyrics-view" id="music-lyrics-view" style="display:none;">
+                        <div class="music-lyrics-view-inner" id="music-lyrics-view-inner">
+                            <p class="music-lyrics-view-empty" id="music-lyrics-view-empty">暂无歌词</p>
+                            <ul class="music-lyrics-view-list" id="music-lyrics-view-list"></ul>
                         </div>
-                        <img class="music-cover-img" id="music-cover-img" src="" alt="" style="display:none;">
-                    </button>
-                    <h2 class="music-title" id="music-title">未选择音频</h2>
-                    <p class="music-meta" id="music-meta">循环播放 · 后台保活</p>
+                    </div>
+                    <div class="music-info">
+                        <div class="music-info-text">
+                            <h2 class="music-title" id="music-title">未选择音频</h2>
+                            <p class="music-meta" id="music-meta">循环播放 · 后台保活</p>
+                        </div>
+                        <div class="music-stats">
+                            <span class="music-stat"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>100w+</span>
+                            <span class="music-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>5w+</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="music-source-btns">
-                    <button type="button" class="music-source-btn" id="music-btn-local">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                        <span>本地上传</span>
-                    </button>
-                    <button type="button" class="music-source-btn" id="music-btn-url">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                        <span>URL</span>
-                    </button>
+                <div class="music-source-btns" hidden>
+                    <button type="button" class="music-source-btn" id="music-btn-local"><span>本地上传</span></button>
+                    <button type="button" class="music-source-btn" id="music-btn-url"><span>URL</span></button>
                 </div>
                 <input type="file" id="music-file-input" accept="audio/*" hidden>
                 <div class="music-url-row" id="music-url-row">
@@ -733,27 +761,25 @@
                 </div>
                 <div class="music-controls">
                     <div class="music-progress-wrap">
-                        <span class="music-time-current" id="music-time-current">0:00</span>
-                        <input type="range" class="music-progress" id="music-progress" min="0" max="100" value="0" step="0.1">
-                        <span class="music-time-total" id="music-time-total">0:00</span>
+                        <div class="music-progress-row">
+                            <span class="music-time-current" id="music-time-current">0:00</span>
+                            <input type="range" class="music-progress" id="music-progress" min="0" max="100" value="0" step="0.1">
+                            <span class="music-time-total" id="music-time-total">0:00</span>
+                        </div>
+                        <span class="music-quality-label">标准</span>
                     </div>
                     <div class="music-buttons">
-                        <button type="button" class="music-btn music-btn-prev" id="music-btn-prev" title="上一首" disabled><svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M6 5h2v14H6V5zm4 4v6l8-3-8-3z"/></svg></button>
-                        <button type="button" class="music-btn music-btn-play" id="music-btn-play" title="播放"><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="40" height="40"><path d="M8 5v14l11-7L8 5z"/></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="40" height="40" style="display:none;"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg></button>
-                        <button type="button" class="music-btn music-btn-next" id="music-btn-next" title="下一首" disabled><svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M14 5v14l8-7-8-7zm-8 5h2v9H6v-9z"/></svg></button>
+                        <button type="button" class="music-btn music-btn-loop" id="music-btn-loop" title="单曲循环">
+                            <svg class="loop-icon loop-icon-single" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/><text x="12" y="14.5" text-anchor="middle" font-size="8" fill="currentColor" stroke="none" font-weight="bold">1</text></svg>
+                            <svg class="loop-icon loop-icon-order" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>
+                            <svg class="loop-icon loop-icon-shuffle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                        </button>
+                        <button type="button" class="music-btn music-btn-prev" id="music-btn-prev" title="上一首" disabled><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+                        <button type="button" class="music-btn music-btn-play" id="music-btn-play" title="播放"><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg></button>
+                        <button type="button" class="music-btn music-btn-next" id="music-btn-next" title="下一首" disabled><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 18V6l-8.5 6L18 18zm-12 0V6h2v12H6z"/></svg></button>
+                        <button type="button" class="music-btn music-btn-queue" id="music-btn-queue" title="播放列表"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
                     </div>
-                    <label class="music-loop-wrap">
-                        <input type="checkbox" id="music-loop-check" checked>
-                        <span>循环播放</span>
-                    </label>
-                </div>
-                <button type="button" class="music-lyrics-toggle" id="music-lyrics-toggle">歌词</button>
-                <div class="music-lyrics-wrap" id="music-lyrics-wrap">
-                    <div class="music-lyrics-inner" id="music-lyrics-inner">
-                        <button type="button" class="music-lyrics-edit-link" id="music-lyrics-edit-link">编辑歌词</button>
-                        <p class="music-lyrics-empty" id="music-lyrics-empty">暂无歌词，点击「编辑歌词」粘贴 LRC</p>
-                        <textarea class="music-lyrics-edit" id="music-lyrics-edit" placeholder="粘贴 LRC 歌词（可选）" style="display:none;"></textarea>
-                    </div>
+                    <input type="checkbox" id="music-loop-check" checked hidden>
                 </div>
             </main>
         </div>
@@ -761,9 +787,206 @@
         <div id="music-source-sheet" class="action-sheet-overlay">
             <div class="action-sheet music-source-sheet">
                 <div class="action-sheet-title">选择音频来源</div>
-                <button type="button" class="action-sheet-button" id="music-sheet-local">本地上传</button>
-                <button type="button" class="action-sheet-button" id="music-sheet-url">输入 URL</button>
-                <button type="button" class="action-sheet-button music-sheet-cancel">取消</button>
+                <button type="button" class="action-sheet-button" id="music-sheet-upload">上传音乐</button>
+                <button type="button" class="action-sheet-button" id="music-sheet-search">在线搜索</button>
+                <button type="button" class="action-sheet-button" id="music-sheet-import-lyrics">导入歌词</button>
+                <button type="button" class="action-sheet-button music-sheet-cancel" id="music-sheet-cancel">取消</button>
+            </div>
+        </div>
+
+        <!-- 批量上传音乐弹窗（本地 + URL） -->
+        <div id="music-upload-modal" class="music-modal-overlay" style="display:none;">
+            <div class="music-modal-window">
+                <div class="music-modal-header">
+                    <h3 class="music-modal-title">上传音乐</h3>
+                    <button type="button" class="music-modal-close" id="music-upload-close-btn">&times;</button>
+                </div>
+                <div class="music-upload-tabs">
+                    <button type="button" class="music-upload-tab active" data-tab="local">本地上传</button>
+                    <button type="button" class="music-upload-tab" data-tab="url">URL 上传</button>
+                </div>
+                <!-- 本地上传 -->
+                <div class="music-upload-tab-content" id="music-upload-local-tab">
+                    <div class="music-upload-field">
+                        <label class="music-upload-label">选择音频文件（支持批量）</label>
+                        <label class="music-upload-file-btn" for="music-upload-local-files">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <span>选择音频文件</span>
+                        </label>
+                        <input type="file" id="music-upload-local-files" accept="audio/*" multiple hidden>
+                    </div>
+                    <div class="music-upload-field">
+                        <label class="music-upload-label">选择歌词文件（.lrc / .txt，可选）</label>
+                        <label class="music-upload-file-btn music-upload-file-btn-secondary" for="music-upload-local-lyrics">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            <span>选择歌词文件</span>
+                        </label>
+                        <input type="file" id="music-upload-local-lyrics" accept=".lrc,.txt" multiple hidden>
+                    </div>
+                    <p class="music-upload-hint">歌词将按文件名自动匹配对应歌曲；未匹配的可手动绑定。</p>
+                    <div id="music-upload-local-preview" class="music-upload-preview-list"></div>
+                </div>
+                <!-- URL 上传 -->
+                <div class="music-upload-tab-content" id="music-upload-url-tab" style="display:none;">
+                    <div class="music-upload-field">
+                        <label class="music-upload-label">音频 URL（每行一个，支持批量）</label>
+                        <textarea id="music-upload-url-list" rows="4" class="music-upload-textarea" placeholder="https://example.com/song1.mp3&#10;https://example.com/song2.mp3"></textarea>
+                    </div>
+                    <div class="music-upload-field">
+                        <label class="music-upload-label">选择歌词文件（.lrc / .txt，可选）</label>
+                        <label class="music-upload-file-btn music-upload-file-btn-secondary" for="music-upload-url-lyrics">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            <span>选择歌词文件</span>
+                        </label>
+                        <input type="file" id="music-upload-url-lyrics" accept=".lrc,.txt" multiple hidden>
+                    </div>
+                    <p class="music-upload-hint">歌词将按顺序依次绑定对应 URL；也可上传后在歌单中手动绑定。</p>
+                    <div id="music-upload-url-preview" class="music-upload-preview-list"></div>
+                </div>
+                <div class="music-modal-footer">
+                    <button type="button" class="music-modal-btn music-modal-btn-cancel" id="music-upload-cancel-btn">取消</button>
+                    <button type="button" class="music-modal-btn music-modal-btn-primary" id="music-upload-confirm-btn">添加到歌单</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 批量导入歌词弹窗 -->
+        <div id="music-lyrics-import-modal" class="music-modal-overlay" style="display:none;">
+            <div class="music-modal-window">
+                <div class="music-modal-header">
+                    <h3 class="music-modal-title">导入歌词</h3>
+                    <button type="button" class="music-modal-close" id="music-lyrics-import-close-btn">&times;</button>
+                </div>
+                <div class="music-upload-field">
+                    <label class="music-upload-label">选择歌词文件（支持批量，.lrc / .txt，混合格式）</label>
+                    <label class="music-upload-file-btn" for="music-lyrics-import-files">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        <span>选择歌词文件</span>
+                    </label>
+                    <input type="file" id="music-lyrics-import-files" accept=".lrc,.txt" multiple hidden>
+                </div>
+                <div id="music-lyrics-import-list" class="music-upload-preview-list"></div>
+                <div class="music-modal-footer">
+                    <button type="button" class="music-modal-btn music-modal-btn-cancel" id="music-lyrics-import-cancel">取消</button>
+                    <button type="button" class="music-modal-btn music-modal-btn-primary" id="music-lyrics-import-confirm">确认导入</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 音乐播放器背景设置面板 -->
+        <div id="music-bg-panel" class="music-bg-panel" aria-hidden="true">
+            <div class="music-bg-panel-header">
+                <button type="button" class="music-search-back" id="music-bg-panel-back" aria-label="返回">‹</button>
+                <h2 class="music-search-title">更换背景</h2>
+            </div>
+            <div class="music-bg-panel-body">
+                <div class="music-bg-preview" id="music-bg-preview">
+                    <span class="music-bg-preview-text" id="music-bg-preview-text">当前背景预览</span>
+                </div>
+                <div class="music-bg-actions">
+                    <button type="button" class="music-bg-action-btn" id="music-bg-local-btn">本地上传</button>
+                    <button type="button" class="music-bg-action-btn" id="music-bg-url-btn">输入 URL</button>
+                    <button type="button" class="music-bg-action-btn music-bg-reset-btn" id="music-bg-reset-btn">恢复默认</button>
+                </div>
+                <div class="music-bg-url-row" id="music-bg-url-row">
+                    <input type="text" class="music-url-input" id="music-bg-url-input" placeholder="输入背景图片链接 (http/https)">
+                    <button type="button" class="music-url-apply-btn" id="music-bg-url-apply">使用</button>
+                </div>
+                <input type="file" id="music-bg-file-input" accept="image/*" hidden>
+                <div class="music-bg-option">
+                    <label class="music-bg-option-label">
+                        <span>覆盖胶片（隐藏黑胶外圈，只保留封面）</span>
+                        <input type="checkbox" id="music-bg-cover-vinyl">
+                        <span class="music-bg-toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div id="music-bg-backdrop" class="music-queue-backdrop" aria-hidden="true"></div>
+
+        <!-- 在线搜索音乐（由选择音频来源 -> 在线搜索 进入） -->
+        <div id="music-search-panel" class="music-search-panel" aria-hidden="true">
+            <div class="music-search-header">
+                <button type="button" class="music-search-back" id="music-search-back" aria-label="返回">‹</button>
+                <h2 class="music-search-title">在线搜索</h2>
+            </div>
+            <div class="music-search-form">
+                <input type="text" id="music-search-input" class="music-search-input" placeholder="歌曲名、歌手名">
+                <select id="music-search-api" class="music-search-api">
+                    <option value="meting1">多平台 · 推荐</option>
+                    <option value="meting2">多平台 · 备用</option>
+                    <option value="meting3">网易 & QQ</option>
+                </select>
+                <button type="button" id="music-search-btn" class="music-search-btn">搜索</button>
+                <button type="button" id="music-search-multiselect-btn" class="music-search-btn music-search-multiselect-btn" style="display:none;">多选</button>
+            </div>
+            <div class="music-search-result-toolbar" id="music-search-result-toolbar" style="display:none;">
+                <button type="button" class="music-queue-multiselect-btn" id="music-search-batch-add-btn">批量添加</button>
+                <button type="button" class="music-queue-cancel-select" id="music-search-cancel-select">取消多选</button>
+            </div>
+            <div id="music-search-loading" class="music-search-loading" style="display:none;">正在搜索…</div>
+            <ul id="music-search-results" class="music-search-results"></ul>
+        </div>
+        <div id="music-search-backdrop" class="music-queue-backdrop" aria-hidden="true"></div>
+
+        <!-- 播放列表面板（歌单分类 + 多选移动） -->
+        <div id="music-queue-panel" class="music-queue-panel" aria-hidden="true">
+            <div class="music-queue-header">
+                <h2 class="music-queue-title">播放列表</h2>
+                <button type="button" class="music-queue-close" id="music-queue-close" aria-label="关闭">×</button>
+            </div>
+            <div class="music-queue-tabs-wrap">
+                <div class="music-queue-tabs" id="music-queue-tabs"></div>
+                <button type="button" class="music-queue-add-cat" id="music-queue-add-cat" title="添加分类">+ 分类</button>
+            </div>
+            <div class="music-queue-toolbar">
+                <button type="button" class="music-queue-multiselect-btn" id="music-queue-multiselect-btn">多选</button>
+                <button type="button" class="music-queue-move-btn" id="music-queue-move-btn" style="display:none;">移动到...</button>
+                <button type="button" class="music-queue-delete-btn" id="music-queue-delete-btn" style="display:none;">删除</button>
+                <button type="button" class="music-queue-clean-btn" id="music-queue-clean-btn" title="清理无法播放的歌曲">清理无效</button>
+                <button type="button" class="music-queue-cancel-select" id="music-queue-cancel-select" style="display:none;">取消</button>
+            </div>
+            <div class="music-queue-list-wrap">
+                <ul class="music-queue-list" id="music-queue-list"></ul>
+                <p class="music-queue-empty" id="music-queue-empty">暂无歌曲，从「点击选择音频」添加</p>
+            </div>
+        </div>
+        <div id="music-queue-backdrop" class="music-queue-backdrop" aria-hidden="true"></div>
+
+        <!-- 清理无效歌曲弹窗 -->
+        <div id="music-clean-modal" class="music-clean-modal-overlay">
+            <div class="music-clean-modal">
+                <div class="music-clean-modal-header">
+                    <h3 class="music-clean-modal-title">清理结果</h3>
+                    <button type="button" class="music-clean-modal-close" id="music-clean-modal-close">×</button>
+                </div>
+                <div class="music-clean-modal-body" id="music-clean-modal-body"></div>
+                <div class="music-clean-modal-footer">
+                    <button type="button" class="music-clean-cancel-btn" id="music-clean-close-btn">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 移动到分类弹窗 -->
+        <div id="music-move-sheet" class="action-sheet-overlay" style="display:none;">
+            <div class="action-sheet music-source-sheet">
+                <div class="action-sheet-title">移动到分类</div>
+                <div id="music-move-category-list" class="music-move-category-list"></div>
+                <button type="button" class="action-sheet-button music-sheet-cancel" id="music-move-cancel">取消</button>
+            </div>
+        </div>
+        <!-- 添加分类弹窗 -->
+        <div id="music-add-category-modal" class="modal-overlay" style="display:none;">
+            <div class="modal-window">
+                <h3>新建歌单分类</h3>
+                <div class="form-group">
+                    <label>分类名称</label>
+                    <input type="text" id="music-new-category-name" placeholder="例如：收藏、学习">
+                </div>
+                <div style="display:flex;gap:10px;margin-top:16px;">
+                    <button type="button" class="btn btn-primary" id="music-add-category-confirm">确定</button>
+                    <button type="button" class="btn btn-neutral" id="music-add-category-cancel">取消</button>
+                </div>
             </div>
         </div>
 
@@ -1536,12 +1759,34 @@
                 </div>
                 <div class="placeholder"></div>
             </header>
-            <main class="content">
+            <main class="content" style="padding-bottom:32px;">
+                <!-- 主屏幕壁纸 -->
+                <div class="wallpaper-section-label">主屏幕壁纸</div>
                 <div class="wallpaper-preview" id="wallpaper-preview"><span>当前壁纸预览</span></div>
                 <button type="button" id="wallpaper-reset-btn" class="btn btn-secondary">重置为默认壁纸</button>
                 <input type="file"
                     id="wallpaper-upload" accept="image/*" style="display: none;"><label for="wallpaper-upload"
                     class="btn btn-primary">从相册选择新壁纸</label>
+
+                <!-- 音乐播放器壁纸 -->
+                <div class="wallpaper-section-label" style="margin-top:28px;">音乐播放器壁纸</div>
+                <div class="wallpaper-preview" id="music-wallpaper-preview"><span id="music-wallpaper-preview-text">当前音乐壁纸预览</span></div>
+                <div class="wallpaper-music-actions">
+                    <button type="button" id="music-wallpaper-local-btn" class="btn btn-primary">本地上传</button>
+                    <button type="button" id="music-wallpaper-url-btn" class="btn btn-secondary">输入 URL</button>
+                    <button type="button" id="music-wallpaper-reset-btn" class="btn btn-secondary">恢复默认</button>
+                </div>
+                <div class="music-wallpaper-url-row" id="music-wallpaper-url-row" style="display:none;">
+                    <input type="text" id="music-wallpaper-url-input" class="form-group" placeholder="输入背景图片链接 (http/https)" style="flex:1;margin:0;">
+                    <button type="button" id="music-wallpaper-url-apply" class="btn btn-primary btn-small">使用</button>
+                </div>
+                <input type="file" id="music-wallpaper-file-input" accept="image/*" hidden>
+                <div class="wallpaper-music-option">
+                    <label class="wallpaper-music-option-label">
+                        <span>覆盖胶片（隐藏黑胶外圈，只保留封面）</span>
+                        <input type="checkbox" id="music-wallpaper-cover-vinyl">
+                    </label>
+                </div>
             </main>
         </div>
         <div id="customize-screen" class="screen">
@@ -1682,8 +1927,99 @@
                             <span class="menu-item-label">收藏</span>
                         </div>
                     </div>
+                    <!-- 第二行功能 -->
+                    <div class="menu-grid" style="margin-top:0; border-top:none; padding-top:0;">
+                        <div class="menu-item" data-action="regex-filter">
+                            <div class="menu-icon-wrapper">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M3 4h18M3 4l6 8v8l6-4v-4l6-8"/>
+                                </svg>
+                            </div>
+                            <span class="menu-item-label">正则</span>
+                        </div>
+                    </div>
                 </div>
 
+            </main>
+        </div>
+
+        <!-- 正则过滤管理界面 -->
+        <div id="regex-filter-manager-screen" class="screen">
+            <header class="app-header">
+                <button class="back-btn" data-target="more-screen">‹</button>
+                <div class="title-container">
+                    <h1 class="title">正则过滤管理</h1>
+                </div>
+                <div class="action-btn-group">
+                    <button class="action-btn" id="import-regex-preset-btn" title="导入">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                        </svg>
+                    </button>
+                    <button class="action-btn" id="add-regex-preset-btn" title="新建">+</button>
+                </div>
+            </header>
+            <main class="content" style="padding: 15px;">
+                <div id="regex-filter-preset-list" class="preset-grid">
+                    <!-- JS 动态生成 -->
+                </div>
+                <input type="file" id="regex-preset-import-input" accept=".json" style="display: none;">
+            </main>
+        </div>
+
+        <!-- 正则过滤编辑界面 -->
+        <div id="regex-filter-editor-screen" class="screen">
+            <header class="app-header">
+                <button class="back-btn" data-target="regex-filter-manager-screen">‹</button>
+                <div class="title-container">
+                    <h1 class="title" id="regex-filter-editor-title">新建正则方案</h1>
+                </div>
+                <div class="placeholder"></div>
+            </header>
+            <main class="content" style="padding:20px; padding-bottom:40px;">
+                <form id="regex-filter-editor-form" onsubmit="event.preventDefault();">
+                    <input type="hidden" id="rf-preset-id">
+                    <div class="editor-section">
+                        <div class="form-group">
+                            <label>方案名称</label>
+                            <input type="text" id="rf-preset-name" placeholder="例如：过滤AI八股" required>
+                        </div>
+                    </div>
+                    <!-- 正则规则列表 -->
+                    <div class="editor-section">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <label style="font-weight:600;">过滤规则</label>
+                            <button type="button" class="btn btn-small" id="rf-add-rule-btn">+ 添加规则</button>
+                        </div>
+                        <div id="rf-rules-list" style="display:flex; flex-direction:column; gap:10px;">
+                            <!-- JS 动态生成 -->
+                        </div>
+                    </div>
+                    <!-- 绑定角色 -->
+                    <div class="editor-section">
+                        <label style="font-weight:600; display:block; margin-bottom:10px;">绑定角色（多选）</label>
+                        <div id="rf-char-bind-list" style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <!-- JS 动态生成 -->
+                        </div>
+                    </div>
+                    <!-- 测试区 -->
+                    <div class="editor-section">
+                        <div class="preview-lab">
+                            <div class="lab-header">🧪 测试过滤效果</div>
+                            <div class="form-group">
+                                <label>测试文本</label>
+                                <textarea id="rf-test-input" rows="3" placeholder="输入一段AI回复来测试过滤效果..."></textarea>
+                            </div>
+                            <div class="preview-result-box">
+                                <div class="preview-label">过滤结果</div>
+                                <div id="rf-preview-container" style="min-height:40px; white-space:pre-wrap; word-break:break-all; font-size:14px; color:#333;">
+                                    <span style="color:#ccc;">请输入测试文本...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="save-regex-preset-btn" style="width:100%; margin-top:10px;">保存方案</button>
+                </form>
             </main>
         </div>
 
@@ -2868,6 +3204,33 @@
                                 </div>
                             </div>
 
+                            <!-- 角色正则过滤设置 -->
+                            <div class="kkt-group" style="margin-top:15px;">
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">启用角色正则过滤</div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                            <input type="checkbox" id="setting-regex-filter-enabled">
+                                            <span class="kkt-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div id="regex-filter-settings-container" class="collapsible-content">
+                                    <div class="kkt-item" style="flex-direction:column; align-items:flex-start; border-top: 1px solid #f5f5f5;">
+                                        <div class="preset-select-container" style="width: 100%; margin-bottom: 10px;">
+                                            <label class="preset-select-label">快速填充预设</label>
+                                            <div style="display:flex; gap:5px; align-items:center;">
+                                                <select id="setting-regex-filter-preset-select" style="flex:1;">
+                                                    <option value="">-- 选择正则预设 --</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="kkt-item-label" style="margin-bottom:8px;">自定义过滤规则 <span style="font-size:12px;color:#999;">(每行一条，格式: 正则|||替换文本)</span></div>
+                                        <textarea id="setting-regex-filter-rules" style="width:100%; border:1px solid #eee; border-radius:8px; padding:8px; min-height:80px; font-family:monospace; font-size:13px;" placeholder="例如：&#10;确实如此|||&#10;不得不说|||&#10;值得一提的是|||"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- 后台自动消息 -->
                             <div class="kkt-group" style="margin-top:15px;">
                                 <div class="kkt-item">
@@ -2957,6 +3320,18 @@
                                         <span class="kkt-arrow">›</span>
                                     </div>
                                 </div>
+                                <div class="kkt-item" id="setting-timestamp-format-container">
+                                    <div class="kkt-item-label">时间戳格式</div>
+                                    <div class="kkt-item-control">
+                                        <select id="setting-timestamp-format"
+                                            style="border:none; background:transparent; text-align:right;">
+                                            <option value="hm">时:分</option>
+                                            <option value="hms">时:分:秒</option>
+                                            <option value="ymd">年/月/日</option>
+                                        </select>
+                                        <span class="kkt-arrow">›</span>
+                                    </div>
+                                </div>
                                 <div class="kkt-item">
                                     <div class="kkt-item-label">顶部显示在线状态</div>
                                     <div class="kkt-item-control">
@@ -2980,6 +3355,15 @@
                                     <div class="kkt-item-control">
                                         <label class="kkt-switch">
                                             <input type="checkbox" id="setting-bubble-blur">
+                                            <span class="kkt-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">输入框增高</div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                            <input type="checkbox" id="setting-input-expand">
                                             <span class="kkt-slider"></span>
                                         </label>
                                     </div>
@@ -3057,6 +3441,27 @@
                                 <div style="margin-bottom: 15px; padding-top: 5px; padding-left: 8px;">
                                     <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">语音设置</div>
                                     <p style="font-size: 11px; color: #999; margin: 5px 0 0;">通话时的语音合成设置</p>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">启用 TTS 语音</div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                            <input type="checkbox" id="setting-chat-tts-enabled">
+                                            <span class="kkt-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <!-- 音色预设库 -->
+                                <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin:0 15px 15px 15px; border: 1px solid #f0f0f0;">
+                                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                                        <label for="voice-preset-select" style="width:auto;color:#666;font-size:13px;">音色预设库</label>
+                                        <select id="voice-preset-select" style="flex:1;padding:6px;border-radius:6px;border:1px solid #ddd;font-size:13px; background: transparent;"><option value="">— 选择 —</option></select>
+                                    </div>
+                                    <div style="display:flex;gap:8px;justify-content: flex-end;">
+                                        <button type="button" id="voice-apply-preset-btn" class="btn btn-small btn-primary" style="padding:4px 8px;">应用</button>
+                                        <button type="button" id="voice-save-preset-btn" class="btn btn-small" style="padding:4px 8px;">保存</button>
+                                        <button type="button" id="voice-manage-presets-btn" class="btn btn-small" style="padding:4px 8px;">管理</button>
+                                    </div>
                                 </div>
                                 
                                 <div class="kkt-item">
@@ -3403,6 +3808,47 @@
                         </div>
                         <textarea id="theater-custom-prompt" class="theater-textarea" placeholder="输入自定义剧情提示词..."></textarea>
                     </div>
+                    <!-- 独立API设置 -->
+                    <div class="theater-control-group">
+                        <div class="theater-context-toggle-row">
+                            <label>调用独立API</label>
+                            <div class="theater-toggle-switch" id="theater-api-toggle" role="switch" aria-checked="false" tabindex="0">
+                                <div class="theater-toggle-slider"></div>
+                            </div>
+                        </div>
+                        <div class="theater-api-config" id="theater-api-config" style="display:none;">
+                            <div class="theater-api-preset-row">
+                                <label>API预设</label>
+                                <select id="theater-api-preset-select" class="theater-select">
+                                    <option value="">— 选择预设配置 —</option>
+                                </select>
+                            </div>
+                            <div class="theater-api-field-row">
+                                <label>API地址</label>
+                                <input type="text" id="theater-api-url" class="theater-input" placeholder="https://api.example.com">
+                            </div>
+                            <div class="theater-api-field-row">
+                                <label>API密钥</label>
+                                <input type="password" id="theater-api-key" class="theater-input" placeholder="sk-...">
+                            </div>
+                            <div class="theater-api-field-row">
+                                <label>模型</label>
+                                <div style="display:flex;gap:8px;align-items:center;flex:1;">
+                                    <select id="theater-api-model" class="theater-select" style="flex:1;">
+                                        <option value="">请先拉取或选择预设</option>
+                                    </select>
+                                    <button type="button" id="theater-api-fetch-models-btn" class="theater-save-prompt-btn" style="padding:10px 14px;">拉取模型</button>
+                                </div>
+                            </div>
+                            <div class="theater-api-field-row">
+                                <button type="button" id="theater-api-save-btn" class="theater-save-prompt-btn" style="width:100%;text-align:center;">保存独立API设置</button>
+                            </div>
+                            <div class="theater-context-hint">
+                                开启后将使用独立API生成剧情，关闭则使用主API设置。选择预设可快速填充配置。
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="theater-control-group">
                         <label>分类名称</label>
                         <input type="text" id="theater-category-input" class="theater-input" placeholder="未分类" value="未分类">
@@ -3729,6 +4175,18 @@
                                     <span class="kkt-arrow">›</span>
                                 </div>
                             </div>
+                            <div class="kkt-item" id="setting-group-timestamp-format-container">
+                                <div class="kkt-item-label">时间戳格式</div>
+                                <div class="kkt-item-control">
+                                    <select id="setting-group-timestamp-format"
+                                        style="border:none; background:transparent; text-align:right;">
+                                        <option value="hm">时:分</option>
+                                        <option value="hms">时:分:秒</option>
+                                        <option value="ymd">年/月/日</option>
+                                    </select>
+                                    <span class="kkt-arrow">›</span>
+                                </div>
+                            </div>
                             <div class="kkt-item">
                                 <div class="kkt-item-label">顶部标题布局</div>
                                 <div class="kkt-item-control">
@@ -3738,6 +4196,15 @@
                                         <option value="center">居中</option>
                                     </select>
                                     <span class="kkt-arrow">›</span>
+                                </div>
+                            </div>
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">输入框增高</div>
+                                <div class="kkt-item-control">
+                                    <label class="kkt-switch">
+                                        <input type="checkbox" id="setting-group-input-expand">
+                                        <span class="kkt-slider"></span>
+                                    </label>
                                 </div>
                             </div>
                             <div class="kkt-item"
@@ -3924,12 +4391,10 @@
                 <div class="title-container">
                     <h1 class="title">日记详情</h1>
                 </div>
-                <button class="action-btn" id="edit-journal-detail-btn">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path
-                            d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z" />
-                    </svg>
-                </button>
+                <div class="action-btn-group">
+                    <button class="btn btn-primary btn-small" id="edit-journal-detail-btn">编辑</button>
+                    <button class="btn btn-primary btn-small" id="save-journal-detail-btn" style="display:none;">保存</button>
+                </div>
             </header>
             <main class="content" style="padding: 20px; font-family: 'Georgia', 'Times New Roman', serif;">
                 <h2 id="journal-detail-title" style="margin-top: 0; font-size: 22px;"></h2>
@@ -4878,7 +5343,7 @@
                             <input type="checkbox" id="peek-char-aware-peek-enabled" style="width: auto;">
                             <label for="peek-char-aware-peek-enabled" style="margin: 0;">角色知晓用户窥屏</label>
                         </div>
-                        <p style="font-size: 12px; color: #888; margin: 4px 0 0 0;">开启后，若用户偷看了你的手机并点进了某些应用，你会知道用户看了哪些应用以及其中的内容，并可以据此在对话中自然反应。</p>
+                        <p style="font-size: 12px; color: #888; margin: 4px 0 0 0;">开启后，角色会知道你偷看了他的手机</p>
                     </div>
                 </div>
                 <div class="collapsible-section">
@@ -5651,6 +6116,26 @@
                     class="btn btn-primary" style="padding:8px 12px;border-radius:8px;">关闭</button></div>
         </div>
     </div>
+    <div id="voice-presets-modal" class="modal-overlay"
+        style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);justify-content:center;align-items:center;z-index:9999;">
+        <div class="modal-window"
+            style="max-width:520px;background:var(--panel-bg,#fff);padding:14px;border-radius:10px;box-shadow:0 12px 36px rgba(10,10,20,0.12);">
+            <h3 style="margin:0 0 10px 0;font-size:16px;">管理音色预设</h3>
+            <div id="voice-presets-list" style="max-height:340px; overflow:auto; margin-bottom:12px;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;"><button type="button" id="voice-presets-close-modal"
+                    class="btn btn-primary" style="padding:8px 12px;border-radius:8px;">关闭</button></div>
+        </div>
+    </div>
+    <div id="name-presets-modal" class="modal-overlay"
+        style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);justify-content:center;align-items:center;z-index:9999;">
+        <div class="modal-window"
+            style="max-width:520px;background:var(--panel-bg,#fff);padding:14px;border-radius:10px;box-shadow:0 12px 36px rgba(10,10,20,0.12);">
+            <h3 style="margin:0 0 10px 0;font-size:16px;">管理名称预设</h3>
+            <div id="name-presets-list" style="max-height:340px; overflow:auto; margin-bottom:12px;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;"><button type="button" id="name-presets-close-modal"
+                    class="btn btn-primary" style="padding:8px 12px;border-radius:8px;">关闭</button></div>
+        </div>
+    </div>
     <div id="widget-presets-modal" class="modal-overlay"
         style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);justify-content:center;align-items:center;z-index:9999;">
         <div class="modal-window"
@@ -6012,6 +6497,7 @@
     <script src="js/modules/widgets.js"></script> <!-- 桌面小组件设置 -->
     <script src="js/modules/tutorial.js"></script> <!-- 教程、更新日志、GitHub备份 -->
     <script src="js/modules/more_menu.js"></script> <!-- 更多菜单与状态栏管理 -->
+    <script src="js/modules/regex_filter.js"></script> <!-- 正则过滤模块 -->
     <script src="js/modules/favorites.js"></script> <!-- 消息收藏 -->
     <script src="js/modules/search.js"></script> <!-- 聊天记录搜索模块 -->
     <script src="js/modules/battery_interaction.js"></script> <!-- 电量交互模块 -->

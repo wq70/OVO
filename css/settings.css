@@ -307,6 +307,153 @@ input:checked + .kkt-slider:before {
     background-color: #fff8fa;
 }
 
+.wallpaper-section-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-color, #333);
+    margin-bottom: 10px;
+    padding-left: 2px;
+}
+
+.wallpaper-music-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.wallpaper-music-actions .btn {
+    flex: 1;
+    min-width: 80px;
+    font-size: 13px;
+    padding: 10px 8px;
+}
+
+.music-wallpaper-url-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.wallpaper-music-option {
+    margin-top: 8px;
+    padding: 12px 14px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 1px solid #e9ecef;
+}
+
+.wallpaper-music-option-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-color, #333);
+    cursor: pointer;
+    gap: 10px;
+}
+
+/* 音乐上传弹窗 */
+.music-upload-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+.music-upload-tab {
+    flex: 1;
+    padding: 10px 0;
+    border: none;
+    background: none;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.music-upload-tab.active {
+    color: #fff;
+    border-bottom-color: #fff;
+}
+
+.music-upload-preview-list {
+    max-height: 240px;
+    overflow-y: auto;
+    margin-top: 8px;
+}
+
+.music-upload-preview-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.music-upload-preview-item .upload-item-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.music-upload-preview-item .upload-item-lrc {
+    font-size: 11px;
+    color: #66bb6a;
+    flex-shrink: 0;
+}
+
+.music-upload-preview-item .upload-item-nolrc {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+}
+
+/* 歌词导入绑定选择 */
+.lyrics-import-item {
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.lyrics-import-item-name {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.lyrics-import-matched {
+    font-size: 11px;
+    color: #66bb6a;
+    font-weight: 400;
+    margin-left: 6px;
+}
+
+.lyrics-import-item select {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+}
+
 /* Sticker Group Tags Styles in Settings */
 #setting-char-sticker-groups-container,
 #setting-group-sticker-groups-container {

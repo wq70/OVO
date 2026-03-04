@@ -1480,6 +1480,14 @@ const VideoCallModule = {
                 return;
             }
 
+            // 检查角色是否启用了 TTS
+            if (typeof db !== 'undefined' && db.characters) {
+                const _chat = db.characters.find(c => c.id === chatId);
+                if (!_chat || !_chat.ttsConfig || !_chat.ttsConfig.chatTtsEnabled) {
+                    return;
+                }
+            }
+
             if (typeof VoiceSelector === 'undefined') {
                 console.error('[VideoCall] VoiceSelector 未加载');
                 showToast('音色选择器未加载');

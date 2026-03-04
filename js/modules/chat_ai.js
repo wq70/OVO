@@ -695,11 +695,13 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
                     });
 
                     if (originalMessage) {
+                        let filteredReplyText = replyText;
+                        if (typeof applyRegexFilter === 'function') filteredReplyText = applyRegexFilter(replyText, targetChatId);
                         const message = {
                             id: `msg_${Date.now()}_${Math.random()}`,
                             role: 'assistant',
-                            content: `[${character.realName}的消息：${replyText}]`,
-                            parts: [{ type: 'text', text: `[${character.realName}的消息：${replyText}]` }],
+                            content: `[${character.realName}的消息：${filteredReplyText}]`,
+                            parts: [{ type: 'text', text: `[${character.realName}的消息：${filteredReplyText}]` }],
                             timestamp: Date.now(),
                             isStatusUpdate: item.isStatusUpdate,
                             statusSnapshot: item.statusSnapshot,
@@ -712,11 +714,13 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
                         chat.history.push(message);
                         addMessageBubble(message, targetChatId, targetChatType);
                     } else {
+                        let filteredReplyText2 = replyText;
+                        if (typeof applyRegexFilter === 'function') filteredReplyText2 = applyRegexFilter(replyText, targetChatId);
                         const message = {
                             id: `msg_${Date.now()}_${Math.random()}`,
                             role: 'assistant',
-                            content: `[${character.realName}的消息：${replyText}]`,
-                            parts: [{ type: 'text', text: `[${character.realName}的消息：${replyText}]` }],
+                            content: `[${character.realName}的消息：${filteredReplyText2}]`,
+                            parts: [{ type: 'text', text: `[${character.realName}的消息：${filteredReplyText2}]` }],
                             timestamp: Date.now(),
                             isStatusUpdate: item.isStatusUpdate,
                             statusSnapshot: item.statusSnapshot
@@ -737,6 +741,11 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
                         const afterReveal = rawContent.slice(idx + '[REVEAL]'.length).trim();
                         const linkedChar = db.characters && db.characters.find(c => c.id === chat.linkedCharId);
                         revealToMain = afterReveal || (linkedChar ? '其实我就是' + (linkedChar.realName || linkedChar.remarkName) + '啦～' : '没想到吧，是我哦～');
+                    }
+
+                    // 应用正则过滤
+                    if (typeof applyRegexFilter === 'function') {
+                        finalContent = applyRegexFilter(finalContent, targetChatId);
                     }
 
                     const message = {
@@ -814,6 +823,29 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
                     group.history.push(message);
                     addMessageBubble(message, targetChatId, targetChatType);
                     continue; // 私聊消息处理完毕，跳过后续普通消息匹配
+                }
+
+                // 优先检查是否为角色接收/退回用户转账的指令消息
+                const transferActionRegex = /\[(.*?)(接收|退回)(.*?)的转账\]/;
+                const transferActionMatch = item.content.match(transferActionRegex);
+                
+                if (transferActionMatch) {
+                    const actorName = transferActionMatch[1].trim();
+                    const sender = group.members.find(m => (m.realName === actorName || m.groupNickname === actorName));
+                    if (sender) {
+                        const message = {
+                            id: `msg_${Date.now()}_${Math.random()}`,
+                            role: 'assistant',
+                            content: item.content.trim(),
+                            parts: [{type: item.type, text: item.content.trim()}],
+                            timestamp: Date.now(),
+                            senderId: sender.id,
+                            isTransferAction: true
+                        };
+                        group.history.push(message);
+                        addMessageBubble(message, targetChatId, targetChatType);
+                    }
+                    continue;
                 }
 
                 const groupTransferRegex = /\[(.*?)\s*向\s*(.*?)\s*转账：([\d.,]+)元；备注：(.*?)\]/;

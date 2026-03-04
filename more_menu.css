@@ -245,3 +245,33 @@
     background-color: #fff;
     font-size: 14px;
 }
+
+/* --- Regex Filter Styles --- */
+#regex-filter-manager-screen {
+    background-color: #f5f7fa;
+}
+
+#regex-filter-editor-screen {
+    background-color: #fff;
+}
+
+.rf-rule-row {
+    background: #f8f9fa;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.rf-rule-row input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #fff;
+}
+
+.rf-rule-row .code-input {
+    font-family: 'Consolas', 'Monaco', monospace;
+    background-color: #fff;
+}
