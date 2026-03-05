@@ -1331,13 +1331,15 @@ function generateGroupSystemPrompt(group) {
 
             // 私聊总结（收藏的记忆/日记）
             let memberSummaryText = '';
-            if (perMemberSummaryCount > 0) {
-                let fav = (char.memoryJournals || []).filter(j => j.isFavorited);
-                if (fav.length > perMemberSummaryCount) {
-                    fav = fav
-                        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-                        .slice(0, perMemberSummaryCount);
-                }
+            // 0 表示读取全部收藏总结，> 0 表示只读取最近的N条
+            let fav = (char.memoryJournals || []).filter(j => j.isFavorited);
+            if (perMemberSummaryCount > 0 && fav.length > perMemberSummaryCount) {
+                // 如果设置了数量限制且总数超过限制，则只取最近的N条
+                fav = fav
+                    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+                    .slice(0, perMemberSummaryCount);
+            }
+            if (fav.length > 0) {
                 memberSummaryText = fav
                     .map(j => `标题：${j.title}\n内容：${j.content}`)
                     .join('\n\n---\n\n');

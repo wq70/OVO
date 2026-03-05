@@ -1450,13 +1450,57 @@ async function saveTheaterPromptPreset() {
     const name = prompt('请输入预设名称：');
     if (!name) return;
 
+    // 让用户选择保存范围：
+    // 确定：同时保存当前选择的人设、角色、世界书
+    // 取消：仅保存剧情提示词
+    const saveFullContext = confirm(
+        '请选择保存范围：\n\n' +
+        '【确定】同时保存：人设 + 角色 + 世界书 + 剧情提示词\n' +
+        '【取消】只保存：剧情提示词'
+    );
+
+    const personaSelect = document.getElementById('theater-persona-select');
+    const charSelect = document.getElementById('theater-char-select');
+    const worldbookOptions = document.getElementById('theater-worldbook-options');
+
     const presets = getTheaterPromptPresets();
     const id = Date.now().toString();
-    presets.push({ id, name, content });
+    let newPreset = { id, name, content };
+
+    if (saveFullContext) {
+        // 收集当前人设、角色、世界书选择，一并写入预设
+        const personaId = personaSelect ? (personaSelect.value || '').trim() || null : null;
+        const charId = charSelect ? (charSelect.value || '').trim() || null : null;
+
+        let worldBookIds = [];
+        if (worldbookOptions) {
+            worldBookIds = Array.from(
+                worldbookOptions.querySelectorAll('.theater-multiselect-option.selected')
+            )
+                .map(opt => opt.dataset.id)
+                .filter(Boolean);
+        }
+
+        newPreset = {
+            ...newPreset,
+            type: 'full',           // 带上下文的预设
+            personaId,
+            charId,
+            worldBookIds
+        };
+    } else {
+        // 仅保存提示词内容
+        newPreset = {
+            ...newPreset,
+            type: 'prompt-only'
+        };
+    }
+
+    presets.push(newPreset);
     setTheaterPromptPresets(presets);
 
     await saveData();
-    showToast('已保存为提示词预设');
+    showToast(saveFullContext ? '已保存为完整预设（含人设/角色/世界书）' : '已保存为提示词预设');
     populateTheaterForm();
 
     presetSelect.value = id;
@@ -1466,6 +1510,9 @@ async function saveTheaterPromptPreset() {
 function applyTheaterPromptPreset() {
     const presetSelect = document.getElementById('theater-prompt-preset-select');
     const promptInput = document.getElementById('theater-custom-prompt');
+    const personaSelect = document.getElementById('theater-persona-select');
+    const charSelect = document.getElementById('theater-char-select');
+    const worldbookOptions = document.getElementById('theater-worldbook-options');
     if (!presetSelect || !promptInput) return;
 
     const presetId = presetSelect.value;
@@ -1476,6 +1523,35 @@ function applyTheaterPromptPreset() {
     if (!preset) return;
 
     promptInput.value = preset.content || '';
+
+    // 如果该预设包含人设/角色/世界书信息，则一并恢复
+    if (personaSelect && preset.personaId) {
+        personaSelect.value = preset.personaId;
+    }
+
+    if (charSelect && preset.charId) {
+        charSelect.value = preset.charId;
+    }
+
+    if (worldbookOptions) {
+        // 先清空当前选择
+        Array.from(worldbookOptions.querySelectorAll('.theater-multiselect-option.selected'))
+            .forEach(opt => opt.classList.remove('selected'));
+
+        if (Array.isArray(preset.worldBookIds) && preset.worldBookIds.length > 0) {
+            const idSet = new Set(preset.worldBookIds);
+            Array.from(worldbookOptions.querySelectorAll('.theater-multiselect-option'))
+                .forEach(opt => {
+                    const wid = opt.dataset.id;
+                    if (wid && idSet.has(wid)) {
+                        opt.classList.add('selected');
+                    }
+                });
+        }
+
+        // 更新世界书展示文案
+        updateWorldbookDisplay();
+    }
 }
 
 // 管理提示词预设（支持单选/多选删除）

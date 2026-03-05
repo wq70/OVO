@@ -54,7 +54,7 @@ const TTSSettings = {
             if (enabledInput) enabledInput.checked = config.enabled || false;
             if (groupIdInput) groupIdInput.value = config.groupId || '';
             if (apiKeyInput) apiKeyInput.value = config.apiKey || '';
-            if (domainSelect) domainSelect.value = config.domain || 'api.minimaxi.com';
+            if (domainSelect) domainSelect.value = config.domain || 'api.minimaxi.chat';
             if (modelSelect) modelSelect.value = config.model || 'speech-2.8-hd';
 
             const userConfig = MinimaxTTSService.userConfig;
@@ -66,7 +66,7 @@ const TTSSettings = {
             if (userEnabledInput) userEnabledInput.checked = userConfig.enabled || false;
             if (userGroupIdInput) userGroupIdInput.value = userConfig.groupId || '';
             if (userApiKeyInput) userApiKeyInput.value = userConfig.apiKey || '';
-            if (userDomainSelect) userDomainSelect.value = userConfig.domain || 'api.minimaxi.com';
+            if (userDomainSelect) userDomainSelect.value = userConfig.domain || 'api.minimaxi.chat';
             if (userModelSelect) userModelSelect.value = userConfig.model || 'speech-2.8-hd';
         } catch (err) {
             console.error('[TTSSettings] 加载设置失败:', err);
@@ -85,7 +85,7 @@ const TTSSettings = {
                 enabled: enabledInput?.checked || false,
                 groupId: groupIdInput?.value?.trim() || '',
                 apiKey: apiKeyInput?.value?.trim() || '',
-                domain: domainSelect?.value || 'api.minimaxi.com',
+                domain: domainSelect?.value || 'api.minimaxi.chat',
                 model: modelSelect?.value || 'speech-2.8-hd'
             };
             if (config.enabled && (!config.groupId || !config.apiKey)) {
@@ -103,7 +103,7 @@ const TTSSettings = {
                 enabled: userEnabledInput?.checked || false,
                 groupId: userGroupIdInput?.value?.trim() || '',
                 apiKey: userApiKeyInput?.value?.trim() || '',
-                domain: userDomainSelect?.value || 'api.minimaxi.com',
+                domain: userDomainSelect?.value || 'api.minimaxi.chat',
                 model: userModelSelect?.value || 'speech-2.8-hd'
             };
             if (userConfig.enabled && (!userConfig.groupId || !userConfig.apiKey)) {

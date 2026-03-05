@@ -172,8 +172,20 @@ const globalSettingKeys = [
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
 
-const appVersion = "3.4";
+const appVersion = "3.5";
 const updateLog = [
+    {
+        version: "3.5",
+        date: "2026-03-05",
+        notes: [
+            "3.5微量更新：",
+            "1.修复了群聊记忆互通的BUG（豹豹老师修）",
+            "2.加了小剧场分类导入导出和预设保存可选择同步保存人设世界书等等（豹豹老师加）",
+            "3.修复TTS开关问题，修复TTS国际版问题",
+            "4.删掉了自动揭露",
+            "5.新增了真实摄像头，视频通话可以看到真实的你的样子（没有人许愿这个，但是！我想做就做了！）"
+        ]
+    },
     {
         version: "3.4",
         date: "2026-03-04",

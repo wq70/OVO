@@ -5,7 +5,8 @@
     display: none;
     flex-direction: column;
     height: 100%;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     position: relative;
 }
 
@@ -70,18 +71,18 @@
     right: 0;
     height: 120px;
     pointer-events: none;
-    z-index: 2;
+    z-index: 10;
 }
 
 .tonearm-svg {
-    width: 140px;
-    height: 120px;
+    width: min(140px, 32vw);
+    height: min(120px, 28vw);
     position: absolute;
-    top: 52px;
-    left: calc(50% - 105px);
+    top: 100px;
+    left: calc(50% - min(105px, 24vw));
     color: rgba(255, 255, 255, 0.9);
     filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
-    transform-origin: 90px 8px;
+    transform-origin: 64% 6%;
     transform: rotate(18deg);
     transition: transform 0.35s ease;
 }
@@ -101,8 +102,8 @@
 
 /* 主内容区 */
 .music-player-content {
-    padding: 16px 20px 100px;
-    overflow: hidden;
+    padding: 100px 20px 20px;
+    overflow: visible;
     flex: 1;
     position: relative;
 }
@@ -111,14 +112,15 @@
     position: relative;
     z-index: 1;
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: min(24px, 3vh);
+    overflow: visible;
 }
 
 /* 黑胶外圈 + 中心封面 */
 .music-vinyl {
-    width: 280px;
-    height: 280px;
-    margin: 0 auto 20px;
+    width: min(280px, 65vw);
+    height: min(280px, 65vw);
+    margin: 0 auto min(20px, 2.5vh);
     border-radius: 50%;
     background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 50%, #252525 100%);
     box-shadow:
@@ -148,8 +150,8 @@
 }
 
 .music-cover-wrap {
-    width: 130px;
-    height: 130px;
+    width: min(130px, 30vw);
+    height: min(130px, 30vw);
     border-radius: 50%;
     overflow: hidden;
     background: linear-gradient(160deg, #2a2a2a 0%, #1a1a1a 100%);
@@ -1429,9 +1431,9 @@
 
 /* ---------- 歌词视图（替换胶片显示） ---------- */
 .music-lyrics-view {
-    width: 280px;
-    height: 280px;
-    margin: 0 auto 20px;
+    width: min(280px, 65vw);
+    height: min(280px, 65vw);
+    margin: 0 auto min(20px, 2.5vh);
     overflow: hidden;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
@@ -1576,8 +1578,8 @@
     display: none;
 }
 #music-screen.music-bg-cover-vinyl .music-cover-wrap {
-    width: 200px;
-    height: 200px;
+    width: min(200px, 48vw);
+    height: min(200px, 48vw);
     border-radius: 16px;
     border: 2px solid rgba(255, 255, 255, 0.15);
 }
@@ -2058,4 +2060,73 @@
     border-color: rgba(0, 0, 0, 0.12);
     background: #fff;
     color: #1c1c1e;
+}
+
+/* ========== 移动端响应式适配 ========== */
+
+/* 矮屏设备（横屏手机、iPhone SE 等高度较小的设备） */
+@media (max-height: 680px) {
+    .music-player-content {
+        padding-bottom: 16px;
+    }
+    .music-hero {
+        margin-bottom: 12px;
+    }
+    .music-controls {
+        padding-bottom: 8px;
+        margin-bottom: 4px;
+    }
+    .music-progress-wrap {
+        margin-bottom: 12px;
+    }
+    .music-hero .music-title {
+        font-size: 17px;
+    }
+    .music-hero .music-meta {
+        font-size: 12px;
+    }
+}
+
+/* 非常矮的屏幕（横屏等极端情况） */
+@media (max-height: 500px) {
+    .music-player-content {
+        padding-bottom: 10px;
+    }
+    .music-hero {
+        margin-bottom: 6px;
+    }
+    .music-btn {
+        width: 36px;
+        height: 36px;
+    }
+    .music-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+    .music-btn-play {
+        width: 46px;
+        height: 46px;
+    }
+    .music-btn-play svg {
+        width: 26px;
+        height: 26px;
+    }
+}
+
+/* 窄屏设备（小尺寸手机） */
+@media (max-width: 360px) {
+    .music-player-content {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+    .music-info {
+        gap: 8px;
+        padding: 0 4px;
+    }
+    .music-hero .music-title {
+        font-size: 17px;
+    }
+    .music-buttons {
+        gap: 4px;
+    }
 }

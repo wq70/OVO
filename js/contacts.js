@@ -82,6 +82,9 @@ function setupContactsScreen() {
     }
 
     // --- My Profile Screen Listeners ---
+    // 资料卡背景图更换功能
+    setupBannerChangeListeners();
+
     const mpSaveBtn = document.getElementById('mp-save-btn');
     if (mpSaveBtn) mpSaveBtn.addEventListener('click', saveCurrentPersona);
 
@@ -224,6 +227,108 @@ function renderContactList() {
     });
 }
 
+// 资料卡背景图更换
+function setupBannerChangeListeners() {
+    const header = document.getElementById('pc-header');
+    const modal = document.getElementById('pc-banner-modal');
+    const fileInput = document.getElementById('pc-banner-file-input');
+    const urlInput = document.getElementById('pc-banner-url-input');
+    const preview = document.getElementById('pc-banner-preview');
+    const form = document.getElementById('pc-banner-form');
+    if (!header || !modal) return;
+
+    const DEFAULT_BANNER = 'https://i.postimg.cc/g0ZZDXfg/Camera_1040g3k031kbtbqsdk8105o6u9s3g8jicmr9oq9g.jpg';
+    const getCharId = () => document.getElementById('pc-message-btn')?.dataset?.charId;
+
+    const updatePreview = (url) => {
+        if (url) {
+            preview.style.backgroundImage = `url('${url}')`;
+            preview.querySelector('span').style.display = 'none';
+        } else {
+            preview.style.backgroundImage = '';
+            preview.querySelector('span').style.display = '';
+        }
+    };
+
+    const applyBannerToHeader = (imageUrl) => {
+        const h = document.getElementById('pc-header');
+        const src = imageUrl || DEFAULT_BANNER;
+        h.style.background = `linear-gradient(to bottom, rgba(0,0,0,0.4), transparent), url('${src}') center/cover`;
+    };
+
+    const closeModal = () => {
+        modal.classList.remove('visible');
+        if (urlInput) urlInput.value = '';
+        updatePreview('');
+        if (fileInput) fileInput.value = '';
+    };
+
+    // 点击背景图打开弹窗
+    header.addEventListener('click', (e) => {
+        if (e.target.closest('.pc-avatar')) return;
+        const charId = getCharId();
+        if (!charId) return;
+        const char = db.characters.find(c => c.id === charId);
+        if (char?.bannerImage) {
+            urlInput.value = char.bannerImage;
+            updatePreview(char.bannerImage);
+        }
+        modal.classList.add('visible');
+    });
+
+    // 点击遮罩关闭
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+
+    // URL输入实时预览
+    urlInput?.addEventListener('input', () => {
+        updatePreview(urlInput.value.trim());
+    });
+
+    // 本地上传
+    fileInput?.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+            showToast('正在处理图片...');
+            const compressedUrl = await compressImage(file, { quality: 0.85, maxWidth: 1080, maxHeight: 720 });
+            urlInput.value = compressedUrl;
+            updatePreview(compressedUrl);
+        } catch (err) {
+            showToast('图片处理失败');
+        }
+    });
+
+    // 保存
+    form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const charId = getCharId();
+        if (!charId) return;
+        const char = db.characters.find(c => c.id === charId);
+        if (!char) return;
+        const url = urlInput.value.trim();
+        char.bannerImage = url || '';
+        applyBannerToHeader(url);
+        await saveData();
+        closeModal();
+        showToast('背景图已更新');
+    });
+
+    // 重置
+    document.getElementById('pc-banner-reset-btn')?.addEventListener('click', async () => {
+        const charId = getCharId();
+        if (!charId) return;
+        const char = db.characters.find(c => c.id === charId);
+        if (!char) return;
+        char.bannerImage = '';
+        applyBannerToHeader('');
+        await saveData();
+        closeModal();
+        showToast('背景图已重置');
+    });
+}
+
 // 打开角色资料卡
 function openProfileCard(charId) {
     const char = db.characters.find(c => c.id === charId);
@@ -232,6 +337,15 @@ function openProfileCard(charId) {
     document.getElementById('pc-avatar').src = char.avatar;
     document.getElementById('pc-name').textContent = char.realName || char.remarkName;
     document.getElementById('pc-remark').textContent = `@${char.remarkName}`;
+
+    // 应用角色自定义背景图
+    const header = document.getElementById('pc-header');
+    const defaultBanner = "url('https://i.postimg.cc/g0ZZDXfg/Camera_1040g3k031kbtbqsdk8105o6u9s3g8jicmr9oq9g.jpg')";
+    if (char.bannerImage) {
+        header.style.background = `linear-gradient(to bottom, rgba(0,0,0,0.4), transparent), url('${char.bannerImage}') center/cover`;
+    } else {
+        header.style.background = `linear-gradient(to bottom, rgba(0,0,0,0.4), transparent), ${defaultBanner} center/cover`;
+    }
     
     const msgCount = char.history ? char.history.length : 0;
     document.getElementById('pc-stat-msg-count').textContent = msgCount;

@@ -18,7 +18,11 @@ const VideoCallModule = {
         incomingChat: null, // 暂存来电对象
         isMinimized: false, // 是否处于悬浮窗模式
         hasEnteredCallScene: false, // 是否已进入通话界面（区分「等待中」与「已接通」）
-        ringAudio: null // 来电铃声 Audio 实例，用于循环播放与接通/拒绝时停止
+        ringAudio: null, // 来电铃声 Audio 实例，用于循环播放与接通/拒绝时停止
+        // 真实摄像头相关
+        cameraStream: null,
+        facingMode: 'user', // 'user' = 前置, 'environment' = 后置
+        realCameraActive: false
     },
 
     stopRingSound: function() {
@@ -29,6 +33,112 @@ const VideoCallModule = {
             } catch (e) {}
             this.state.ringAudio = null;
         }
+    },
+
+    // --- 真实摄像头相关 ---
+
+    startRealCamera: async function() {
+        const chat = this.state.currentChat;
+        if (!chat || !chat.realCameraEnabled) return;
+        if (this.state.callType !== 'video') return;
+
+        const pip = document.getElementById('vc-user-camera-pip');
+        const video = document.getElementById('vc-user-camera-video');
+        if (!pip || !video) return;
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: this.state.facingMode, width: { ideal: 480 }, height: { ideal: 640 } },
+                audio: false
+            });
+            this.state.cameraStream = stream;
+            this.state.realCameraActive = true;
+            video.srcObject = stream;
+            pip.style.display = 'block';
+
+            // 初始化PIP拖拽
+            this.initDraggable(pip);
+
+            // 点击翻转摄像头
+            pip.addEventListener('click', (e) => {
+                if (pip.dataset.isDragging === 'true') return;
+                this.flipCamera();
+            });
+        } catch (err) {
+            console.error('[VideoCall] 摄像头启动失败:', err);
+            showToast('摄像头启动失败，请检查权限设置');
+            this.state.realCameraActive = false;
+        }
+    },
+
+    stopRealCamera: function() {
+        if (this.state.cameraStream) {
+            this.state.cameraStream.getTracks().forEach(t => t.stop());
+            this.state.cameraStream = null;
+        }
+        this.state.realCameraActive = false;
+        this.state.facingMode = 'user';
+        const pip = document.getElementById('vc-user-camera-pip');
+        if (pip) {
+            pip.style.display = 'none';
+            pip.classList.remove('rear-camera');
+        }
+        const video = document.getElementById('vc-user-camera-video');
+        if (video) video.srcObject = null;
+    },
+
+    flipCamera: async function() {
+        if (!this.state.realCameraActive) return;
+
+        // 切换方向
+        this.state.facingMode = this.state.facingMode === 'user' ? 'environment' : 'user';
+
+        // 停掉旧流
+        if (this.state.cameraStream) {
+            this.state.cameraStream.getTracks().forEach(t => t.stop());
+        }
+
+        const pip = document.getElementById('vc-user-camera-pip');
+        const video = document.getElementById('vc-user-camera-video');
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: this.state.facingMode, width: { ideal: 480 }, height: { ideal: 640 } },
+                audio: false
+            });
+            this.state.cameraStream = stream;
+            video.srcObject = stream;
+
+            if (this.state.facingMode === 'environment') {
+                pip.classList.add('rear-camera');
+            } else {
+                pip.classList.remove('rear-camera');
+            }
+            showToast(this.state.facingMode === 'user' ? '已切换到前置摄像头' : '已切换到后置摄像头');
+        } catch (err) {
+            console.error('[VideoCall] 翻转摄像头失败:', err);
+            showToast('切换摄像头失败');
+            // 回退
+            this.state.facingMode = this.state.facingMode === 'user' ? 'environment' : 'user';
+        }
+    },
+
+    captureFrame: function() {
+        if (!this.state.realCameraActive) return null;
+
+        const video = document.getElementById('vc-user-camera-video');
+        const canvas = document.getElementById('vc-camera-capture-canvas');
+        if (!video || !canvas || video.readyState < 2) return null;
+
+        // 压缩到 480 宽度
+        const maxW = 480;
+        const scale = Math.min(maxW / video.videoWidth, 1);
+        canvas.width = Math.round(video.videoWidth * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.6);
     },
 
     init: function() {
@@ -672,6 +782,7 @@ const VideoCallModule = {
             if (floatWindow) floatWindow.classList.add('vc-float-connected');
             this.startTimer();
             this.sendInitialMessage();
+            this.startRealCamera();
             return;
         }
 
@@ -687,6 +798,7 @@ const VideoCallModule = {
                 loadingScene.style.display = 'none';
                 this.startTimer();
                 this.sendInitialMessage();
+                this.startRealCamera();
             }, 500);
         });
     },
@@ -970,6 +1082,14 @@ const VideoCallModule = {
             return;
         }
 
+        // 真实摄像头：点击头像触发时也截取一帧
+        if (this.state.realCameraActive) {
+            const frame = this.captureFrame();
+            if (frame) {
+                this.state.lastCapturedFrame = frame;
+            }
+        }
+
         this.state.isGenerating = true;
         this.state.isAiSpeaking = true; // 同时也标记为 speaking 以防其他操作干扰
         
@@ -1000,12 +1120,22 @@ const VideoCallModule = {
             // 移除处理中状态样式
             if (avatar) avatar.classList.remove('processing');
             this.state.isGenerating = false;
-            this.state.isAiSpeaking = false; 
+            this.state.isAiSpeaking = false;
+            // 清除已使用的摄像头截图
+            this.state.lastCapturedFrame = null;
         }
     },
 
     sendUserAction: async function(text) {
         if (!text) return;
+
+        // 真实摄像头：发送时截取一帧
+        if (this.state.realCameraActive) {
+            const frame = this.captureFrame();
+            if (frame) {
+                this.state.lastCapturedFrame = frame;
+            }
+        }
 
         const parts = text.split(/([（\(].*?[）\)])/g);
 
@@ -1032,6 +1162,8 @@ const VideoCallModule = {
         this.state.isCallActive = false;
         this.state.isMinimized = false;
         this.state.hasEnteredCallScene = false;
+
+        this.stopRealCamera();
 
         if (this.state.timerInterval) {
             clearInterval(this.state.timerInterval);
@@ -1466,13 +1598,8 @@ const VideoCallModule = {
                 return;
             }
 
-            if (!MinimaxTTSService.config.enabled) {
-                return;
-            }
-            if (!MinimaxTTSService.isConfigured()) {
-                showToast('TTS 未配置或未启用');
-                return;
-            }
+            // 两个开关必须同时打开才进行 TTS，任一未开启则静默忽略
+            if (!MinimaxTTSService.config.enabled) return;
 
             const chatId = this.state.currentChat?.id;
             if (!chatId) {
@@ -1480,12 +1607,15 @@ const VideoCallModule = {
                 return;
             }
 
-            // 检查角色是否启用了 TTS
             if (typeof db !== 'undefined' && db.characters) {
                 const _chat = db.characters.find(c => c.id === chatId);
-                if (!_chat || !_chat.ttsConfig || !_chat.ttsConfig.chatTtsEnabled) {
-                    return;
-                }
+                if (!_chat || !_chat.ttsConfig || !_chat.ttsConfig.chatTtsEnabled) return;
+            }
+
+            // 两个开关都开了，但 API 配置不完整时才提示
+            if (!MinimaxTTSService.isConfigured()) {
+                showToast('TTS 配置不完整，请检查 API 设置');
+                return;
             }
 
             if (typeof VoiceSelector === 'undefined') {

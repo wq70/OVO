@@ -126,6 +126,11 @@
     display: flex;
     justify-content: center;
     align-items: flex-end;
+    cursor: pointer;
+    transition: filter 0.2s;
+}
+.pc-header:active {
+    filter: brightness(0.85);
 }
 
 .pc-avatar {

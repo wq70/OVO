@@ -275,3 +275,13 @@
     font-family: 'Consolas', 'Monaco', monospace;
     background-color: #fff;
 }
+
+/* 编辑器内"过滤规则"标题栏固定，规则多时也能随时点击添加 */
+.rf-rules-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background-color: #fff;
+    padding-top: 5px;
+    padding-bottom: 10px;
+}

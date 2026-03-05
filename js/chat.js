@@ -287,13 +287,12 @@ function setupChatRoom() {
                     const svc = typeof MinimaxTTSService !== 'undefined' ? MinimaxTTSService : null;
                     const state = svc ? svc.getPlayState() : {};
 
-                    // 检查角色是否启用了 TTS
-                    if (svc && currentChatId && typeof db !== 'undefined' && db.characters) {
+                    // 两个开关必须同时打开才进行 TTS：API 全局开关 + 角色开关
+                    // 任一未开启则静默忽略，不弹提示
+                    if (!svc || !svc.config.enabled) return;
+                    if (currentChatId && typeof db !== 'undefined' && db.characters) {
                         const _chat = db.characters.find(c => c.id === currentChatId);
-                        if (!_chat || !_chat.ttsConfig || !_chat.ttsConfig.chatTtsEnabled) {
-                            showToast('该角色未启用 TTS 语音');
-                            return;
-                        }
+                        if (!_chat || !_chat.ttsConfig || !_chat.ttsConfig.chatTtsEnabled) return;
                     }
 
                     // 当前正在播的就是这条：切换暂停/恢复，避免重复读

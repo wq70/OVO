@@ -395,6 +395,7 @@ function renderTutorialContent() {
         { key: 'groups', label: '群聊' },
         { key: 'worldBooks', label: '世界书' },
         { key: 'myStickers', label: '我的表情' },
+        { key: 'theaterData', label: '小剧场（剧情、预设、API设置）' },
         { key: 'globalSettings', label: '全局设置（API、壁纸、主题等）' }
     ];
     const partialExportModalId = 'partial-export-modal';
@@ -1251,6 +1252,13 @@ async function createFullBackupData() {
     return backupData;
 }
 
+// 小剧场相关的所有 db 键（用于分类导出/导入）
+const THEATER_DB_KEYS = [
+    'theaterScenarios', 'theaterPromptPresets',
+    'theaterHtmlScenarios', 'theaterHtmlPromptPresets',
+    'theaterMode', 'theaterApiSettings'
+];
+
 // 分类导出：只包含选中的表
 async function createPartialBackupData(selectedKeys) {
     const keys = window.globalSettingKeysForBackup || [];
@@ -1259,6 +1267,9 @@ async function createPartialBackupData(selectedKeys) {
         if (key === 'globalSettings') {
             result.globalSettings = {};
             keys.forEach(k => { result.globalSettings[k] = db[k] !== undefined ? JSON.parse(JSON.stringify(db[k])) : undefined; });
+        } else if (key === 'theaterData') {
+            result.theaterData = {};
+            THEATER_DB_KEYS.forEach(k => { result.theaterData[k] = db[k] !== undefined ? JSON.parse(JSON.stringify(db[k])) : undefined; });
         } else if (db[key] !== undefined) {
             result[key] = JSON.parse(JSON.stringify(db[key]));
         }
@@ -1276,6 +1287,8 @@ async function importPartialBackupData(data) {
         for (const key of tables) {
             if (key === 'globalSettings' && data.globalSettings) {
                 Object.keys(data.globalSettings).forEach(k => { db[k] = data.globalSettings[k]; });
+            } else if (key === 'theaterData' && data.theaterData) {
+                Object.keys(data.theaterData).forEach(k => { db[k] = data.theaterData[k]; });
             } else if (data[key] !== undefined) {
                 db[key] = data[key];
             }

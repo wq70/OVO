@@ -1618,6 +1618,7 @@
                             <div class="kkt-item-control">
                                 <select id="minimax-domain"
                                     style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                    <option value="api.minimaxi.chat">国际 (api.minimaxi.chat)</option>
                                     <option value="api.minimaxi.com">国际 (api.minimaxi.com)</option>
                                     <option value="api.minimax.chat">国内 (api.minimax.chat)</option>
                                 </select>
@@ -1725,6 +1726,7 @@
                             <div class="kkt-item-control">
                                 <select id="minimax-user-domain"
                                     style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                    <option value="api.minimaxi.chat">国际 (api.minimaxi.chat)</option>
                                     <option value="api.minimaxi.com">国际 (api.minimaxi.com)</option>
                                     <option value="api.minimax.chat">国内 (api.minimax.chat)</option>
                                 </select>
@@ -1987,7 +1989,7 @@
                     </div>
                     <!-- 正则规则列表 -->
                     <div class="editor-section">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <div class="rf-rules-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                             <label style="font-weight:600;">过滤规则</label>
                             <button type="button" class="btn btn-small" id="rf-add-rule-btn">+ 添加规则</button>
                         </div>
@@ -2357,7 +2359,7 @@
         <!-- Profile Card Modal -->
         <div id="profile-card-modal" class="modal-overlay">
             <div class="modal-window">
-                <div class="pc-header">
+                <div class="pc-header" id="pc-header" title="点击更换背景图">
                     <img src="" class="pc-avatar" id="pc-avatar">
                 </div>
                 <div class="pc-content">
@@ -2403,6 +2405,28 @@
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- 资料卡背景图更换弹窗 -->
+        <div id="pc-banner-modal" class="modal-overlay">
+            <div class="modal-window">
+                <h3>更换卡片背景</h3>
+                <form id="pc-banner-form">
+                    <div id="pc-banner-preview"
+                        style="width: 100%; height: 150px; border: 2px dashed #ddd; border-radius: 10px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; color: #aaa; background-size: cover; background-position: center;">
+                        <span>预览</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="pc-banner-url-input">图片URL</label>
+                        <input type="url" id="pc-banner-url-input" class="form-group" placeholder="粘贴图片URL">
+                    </div>
+                    <p style="text-align:center; color:#888; margin: -10px 0 15px;">或</p>
+                    <input type="file" id="pc-banner-file-input" accept="image/*" style="display:none;">
+                    <label for="pc-banner-file-input" class="btn btn-secondary" style="width:100%; margin-bottom: 10px;">从本地上传</label>
+                    <button type="submit" class="btn btn-primary" style="margin-bottom: 8px;">保存</button>
+                    <button type="button" class="btn btn-neutral" id="pc-banner-reset-btn">重置为默认</button>
+                </form>
             </div>
         </div>
 
@@ -3111,6 +3135,18 @@
                                             <span class="kkt-slider"></span>
                                         </label>
                                     </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">视频通话真实摄像头</div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                            <input type="checkbox" id="setting-real-camera-enabled">
+                                            <span class="kkt-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="kkt-item-hint" id="real-camera-hint" style="padding: 0 16px 12px; font-size: 12px; color: #8e8e93; line-height: 1.4;">
+                                    开启后，视频通话时会在右上角显示你的真实摄像头画面，角色可以通过API识别你的画面内容。
                                 </div>
                             </div>
 
@@ -3942,27 +3978,6 @@
                     </div>
 
                     <form id="group-settings-form">
-                        <!-- 聊天快速定位（回顶/回底） -->
-                        <div class="kkt-group">
-                            <div class="kkt-item kkt-item-clickable" id="group-chat-scroll-to-top-current-btn" style="cursor:pointer;">
-                                <div class="kkt-item-label">回顶（当前已加载）</div>
-                                <div class="kkt-item-control">
-                                    <span class="kkt-arrow">›</span>
-                                </div>
-                            </div>
-                            <div class="kkt-item kkt-item-clickable" id="group-chat-scroll-to-top-all-btn" style="cursor:pointer;">
-                                <div class="kkt-item-label">回顶（全部）</div>
-                                <div class="kkt-item-control">
-                                    <span class="kkt-arrow">›</span>
-                                </div>
-                            </div>
-                            <div class="kkt-item kkt-item-clickable" id="group-chat-scroll-to-bottom-btn" style="cursor:pointer;">
-                                <div class="kkt-item-label">聊天回底</div>
-                                <div class="kkt-item-control">
-                                    <span class="kkt-arrow">›</span>
-                                </div>
-                            </div>
-                        </div>
                         <!-- 我的信息分组 -->
                         <div class="kkt-group">
                             <div class="kkt-item">
@@ -4053,7 +4068,7 @@
                                 <div class="kkt-item-control">
                                     <input type="number" id="setting-group-private-memory-summary-count" value="0" min="0"
                                         max="50" style="width:50px; text-align:right; border:none;"
-                                        title="每个群成员读取其与用户私聊的已收藏总结数量；0表示不读取">
+                                        title="每个群成员读取其与用户私聊的已收藏总结数量；0表示读取全部已收藏的总结">
                                 </div>
                             </div>
                             <div class="kkt-item" style="padding-top: 0;">
@@ -4091,6 +4106,28 @@
                                 <div id="setting-group-sticker-groups-container"
                                     style="width:100%; max-height: 120px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 8px;">
                                     <!-- JS populate -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 聊天快速定位（回顶/回底） -->
+                        <div class="kkt-group" style="margin-top:15px;">
+                            <div class="kkt-item kkt-item-clickable" id="group-chat-scroll-to-top-current-btn" style="cursor:pointer;">
+                                <div class="kkt-item-label">回顶（当前已加载）</div>
+                                <div class="kkt-item-control">
+                                    <span class="kkt-arrow">›</span>
+                                </div>
+                            </div>
+                            <div class="kkt-item kkt-item-clickable" id="group-chat-scroll-to-top-all-btn" style="cursor:pointer;">
+                                <div class="kkt-item-label">回顶（全部）</div>
+                                <div class="kkt-item-control">
+                                    <span class="kkt-arrow">›</span>
+                                </div>
+                            </div>
+                            <div class="kkt-item kkt-item-clickable" id="group-chat-scroll-to-bottom-btn" style="cursor:pointer;">
+                                <div class="kkt-item-label">聊天回底</div>
+                                <div class="kkt-item-control">
+                                    <span class="kkt-arrow">›</span>
                                 </div>
                             </div>
                         </div>
@@ -5116,6 +5153,12 @@
 
         <!-- SCENE 2: 通话界面 -->
         <div id="vc-scene-call" class="vc-scene vc-hidden">
+            <!-- 用户真实摄像头画中画 -->
+            <div id="vc-user-camera-pip" class="vc-user-camera-pip" style="display:none;">
+                <video id="vc-user-camera-video" autoplay playsinline muted></video>
+                <div class="vc-pip-flip-hint">点击翻转</div>
+            </div>
+            <canvas id="vc-camera-capture-canvas" style="display:none;"></canvas>
             <div class="vc-call-header">
                 <div class="vc-contact-info">
                     <div class="name" id="vc-call-name">Unknown</div>

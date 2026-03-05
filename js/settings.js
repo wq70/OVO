@@ -597,6 +597,7 @@ function loadSettingsToSidebar() {
         document.getElementById('setting-shop-interaction-enabled').checked = e.shopInteractionEnabled !== false;
 
         document.getElementById('setting-video-call-enabled').checked = e.videoCallEnabled || false;
+        document.getElementById('setting-real-camera-enabled').checked = e.realCameraEnabled || false;
 
         const ar = e.autoReply || {};
         document.getElementById('setting-auto-reply-enabled').checked = ar.enabled || false;
@@ -753,6 +754,7 @@ async function saveSettingsFromSidebar() {
         e.shopInteractionEnabled = document.getElementById('setting-shop-interaction-enabled').checked;
 
         e.videoCallEnabled = document.getElementById('setting-video-call-enabled').checked;
+        e.realCameraEnabled = document.getElementById('setting-real-camera-enabled').checked;
 
         if (!e.autoReply) e.autoReply = {};
         e.autoReply.enabled = document.getElementById('setting-auto-reply-enabled').checked;

@@ -30,7 +30,7 @@ const MinimaxTTSService = {
         enabled: false,
         groupId: '',
         apiKey: '',
-        domain: 'api.minimaxi.com',
+        domain: 'api.minimaxi.chat',
         model: 'speech-2.8-hd'
     },
 
@@ -39,7 +39,7 @@ const MinimaxTTSService = {
         enabled: false,
         groupId: '',
         apiKey: '',
-        domain: 'api.minimaxi.com',
+        domain: 'api.minimaxi.chat',
         model: 'speech-2.8-hd'
     },
 
