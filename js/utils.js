@@ -844,6 +844,308 @@ function openImageViewer(src) {
     };
 }
 
+// === NovelAI 生图 API ===
+
+// Blob 转 DataURL 辅助函数
+function _nai_blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+// 从 ZIP Blob 中提取图片，返回 DataURL
+async function _nai_extractPngFromZipBlob(zipBlob) {
+    const arrayBuffer = await zipBlob.arrayBuffer();
+    const uint8 = new Uint8Array(arrayBuffer);
+
+    // 在 zip 字节流中定位 PNG 签名 (89 50 4E 47)
+    let pngStart = -1;
+    for (let i = 0; i < uint8.length - 8; i++) {
+        if (uint8[i] === 0x89 && uint8[i+1] === 0x50 && uint8[i+2] === 0x4E && uint8[i+3] === 0x47) {
+            pngStart = i;
+            break;
+        }
+    }
+
+    if (pngStart >= 0) {
+        // 找到 PNG IEND 标记来精确截取
+        let pngEnd = uint8.length;
+        for (let i = pngStart + 8; i < uint8.length - 8; i++) {
+            // IEND chunk: 49 45 4E 44
+            if (uint8[i] === 0x49 && uint8[i+1] === 0x45 && uint8[i+2] === 0x4E && uint8[i+3] === 0x44) {
+                pngEnd = i + 8; // IEND(4) + CRC(4)
+                break;
+            }
+        }
+        const pngBlob = new Blob([uint8.slice(pngStart, pngEnd)], { type: 'image/png' });
+        return await _nai_blobToDataUrl(pngBlob);
+    }
+
+    // 没找到 PNG，尝试找 JPEG 签名 (FF D8 FF)
+    for (let i = 0; i < uint8.length - 3; i++) {
+        if (uint8[i] === 0xFF && uint8[i+1] === 0xD8 && uint8[i+2] === 0xFF) {
+            const jpgBlob = new Blob([uint8.slice(i)], { type: 'image/jpeg' });
+            return await _nai_blobToDataUrl(jpgBlob);
+        }
+    }
+
+    // 都找不到，直接当整个文件转
+    return await _nai_blobToDataUrl(zipBlob);
+}
+
+// 从 base64 字符串解析为图片 DataURL
+function _nai_resolveBase64Image(b64) {
+    if (!b64) return null;
+    if (b64.startsWith('http')) return b64;
+    if (b64.startsWith('data:image')) return b64;
+    if (b64.startsWith('iVBOR')) return `data:image/png;base64,${b64}`;
+    if (b64.startsWith('/9j/')) return `data:image/jpeg;base64,${b64}`;
+    return `data:image/png;base64,${b64}`;
+}
+
+/**
+ * 调用 NovelAI 图像生成 API
+ * @param {string} prompt - 正面提示词 (英文 tag)
+ * @param {object} [overrideSettings] - 可选，覆盖 db.novelAiSettings 的参数
+ * @returns {Promise<{imageUrl: string}>} - 返回图片 DataURL
+ */
+async function generateNovelAiImage(prompt, overrideSettings = {}) {
+    const settings = Object.assign({}, db.novelAiSettings || {}, overrideSettings);
+    const token = settings.token;
+    if (!token) throw new Error('NovelAI Token 未配置');
+    if (!prompt || !prompt.trim()) throw new Error('提示词不能为空');
+
+    // 清理 Token 中可能的特殊字符
+    const cleanToken = token.trim().replace(/[^\x20-\x7E]/g, '');
+
+    let model = settings.model || 'nai-diffusion-4-curated-preview';
+    const resolution = settings.resolution || '832x1216';
+    const [widthStr, heightStr] = resolution.split('x');
+    const width = parseInt(widthStr) || 832;
+    const height = parseInt(heightStr) || 1216;
+    const sampler = settings.sampler || 'k_euler';
+    const steps = settings.steps || 28;
+    const scale = settings.scale || 5;
+    const systemPrompt = settings.systemPrompt || '';
+    const artistTags = settings.artistTags || '';
+    const negativePrompt = settings.negativePrompt || '';
+
+    // 拼接最终 prompt：系统基础 Prompt + 画师串 + 用户 prompt
+    const promptParts = [];
+    if (systemPrompt) promptParts.push(systemPrompt);
+    if (artistTags) promptParts.push(artistTags);
+    promptParts.push(prompt);
+    const fullPrompt = promptParts.filter(Boolean).join(', ');
+
+    console.log('[NovelAI] 最终 Prompt:', fullPrompt);
+
+    // inpainting 模型不能直接生成，回退到同版本普通模型
+    if (model === 'nai-diffusion-3-inpainting') model = 'nai-diffusion-3';
+
+    // 判断是否为 V4 模型
+    const isV4 = model.includes('nai-diffusion-4');
+    const commonSeed = Math.floor(Math.random() * 9999999999);
+
+    // 根据模型版本构建不同的请求体
+    let requestBody;
+    if (isV4) {
+        requestBody = {
+            input: fullPrompt,
+            model: model,
+            action: 'generate',
+            parameters: {
+                params_version: 3,
+                width, height, scale, sampler, steps,
+                seed: commonSeed,
+                n_samples: 1,
+                ucPreset: 0,
+                qualityToggle: true,
+                autoSmea: false,
+                dynamic_thresholding: false,
+                controlnet_strength: 1,
+                legacy: false,
+                add_original_image: true,
+                cfg_rescale: 0,
+                noise_schedule: 'karras',
+                legacy_v3_extend: false,
+                skip_cfg_above_sigma: null,
+                use_coords: false,
+                legacy_uc: false,
+                normalize_reference_strength_multiple: true,
+                characterPrompts: [],
+                v4_prompt: {
+                    caption: { base_caption: fullPrompt, char_captions: [] },
+                    use_coords: false,
+                    use_order: true
+                },
+                v4_negative_prompt: {
+                    caption: { base_caption: negativePrompt, char_captions: [] },
+                    legacy_uc: false
+                },
+                negative_prompt: negativePrompt,
+                deliberate_euler_ancestral_bug: false,
+                prefer_brownian: true
+            }
+        };
+    } else {
+        // V3 请求格式
+        requestBody = {
+            input: fullPrompt,
+            model: model,
+            action: 'generate',
+            parameters: {
+                width, height, scale, sampler, steps,
+                seed: commonSeed,
+                n_samples: 1,
+                ucPreset: 0,
+                qualityToggle: true,
+                sm: false,
+                sm_dyn: false,
+                dynamic_thresholding: false,
+                controlnet_strength: 1,
+                legacy: false,
+                add_original_image: false,
+                cfg_rescale: 0,
+                noise_schedule: 'native',
+                negative_prompt: negativePrompt
+            }
+        };
+    }
+
+    // V4 使用 stream 端点，V3 使用普通端点
+    const apiUrl = isV4
+        ? 'https://image.novelai.net/ai/generate-image-stream'
+        : 'https://image.novelai.net/ai/generate-image';
+
+    console.log('[NovelAI] 发送生图请求:', { apiUrl, model, isV4, width, height, steps, scale, sampler });
+
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${cleanToken}`
+        },
+        body: JSON.stringify(requestBody)
+    });
+
+    console.log(`[NovelAI] 响应状态: ${response.status}, Content-Type: ${response.headers.get('content-type')}`);
+
+    if (!response.ok) {
+        let errDetail = '';
+        try {
+            const errText = await response.text();
+            try { const errObj = JSON.parse(errText); errDetail = errObj.message || errObj.error || errText.substring(0, 150); }
+            catch (_) { errDetail = errText.substring(0, 150); }
+        } catch (_) {}
+        console.error(`[NovelAI] API 错误 (${response.status}): ${errDetail}`);
+        if (response.status === 401) throw new Error('Token 无效或已过期');
+        if (response.status === 402) throw new Error('Anlas 额度不足');
+        if (response.status === 429) throw new Error('请求过于频繁，请稍后再试');
+        throw new Error(`API 返回错误 (${response.status}): ${errDetail}`);
+    }
+
+    // === 根据响应 Content-Type 选择解析策略 ===
+    const contentType = response.headers.get('content-type') || '';
+    let imageDataUrl = null;
+
+    if (contentType.includes('text/event-stream') || contentType.includes('application/x-ndjson')) {
+        // === V4 SSE 流式响应 ===
+        console.log('[NovelAI] 解析 SSE 流式响应...');
+        const sseText = await response.text();
+        const lines = sseText.trim().split('\n');
+
+        // 从后往前扫描，找到最终的图片数据
+        for (let i = lines.length - 1; i >= 0; i--) {
+            const line = lines[i].trim();
+            if (!line.startsWith('data: ') || line === 'data: [DONE]') continue;
+
+            const payload = line.substring(6);
+            try {
+                const obj = JSON.parse(payload);
+                // 检查是否有 URL 字段
+                if (obj.output && Array.isArray(obj.output) && obj.output[0] && obj.output[0].url) {
+                    imageDataUrl = obj.output[0].url; break;
+                }
+                if (obj.url) { imageDataUrl = obj.url; break; }
+                // 检查 base64 字段
+                const b64 = (obj.event_type === 'final' && obj.image) ? obj.image : (obj.data || obj.image);
+                if (b64) {
+                    imageDataUrl = _nai_resolveBase64Image(b64);
+                    if (!imageDataUrl) {
+                        // 可能是 zip 的 base64，解码后提取
+                        const raw = atob(b64);
+                        const bytes = new Uint8Array(raw.length);
+                        for (let j = 0; j < raw.length; j++) bytes[j] = raw.charCodeAt(j);
+                        imageDataUrl = await _nai_extractPngFromZipBlob(new Blob([bytes]));
+                    }
+                    break;
+                }
+            } catch (e) {
+                // 非 JSON，当成原始 base64 尝试
+                if (payload.length > 100) {
+                    imageDataUrl = _nai_resolveBase64Image(payload);
+                    break;
+                }
+            }
+        }
+
+        if (!imageDataUrl) {
+            console.error('[NovelAI] SSE 响应中未找到图片数据, 前500字符:', sseText.substring(0, 500));
+            throw new Error('SSE 响应中未找到图片数据');
+        }
+
+    } else if (contentType.includes('application/json')) {
+        // === JSON 响应（某些代理会返回 JSON） ===
+        console.log('[NovelAI] 解析 JSON 响应...');
+        const jsonData = await response.json();
+        if (jsonData.output && jsonData.output[0] && jsonData.output[0].url) {
+            imageDataUrl = jsonData.output[0].url;
+        } else if (jsonData.url) {
+            imageDataUrl = jsonData.url;
+        } else {
+            const b64 = jsonData.image || jsonData.data;
+            if (b64) {
+                imageDataUrl = _nai_resolveBase64Image(b64);
+            }
+        }
+        if (!imageDataUrl) {
+            throw new Error('JSON 响应中未找到图片数据');
+        }
+
+    } else {
+        // === 默认当 ZIP / 二进制 Blob 处理（V3 常见）===
+        console.log('[NovelAI] 解析二进制/ZIP 响应...');
+        const blob = await response.blob();
+        if (blob.type && blob.type.startsWith('image/')) {
+            imageDataUrl = await _nai_blobToDataUrl(blob);
+        } else {
+            imageDataUrl = await _nai_extractPngFromZipBlob(blob);
+        }
+    }
+
+    if (!imageDataUrl) {
+        throw new Error('未能从响应中获取图片');
+    }
+
+    console.log('[NovelAI] ✅ 生图成功');
+    return { imageUrl: imageDataUrl };
+}
+
+/**
+ * 使用已保存的 NovelAI 设置生成图片（便捷方法）
+ * @param {string} prompt - 正面提示词
+ * @returns {Promise<{imageUrl: string}>}
+ */
+async function novelAiGenerate(prompt) {
+    if (!db.novelAiSettings || !db.novelAiSettings.enabled) {
+        throw new Error('NovelAI 生图未启用，请在 API 设置中开启');
+    }
+    return generateNovelAiImage(prompt);
+}
+
 // 暴露给全局
 window.openImageViewer = openImageViewer;
 window.getRandomValue = getRandomValue;
@@ -852,3 +1154,5 @@ window.formatTimeGap = formatTimeGap;
 window.filterHistoryForAI = filterHistoryForAI;
 window.showToast = showToast;
 window.playSound = (typeof playSound !== 'undefined') ? playSound : null; // 防止循环依赖
+window.generateNovelAiImage = generateNovelAiImage;
+window.novelAiGenerate = novelAiGenerate;

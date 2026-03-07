@@ -141,7 +141,41 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                         return null;
                     }).filter(p => p);
                 } else {
-                    parts = [{text: msg.content}];
+                    let content = msg.content || '';
+                    // 展开小剧场分享卡片为实际内容，供 AI 读取
+                    const theaterShareMatch = content.match(/\[小剧场分享[：:](.+?)\]/);
+                    if (theaterShareMatch) {
+                        const scenarioId = theaterShareMatch[1];
+                        let scenario = null;
+                        if (typeof db !== 'undefined' && db) {
+                            if (Array.isArray(db.theaterScenarios)) {
+                                scenario = db.theaterScenarios.find(s => s.id === scenarioId);
+                            }
+                            if (!scenario && Array.isArray(db.theaterHtmlScenarios)) {
+                                scenario = db.theaterHtmlScenarios.find(s => s.id === scenarioId);
+                            }
+                        }
+                        if (scenario) {
+                            let readableContent = scenario.content || '';
+                            // HTML 模式：剥除标签，只保留可读文本（无论用户分享还是 char 生成）
+                            if (scenario.mode === 'html' || /<[^>]+>/.test(readableContent)) {
+                                readableContent = readableContent
+                                    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                                    .replace(/<[^>]+>/g, ' ')
+                                    .replace(/\s{2,}/g, ' ')
+                                    .trim();
+                            }
+                            const title = scenario.title || '小剧场';
+                            // 所有小剧场都不截断，使用完整内容
+                            const excerpt = readableContent;
+                            // 替换为包含实际内容的文本
+                            content = content.replace(
+                                /\[小剧场分享[：:].+?\]/,
+                                `（我刚刚写了一篇小剧场，标题是「${title}」。以下是我写的内容：\n${excerpt}）`
+                            );
+                        }
+                    }
+                    parts = [{text: content}];
                 }
 
                 if (prefix) {
@@ -219,6 +253,39 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                        }).filter(p => p);
                    } else {
                        content = prefix + msg.content;
+                       // 展开小剧场分享卡片为实际内容，供 AI 读取
+                       const theaterShareMatch = content.match(/\[小剧场分享[：:](.+?)\]/);
+                       if (theaterShareMatch) {
+                           const scenarioId = theaterShareMatch[1];
+                           let scenario = null;
+                           if (typeof db !== 'undefined' && db) {
+                               if (Array.isArray(db.theaterScenarios)) {
+                                   scenario = db.theaterScenarios.find(s => s.id === scenarioId);
+                               }
+                               if (!scenario && Array.isArray(db.theaterHtmlScenarios)) {
+                                   scenario = db.theaterHtmlScenarios.find(s => s.id === scenarioId);
+                               }
+                           }
+                           if (scenario) {
+                               let readableContent = scenario.content || '';
+                               // HTML 模式：剥除标签，只保留可读文本（无论用户分享还是 char 生成）
+                               if (scenario.mode === 'html' || /<[^>]+>/.test(readableContent)) {
+                                   readableContent = readableContent
+                                       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                                       .replace(/<[^>]+>/g, ' ')
+                                       .replace(/\s{2,}/g, ' ')
+                                       .trim();
+                               }
+                               const title = scenario.title || '小剧场';
+                               // 所有小剧场都不截断，使用完整内容
+                               const excerpt = readableContent;
+                               // 替换为包含实际内容的文本
+                               content = content.replace(
+                                   /\[小剧场分享[：:].+?\]/,
+                                   `（我刚刚写了一篇小剧场，标题是「${title}」。以下是我写的内容：\n${excerpt}）`
+                               );
+                           }
+                       }
                    }
                    if (msg.role === 'user' && chatType === 'private' && chat.characterAutoFavoriteEnabled) {
                        if (typeof content === 'string') {
@@ -354,7 +421,10 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
             isGenerating = false;
             getReplyBtn.disabled = false;
             regenerateBtn.disabled = false;
-            typingIndicator.style.display = 'none';
+            // 如果正在生成小剧场，不隐藏提示（让小剧场生成过程显示提示）
+            if (!typingIndicator || typingIndicator.getAttribute('data-theater-generating') !== 'true') {
+                typingIndicator.style.display = 'none';
+            }
         }
     }
 }
@@ -883,6 +953,12 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
         if (typeof checkAndTriggerAutoJournal === 'function') {
             setTimeout(() => checkAndTriggerAutoJournal(chat), 500);
         }
+
+        // 角色主动生成小剧场（仅私聊，按概率触发）
+        // 直接调用，无延迟——generateCharTheater 内部会立即推送通知气泡
+        if (targetChatType === 'private' && typeof maybeGenerateCharTheater === 'function') {
+            maybeGenerateCharTheater(targetChatId);
+        }
     }
 }
 
@@ -1316,10 +1392,19 @@ b) [${character.realName}拒绝了${character.myName}的代付请求]
     }
     prompt += `</logic_rules>\n\n`
     let photoVideoFormat = '';
+    const _novelAiAutoEnabled = db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token;
     if (character.useRealGallery && character.gallery && character.gallery.length > 0) {
-        photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{相册图片名称} 或 {文字描述}] (优先使用相册名称，若相册无匹配则填写照片/视频的详细文字描述)`;
+        if (_novelAiAutoEnabled) {
+            photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{相册图片名称} 或 {中文描述}{{english, novelai, tags}}] (优先使用相册名称；若相册无匹配则填写中文描述，并在 {{ }} 内写英文 NovelAI/Danbooru 风格 tag。根据角色性别用1boy或1girl，包含外貌特征、服装、表情、动作、场景，不加质量词，不超过25个tag)`;
+        } else {
+            photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{相册图片名称} 或 {文字描述}] (优先使用相册名称，若相册无匹配则填写照片/视频的详细文字描述)`;
+        }
     } else {
-        photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{描述}]`;
+        if (_novelAiAutoEnabled) {
+            photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{中文描述}{{english, novelai, tags}}] (发图时必须在 {{ }} 内写英文 NovelAI/Danbooru 风格 tag。根据角色性别用1boy或1girl，包含外貌特征、服装、表情、动作、场景，不加质量词，不超过25个tag)`;
+        } else {
+            photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{描述}]`;
+        }
     }
  
     let outputFormats = `
@@ -1419,23 +1504,192 @@ function estimateChatTokens(chatId, chatType = 'private') {
     return breakdown ? breakdown.total : 0;
 }
 
-// 获取 Token 分布（提示词人设、长期记忆、短期记忆），用于饼图与详情展示
+// 获取 Token 分布（细分：系统规则、世界书、角色人设、用户人设、表情包、长期记忆、窥屏、对话主题、记忆互通、群聊记忆、短期记忆等），用于饼图与详情展示
 function getChatTokenBreakdown(chatId, chatType = 'private') {
     const chat = (chatType === 'private') ? db.characters.find(c => c.id === chatId) : db.groups.find(g => g.id === chatId);
     if (!chat) return null;
 
-    let systemPrompt = '';
-    if (chatType === 'private') {
-        if (typeof generatePrivateSystemPrompt === 'function') {
-            systemPrompt = generatePrivateSystemPrompt(chat);
-        }
-    } else {
-        if (typeof generateGroupSystemPrompt === 'function') {
-            systemPrompt = generateGroupSystemPrompt(chat);
-        }
+    // --- 群聊走旧逻辑（整体 systemPrompt 拆分） ---
+    if (chatType !== 'private') {
+        return _getChatTokenBreakdownGroup(chat);
     }
 
-    // 从 systemPrompt 中拆出长期记忆（<memoir>...</memoir>）
+    // --- 私聊：逐项独立计算各模块 Token ---
+    const character = chat;
+    const linkedChar = (character.source === 'forum' && character.linkedCharId && db.characters)
+        ? db.characters.find(c => c.id === character.linkedCharId) : null;
+    const effectiveChar = linkedChar || character;
+
+    // 1) 世界书
+    const associatedIds = effectiveChar.worldBookIds || [];
+    const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
+    const globalIds = globalBooks.map(wb => wb.id);
+    const allBookIds = [...new Set([...associatedIds, ...globalIds])];
+    const worldBooksBefore = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
+    const worldBooksMiddle = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'middle')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
+    const worldBooksAfter = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
+    const worldBookText = [worldBooksBefore, worldBooksMiddle, worldBooksAfter].filter(Boolean).join('\n');
+    const worldBookTokens = estimateTokenFromText(worldBookText);
+
+    // 2) 角色人设
+    const personaText = getEffectivePersona(linkedChar || character);
+    const charPersonaTokens = estimateTokenFromText(personaText);
+
+    // 3) 用户人设
+    const userPersonaText = character.myPersona || '';
+    const userPersonaTokens = estimateTokenFromText(userPersonaText);
+
+    // 4) 表情包
+    let stickerText = '';
+    const stickerGroups = (character.stickerGroups || '').split(/[,，]/).map(s => s.trim()).filter(s => s && s !== '未分类');
+    if (stickerGroups.length > 0 && db.myStickers) {
+        const availableStickers = db.myStickers.filter(s => stickerGroups.includes(s.group));
+        if (availableStickers.length > 0) {
+            stickerText = availableStickers.map(s => s.name).join(', ');
+        }
+    }
+    const stickerTokens = estimateTokenFromText(stickerText);
+
+    // 5) 长期记忆（共同回忆 / 收藏日记）
+    const favoritedJournals = (character.memoryJournals || [])
+        .filter(j => j.isFavorited)
+        .map(j => `标题：${j.title}\n内容：${j.content}`)
+        .join('\n\n---\n\n');
+    const memoirTokens = estimateTokenFromText(favoritedJournals);
+
+    // 6) 窥屏知晓
+    let peekText = '';
+    if (character.peekScreenSettings?.charAwarePeek && character.peekViewedByUser && character.peekViewedByUser.length > 0) {
+        peekText = character.peekViewedByUser.map(entry => {
+            if (typeof formatPeekContentForPrompt === 'function') return formatPeekContentForPrompt(entry);
+            return '';
+        }).filter(Boolean).join('\n');
+    }
+    const peekTokens = estimateTokenFromText(peekText);
+
+    // 7) 对话主题
+    let themeText = '';
+    if (character.allowCharSwitchBubbleCss && Array.isArray(character.bubbleCssThemeBindings) && character.bubbleCssThemeBindings.length > 0) {
+        themeText = character.bubbleCssThemeBindings.map(b => {
+            const desc = (b.description && b.description.trim()) ? `：${b.description.trim()}` : '';
+            return `- ${b.presetName}${desc}`;
+        }).join('\n');
+    }
+    const themeTokens = estimateTokenFromText(themeText);
+
+    // 8) 小号/主号记忆互通
+    let altMemoryText = '';
+    const enableCharAltDm = !!(db.forumSettings && db.forumSettings.enableCharAltDm);
+    const syncLimit = Math.max(1, (character.maxMemory != null ? parseInt(character.maxMemory, 10) : 20) || 20);
+    if (enableCharAltDm && !linkedChar) {
+        const altChars = (db.characters || []).filter(c => c.source === 'forum' && c.linkedCharId === character.id);
+        const altForumUserIds = [];
+        altChars.forEach(c => { if (c.forumUserId) altForumUserIds.push(c.forumUserId); });
+        if (db.forumStrangerProfiles) {
+            Object.keys(db.forumStrangerProfiles).forEach(uid => {
+                if (db.forumStrangerProfiles[uid].linkedCharId === character.id && altForumUserIds.indexOf(uid) === -1) altForumUserIds.push(uid);
+            });
+        }
+        altForumUserIds.forEach(forumUserId => {
+            const forumMsgs = (db.forumMessages || []).filter(m =>
+                (m.fromUserId === 'user' && m.toUserId === forumUserId) || (m.fromUserId === forumUserId && m.toUserId === 'user')
+            ).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0)).slice(-syncLimit);
+            forumMsgs.forEach(m => { altMemoryText += (m.content || '').trim().slice(0, 200) + '\n'; });
+            const altChar = altChars.find(c => c.forumUserId === forumUserId);
+            if (altChar && altChar.history && altChar.history.length > 0) {
+                altChar.history.filter(m => !m.isContextDisabled).slice(-syncLimit).forEach(m => {
+                    altMemoryText += (m.content || '').trim().slice(0, 200) + '\n';
+                });
+            }
+        });
+    } else if (enableCharAltDm && linkedChar && linkedChar.history && linkedChar.history.length > 0) {
+        const mainSyncLimit = Math.max(1, (linkedChar.maxMemory != null ? parseInt(linkedChar.maxMemory, 10) : 20) || 20);
+        linkedChar.history.filter(m => !m.isContextDisabled).slice(-mainSyncLimit).forEach(m => {
+            altMemoryText += (m.content || '').trim().slice(0, 200) + '\n';
+        });
+    }
+    const altMemoryTokens = estimateTokenFromText(altMemoryText);
+
+    // 9) 群聊记忆互通
+    let groupMemoryText = '';
+    if (character.syncGroupMemory) {
+        let groupsWithCharacter = (db.groups || []).filter(group =>
+            group.members && group.members.some(member => member.originalCharId === character.id)
+        );
+        if (character.syncGroupIds && Array.isArray(character.syncGroupIds) && character.syncGroupIds.length > 0) {
+            groupsWithCharacter = groupsWithCharacter.filter(group => character.syncGroupIds.includes(group.id));
+        }
+        groupsWithCharacter.forEach(group => {
+            let gJournals = (group.memoryJournals || []).filter(j => j.isFavorited);
+            const summaryCount = character.groupMemorySummaryCount || 0;
+            if (summaryCount > 0 && gJournals.length > summaryCount) {
+                gJournals = gJournals.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, summaryCount);
+            }
+            gJournals.forEach(j => { groupMemoryText += j.title + '\n' + j.content + '\n'; });
+            const maxGroupHistory = character.groupMemoryHistoryCount || 20;
+            let recentGroupHistory = (group.history || []).slice(-maxGroupHistory).filter(m => !m.isContextDisabled);
+            recentGroupHistory.forEach(m => { groupMemoryText += (m.content || '') + '\n'; });
+        });
+    }
+    const groupMemoryTokens = estimateTokenFromText(groupMemoryText);
+
+    // 10) 活人运转
+    let humanRunTokens = 0;
+    if (db.cotSettings && db.cotSettings.humanRunEnabled && typeof HUMAN_RUN_PROMPT !== 'undefined') {
+        humanRunTokens = estimateTokenFromText(HUMAN_RUN_PROMPT);
+    }
+
+    // 11) 系统规则（固定提示词框架：核心规则 + logic_rules + output_formats + chatting guidelines 等）
+    //     用完整 systemPrompt 减去上面所有已拆出的部分来得到
+    let fullSystemPrompt = '';
+    if (typeof generatePrivateSystemPrompt === 'function') {
+        fullSystemPrompt = generatePrivateSystemPrompt(character);
+    }
+    const fullSystemTokens = estimateTokenFromText(fullSystemPrompt);
+    const identifiedPromptTokens = worldBookTokens + charPersonaTokens + userPersonaTokens + stickerTokens + memoirTokens + peekTokens + themeTokens + altMemoryTokens + groupMemoryTokens + humanRunTokens;
+    const systemRulesTokens = Math.max(0, fullSystemTokens - identifiedPromptTokens);
+
+    // 12) 短期记忆（对话历史）
+    let historySlice = (chat.history || []).slice(-(chat.maxMemory || 20));
+    historySlice = historySlice.filter(m => !m.isContextDisabled);
+    let shortTermText = '';
+    historySlice.forEach(msg => {
+        shortTermText += msg.content || '';
+        if (msg.parts) {
+            msg.parts.forEach(p => {
+                if (p.type === 'text') shortTermText += p.text || '';
+            });
+        }
+    });
+    const shortTermTokens = estimateTokenFromText(shortTermText);
+
+    // 汇总
+    const total = fullSystemTokens + shortTermTokens;
+
+    const details = [
+        { key: 'systemRules',    name: '系统规则',     value: systemRulesTokens,  desc: '核心规则、输出格式、对话节奏等发送给 AI 的固定指令框架。' },
+        { key: 'worldBook',      name: '世界书',       value: worldBookTokens,    desc: '关联的世界书和全局世界书内容，用于构建世界观背景。' },
+        { key: 'charPersona',    name: '角色人设',     value: charPersonaTokens,  desc: '角色的性格、背景、说话风格等设定文本。' },
+        { key: 'userPersona',    name: '用户人设',     value: userPersonaTokens,  desc: '你自己的人设描述，让角色了解你是谁。' },
+        { key: 'sticker',        name: '表情包',       value: stickerTokens,      desc: '已绑定的表情包名称列表，角色可从中选择发送。' },
+        { key: 'memoir',         name: '共同回忆',     value: memoirTokens,       desc: '已收藏的日记摘要，作为长期记忆保留在上下文中。' },
+        { key: 'peek',           name: '窥屏知晓',     value: peekTokens,         desc: '用户偷看手机后注入的应用内容摘要。' },
+        { key: 'theme',          name: '对话主题',     value: themeTokens,        desc: '聊天界面主题列表，角色可主动切换。' },
+        { key: 'altMemory',      name: '记忆互通',     value: altMemoryTokens,    desc: '大号/小号之间的聊天记忆同步内容。' },
+        { key: 'groupMemory',    name: '群聊记忆',     value: groupMemoryTokens,  desc: '角色所在群聊的总结和最近聊天记录。' },
+        { key: 'humanRun',       name: '活人运转',     value: humanRunTokens,     desc: '角色活人运转心理模型指令（HEXACO 等）。' },
+        { key: 'shortTermMemory',name: '对话历史',     value: shortTermTokens,    desc: '最近的对话消息，随轮次滑动窗口更新。' }
+    ].filter(d => d.value > 0);
+
+    return { total, details };
+}
+
+// 群聊 Token 分布（保持兼容，从完整 systemPrompt 拆分）
+function _getChatTokenBreakdownGroup(chat) {
+    let systemPrompt = '';
+    if (typeof generateGroupSystemPrompt === 'function') {
+        systemPrompt = generateGroupSystemPrompt(chat);
+    }
     const memoirMatch = systemPrompt.match(/<memoir>([\s\S]*?)<\/memoir>/);
     const memoirText = memoirMatch ? memoirMatch[1].trim() : '';
     const personaPrompt = systemPrompt.replace(/<memoir>[\s\S]*?<\/memoir>/g, '').trim();
@@ -1463,7 +1717,7 @@ function getChatTokenBreakdown(chatId, chatType = 'private') {
         { key: 'shortTermMemory', name: '短期记忆', value: shortTermTokens, desc: '最近对话消息，随轮次滑动窗口更新。' }
     ].filter(d => d.value > 0);
 
-    return { total, breakdown: { promptPersona: promptPersonaTokens, longTermMemory: longTermTokens, shortTermMemory: shortTermTokens }, details };
+    return { total, details };
 }
 
 // --- 视频/语音通话专用 AI 逻辑 ---
@@ -1586,8 +1840,21 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate) {
         systemPrompt += `${chat.myName}已开启真实摄像头，你可以通过附带的图片看到${chat.myName}的真实画面。请根据你看到的画面内容自然地融入对话中（比如评论对方的穿着、表情、动作、环境等），但不要每次都刻意提及，保持自然。如果图片模糊或看不清，也不必强行描述。\n`;
     }
 
+    // === NovelAI 视频通话生图模式 ===
+    const _vcNaiEnabled = chat.vcNovelAiEnabled && db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token && callType === 'video';
+    if (_vcNaiEnabled) {
+        systemPrompt += `\n【视频通话生图模式】\n`;
+        systemPrompt += `你正在视频通话中，每次回复时你必须额外输出一条 [${chat.realName}的画面生图：{{english, danbooru, tags}}] 来描述当前视频画面中你的样子。\n`;
+        systemPrompt += `tag 规则：根据角色性别用 1boy 或 1girl，必须包含角色外貌特征（发色、瞳色、发型等）、当前服装、表情、动作/姿势、背景/场景。不要加质量词。不超过 25 个 tag。用英文逗号分隔。\n`;
+        systemPrompt += `示例：[${chat.realName}的画面生图：{{1girl, long black hair, blue eyes, white t-shirt, smiling, waving hand, bedroom, sitting on bed, webcam view, looking at viewer}}]\n`;
+        systemPrompt += `每次回复都必须包含恰好一条画面生图指令，放在回复最前面。\n\n`;
+    }
+
     systemPrompt += `【输出格式】\n`;
     systemPrompt += `请严格按照以下格式输出（可以发送多条）：\n`;
+    if (_vcNaiEnabled) {
+        systemPrompt += `[${chat.realName}的画面生图：{{english, danbooru, tags}}]（每次必须恰好输出一条）\n`;
+    }
     systemPrompt += `${callType === 'video' ? `[${chat.realName}的画面/环境音：描述画面动作或环境声音]\n[${chat.realName}的声音：${chat.realName}说话的内容]` : `[${chat.realName}的环境音：描述环境声音]\n[${chat.realName}的声音：${chat.realName}说话的内容]`}\n`;
 
     // 2. 构建消息历史

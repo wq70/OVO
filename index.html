@@ -450,6 +450,19 @@
                 <div class="status-panel-content" id="char-status-content">
                     <!-- JS 动态注入 -->
                 </div>
+                <!-- 状态栏管理按钮 -->
+                <button class="status-manage-btn" id="status-manage-btn" title="管理">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <!-- 状态栏多选操作栏 -->
+                <div id="status-multi-select-bar" class="status-multi-select-bar">
+                    <span id="status-select-count">已选 0 项</span>
+                    <div class="status-multi-select-actions">
+                        <button class="btn btn-small" id="status-select-all-btn">全选</button>
+                        <button class="btn btn-danger btn-small" id="status-delete-selected-btn" disabled>删除选中</button>
+                        <button class="btn btn-small" id="status-cancel-multi-btn">取消</button>
+                    </div>
+                </div>
                 <button class="close-status-panel" id="close-status-panel-btn">×</button>
             </div>
 
@@ -1578,6 +1591,104 @@
                         </div>
                     </div>
 
+                    <!-- NovelAI 生图 API 配置 -->
+                    <div class="kkt-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
+                        <div style="margin-bottom: 15px;">
+                            <h3 style="margin: 0; font-size: 16px; color: var(--primary-color);">NovelAI 生图 API</h3>
+                            <p style="font-size: 12px; color: #999; margin: 5px 0 0;">配置 NovelAI 图像生成接口，用于 AI 生图功能</p>
+                        </div>
+
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">启用 NovelAI 生图</div>
+                            <div class="kkt-item-control">
+                                <label class="kkt-switch">
+                                    <input type="checkbox" id="novelai-enabled">
+                                    <span class="kkt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">API Token</div>
+                            <div class="kkt-item-control">
+                                <input type="password" id="novelai-token" autocomplete="new-password"
+                                    placeholder="pst-..."
+                                    style="text-align:right; border:none; background:transparent; width: 100%;">
+                            </div>
+                        </div>
+
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">采样器</div>
+                            <div class="kkt-item-control">
+                                <select id="novelai-sampler"
+                                    style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                    <option value="k_euler">Euler</option>
+                                    <option value="k_euler_ancestral">Euler Ancestral</option>
+                                    <option value="k_dpmpp_2s_ancestral">DPM++ 2S Ancestral</option>
+                                    <option value="k_dpmpp_2m">DPM++ 2M</option>
+                                    <option value="k_dpmpp_sde">DPM++ SDE</option>
+                                    <option value="ddim_v3">DDIM</option>
+                                </select>
+                                <span class="kkt-arrow">›</span>
+                            </div>
+                        </div>
+
+                        <div class="kkt-item" style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <div class="kkt-item-label">采样步数 (Steps)</div>
+                                <span id="novelai-steps-value" style="color: var(--primary-color); font-weight: bold;">28</span>
+                            </div>
+                            <input type="range" id="novelai-steps" min="1" max="50" step="1" value="28"
+                                style="width: 100%; accent-color: var(--primary-color);">
+                        </div>
+
+                        <div class="kkt-item" style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <div class="kkt-item-label">提示词相关性 (Scale)</div>
+                                <span id="novelai-scale-value" style="color: var(--primary-color); font-weight: bold;">5.0</span>
+                            </div>
+                            <input type="range" id="novelai-scale" min="1" max="20" step="0.5" value="5"
+                                style="width: 100%; accent-color: var(--primary-color);">
+                            <p style="font-size: 12px; color: #999; margin-top: 5px; margin-bottom: 0;">
+                                数值越大越贴合提示词，但过高可能导致画面失真</p>
+                        </div>
+
+                        <div class="kkt-item" style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <div class="kkt-item-label">系统基础 Prompt</div>
+                            </div>
+                            <textarea id="novelai-system-prompt" rows="2" placeholder="输入通用风格/质量 tag，会自动添加到所有生图请求的开头"
+                                style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 8px; resize: vertical; font-size: 13px; box-sizing: border-box;"></textarea>
+                            <p style="font-size: 12px; color: #999; margin-top: 5px; margin-bottom: 0;">
+                                将自动添加到所有生成请求的开头，如：<code>masterpiece, best quality, amazing quality</code></p>
+                        </div>
+
+                        <div class="kkt-item" style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <div class="kkt-item-label">默认负面提示词</div>
+                            </div>
+                            <textarea id="novelai-negative-prompt" rows="3" placeholder="lowres, bad anatomy, bad hands, missing fingers..."
+                                style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 8px; resize: vertical; font-size: 13px; box-sizing: border-box;">lowres, {bad}, error, fewer, extra, missing, worst quality, jpeg artifacts, bad quality, watermark, unfinished, displeasing, chromatic aberration, signature, extra digits, artistic error, username, scan, [abstract]</textarea>
+                        </div>
+
+                        <button type="button" class="btn btn-primary" id="novelai-save-btn"
+                            style="margin-top: 10px; width: 100%;">
+                            <span class="btn-text">保存 NovelAI 设置</span>
+                            <div class="spinner"></div>
+                        </button>
+
+                        <button type="button" class="btn btn-secondary" id="novelai-test-btn"
+                            style="margin-top: 8px; width: 100%;">
+                            <span class="btn-text">🎨 测试生图</span>
+                            <div class="spinner"></div>
+                        </button>
+
+                        <!-- NovelAI 测试结果预览 -->
+                        <div id="novelai-test-preview" style="display:none; margin-top: 15px; text-align: center;">
+                            <img id="novelai-test-image" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);" />
+                        </div>
+                    </div>
+
                     <!-- 角色 TTS 配置 (独立保存) -->
                     <div class="kkt-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
                         <div style="margin-bottom: 15px;">
@@ -2434,11 +2545,13 @@
         <div id="token-distribution-modal" class="modal-overlay">
             <div class="modal-window token-distribution-window">
                 <h3 class="token-distribution-title">Token 分布</h3>
-                <div id="token-chart-container"></div>
-                <div class="token-total-row">
-                    <span class="token-total-label">合计</span>
-                    <strong id="token-distribution-total" class="token-total-value">0</strong>
-                    <span class="token-total-unit">Token</span>
+                <div class="token-chart-summary">
+                    <div id="token-chart-container"></div>
+                    <div class="token-total-row">
+                        <span class="token-total-label">合计</span>
+                        <strong id="token-distribution-total" class="token-total-value">0</strong>
+                        <span class="token-total-unit">Token</span>
+                    </div>
                 </div>
                 <div class="token-details-list" id="token-details-list"></div>
                 <div class="token-detail-desc" id="token-detail-desc"></div>
@@ -3148,6 +3261,163 @@
                                 <div class="kkt-item-hint" id="real-camera-hint" style="padding: 0 16px 12px; font-size: 12px; color: #8e8e93; line-height: 1.4;">
                                     开启后，视频通话时会在右上角显示你的真实摄像头画面，角色可以通过API识别你的画面内容。
                                 </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">视频通话 NovelAI 生图</div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                            <input type="checkbox" id="setting-vc-novelai-enabled">
+                                            <span class="kkt-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="kkt-item-hint" style="padding: 0 16px 12px; font-size: 12px; color: #8e8e93; line-height: 1.4;">
+                                    开启后，视频通话中角色每轮回复会生成 NovelAI 图片作为通话画面背景。需先在 API 设置中配置 NovelAI。
+                                </div>
+                            </div>
+
+                            <!-- 小剧场设置 -->
+                            <div class="kkt-group" style="margin-top:15px;">
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">角色主动生成小剧场</div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                            <input type="checkbox" id="setting-char-theater-enabled">
+                                            <span class="kkt-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="kkt-item" style="padding-top: 0;">
+                                    <p class="kkt-item-hint" style="font-size: 12px; color: #999; margin: 0;">
+                                        开启后，角色会基于人设和聊天内容主动创作小剧场，存储在小剧场App中（以❤️标记）
+                                    </p>
+                                </div>
+                                <!-- 小剧场详细设置（仅开启时显示） -->
+                                <div id="setting-char-theater-options" style="display:none;">
+                                    <div class="kkt-item" style="border-top: 1px solid #f5f5f5;">
+                                        <div class="kkt-item-label">生成概率</div>
+                                        <div class="kkt-item-control" style="gap: 8px; flex: 1; justify-content: flex-end;">
+                                            <input type="range" id="setting-char-theater-probability"
+                                                min="0" max="100" value="20"
+                                                style="width: 100px; accent-color: #ff80ab;">
+                                            <span id="setting-char-theater-probability-value" style="font-size: 13px; color: #ff80ab; font-weight: 600; min-width: 34px; text-align: right;">20%</span>
+                                        </div>
+                                    </div>
+                                    <div class="kkt-item">
+                                        <div class="kkt-item-label">生成格式</div>
+                                        <div class="kkt-item-control">
+                                            <select id="setting-char-theater-format"
+                                                style="border:none; background:transparent; text-align:right; font-size: 14px;">
+                                                <option value="text">纯文字</option>
+                                                <option value="html">HTML</option>
+                                                <option value="both">两者皆可（随机选择）</option>
+                                            </select>
+                                            <span class="kkt-arrow">›</span>
+                                        </div>
+                                    </div>
+                                    <div class="kkt-item" style="border-top: 1px solid #f5f5f5;">
+                                        <div class="kkt-item-label">读取聊天记录条数</div>
+                                        <div class="kkt-item-control">
+                                            <input type="number" id="setting-char-theater-chat-count"
+                                                value="20" min="0" max="200"
+                                                style="width:50px; text-align:right; border:none; background: rgba(0,0,0,0.05); border-radius:4px;">
+                                        </div>
+                                    </div>
+                                    <div class="kkt-item">
+                                        <div class="kkt-item-label">读取日记总结条数</div>
+                                        <div class="kkt-item-control">
+                                            <input type="number" id="setting-char-theater-journal-count"
+                                                value="0" min="0" max="50"
+                                                style="width:50px; text-align:right; border:none; background: rgba(0,0,0,0.05); border-radius:4px;">
+                                        </div>
+                                    </div>
+                                    <!-- 世界书绑定（下拉分类多选） -->
+                                    <div style="border-top: 1px solid #f5f5f5; padding: 10px 16px 6px;">
+                                        <div class="kkt-item-label" style="margin-bottom:8px; font-size:13px; font-weight:600; color:#555;">绑定世界书（可多选）</div>
+                                        <div class="theater-multiselect-wrapper" style="font-size:13px;">
+                                            <div class="theater-multiselect-display" id="setting-char-theater-wb-display">
+                                                <span class="theater-multiselect-placeholder">请选择世界书（可选）</span>
+                                                <span class="theater-multiselect-arrow">▼</span>
+                                            </div>
+                                            <div class="theater-multiselect-dropdown" id="setting-char-theater-wb-dropdown">
+                                                <div class="theater-multiselect-options" id="setting-char-theater-wb-options"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- 提示词：预设选择 + 自定义 -->
+                                    <div style="padding: 8px 16px 10px; border-top: 1px solid #f5f5f5; margin-top:4px;">
+                                        <div class="kkt-item-label" style="margin-bottom:6px; font-size:13px; font-weight:600; color:#555;">剧情提示词</div>
+                                        <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                                            <select id="setting-char-theater-prompt-preset"
+                                                style="flex:1; border:1px solid #eee; border-radius:8px; padding:6px 8px; font-size:12px; background:#fafafa; color:#555;">
+                                                <option value="">— 从预设中选择 —</option>
+                                            </select>
+                                            <button type="button" id="setting-char-theater-prompt-apply"
+                                                style="flex-shrink:0; padding:5px 10px; font-size:12px; border:none; border-radius:8px; background:linear-gradient(135deg,#ff80ab,#ffb3d1); color:#fff; cursor:pointer;">应用</button>
+                                        </div>
+                                        <textarea id="setting-char-theater-prompt"
+                                            style="width:100%; border:1px solid #eee; border-radius:8px; padding:8px; min-height:60px; font-size:13px; resize:vertical; box-sizing:border-box;"
+                                            placeholder="留空则使用默认提示词，或在此补充特殊要求（例如：请以诗歌形式创作）"></textarea>
+                                    </div>
+                                    <!-- char是否知道自己创建了小剧场 -->
+                                    <div class="kkt-item" style="border-top: 1px solid #f5f5f5;">
+                                        <div class="kkt-item-label" style="font-size:13px;">角色知道自己创作了小剧场</div>
+                                        <div class="kkt-item-control">
+                                            <label class="kkt-switch">
+                                                <input type="checkbox" id="setting-char-theater-self-aware">
+                                                <span class="kkt-slider"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="kkt-item" style="padding-top:0;">
+                                        <p class="kkt-item-hint" style="font-size:11px; color:#bbb; margin:0;">开启后角色会记得自己写过小剧场并在对话中表现出来</p>
+                                    </div>
+                                    <!-- 独立 API -->
+                                    <div class="kkt-item" style="border-top: 1px solid #f5f5f5;">
+                                        <div class="kkt-item-label" style="font-size:13px;">使用独立 API</div>
+                                        <div class="kkt-item-control">
+                                            <label class="kkt-switch">
+                                                <input type="checkbox" id="setting-char-theater-use-custom-api">
+                                                <span class="kkt-slider"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div id="setting-char-theater-api-config" style="display:none;">
+                                        <div class="kkt-item" style="padding-top:0; flex-direction:column; align-items:flex-start; gap:6px;">
+                                            <div class="kkt-item-label" style="font-size:12px; color:#999; margin-bottom:2px;">读取预设</div>
+                                            <select id="setting-char-theater-api-preset"
+                                                style="width:100%; border:1px solid #eee; border-radius:8px; padding:6px 8px; font-size:13px;">
+                                                <option value="">— 选择预设配置 —</option>
+                                            </select>
+                                        </div>
+                                        <div class="kkt-item" style="border-top:1px solid #f5f5f5;">
+                                            <div class="kkt-item-label" style="font-size:13px;">API URL</div>
+                                            <div class="kkt-item-control" style="flex:1; justify-content:flex-end;">
+                                                <input type="text" id="setting-char-theater-api-url"
+                                                    placeholder="https://..."
+                                                    style="width:100%; max-width:180px; border:none; background:transparent; text-align:right; font-size:13px; color:#555;">
+                                            </div>
+                                        </div>
+                                        <div class="kkt-item">
+                                            <div class="kkt-item-label" style="font-size:13px;">API Key</div>
+                                            <div class="kkt-item-control" style="flex:1; justify-content:flex-end;">
+                                                <input type="password" id="setting-char-theater-api-key"
+                                                    placeholder="sk-..."
+                                                    style="width:100%; max-width:180px; border:none; background:transparent; text-align:right; font-size:13px; color:#555;">
+                                            </div>
+                                        </div>
+                                        <div class="kkt-item" style="flex-wrap:wrap; gap:6px;">
+                                            <div class="kkt-item-label" style="font-size:13px;">模型</div>
+                                            <div class="kkt-item-control" style="flex:1; justify-content:flex-end; gap:6px;">
+                                                <select id="setting-char-theater-api-model"
+                                                    style="flex:1; max-width:160px; border:1px solid #eee; border-radius:8px; padding:4px 6px; font-size:12px; color:#555; background:#fafafa;">
+                                                    <option value="">— 先拉取模型 —</option>
+                                                </select>
+                                                <button type="button" id="setting-char-theater-fetch-models-btn"
+                                                    style="padding:4px 10px; font-size:12px; border:1px solid #ddd; border-radius:8px; background:#f5f5f5; color:#555; cursor:pointer; white-space:nowrap;">拉取</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- 记忆存档库 -->
@@ -3614,32 +3884,52 @@
                                 </div>
                             </div>
                             
-                            <!-- 生图功能占位 -->
-                            <div class="kkt-group" style="margin-top:15px; opacity: 0.5; pointer-events: none;">
+                            <!-- NovelAI 生图设置（模型/尺寸/画师串） -->
+                            <div class="kkt-group" style="margin-top:15px;">
                                 <div style="margin-bottom: 10px; padding-left: 8px;">
-                                    <div class="kkt-item-label" style="font-weight: bold; color: #aaa;">生图设置</div>
-                                    <p style="font-size: 11px; color: #999; margin: 3px 0 0;">功能开发中，敬请期待...</p>
+                                    <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">生图设置</div>
+                                    <p style="font-size: 11px; color: #999; margin: 3px 0 0;">需先在 API 设置中配置 NovelAI Token 并启用</p>
                                 </div>
-                                
+
                                 <div class="kkt-item">
-                                    <div class="kkt-item-label" style="color: #ccc;">生图模型</div>
+                                    <div class="kkt-item-label">生图模型</div>
                                     <div class="kkt-item-control">
-                                        <span style="color: #ccc;">暂未开放</span>
+                                        <select id="novelai-model"
+                                            style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                            <option value="nai-diffusion-4-5-full">NAI Diffusion 4.5 Full (推荐)</option>
+                                            <option value="nai-diffusion-4-curated-preview">NAI Diffusion 4 Curated</option>
+                                            <option value="nai-diffusion-4-full">NAI Diffusion 4 Full</option>
+                                            <option value="nai-diffusion-3">NAI Diffusion 3 (Anime V3)</option>
+                                            <option value="nai-diffusion-furry-3">NAI Diffusion Furry 3</option>
+                                        </select>
+                                        <span class="kkt-arrow">›</span>
                                     </div>
                                 </div>
-                                
+
                                 <div class="kkt-item">
-                                    <div class="kkt-item-label" style="color: #ccc;">图片尺寸</div>
+                                    <div class="kkt-item-label">图片尺寸</div>
                                     <div class="kkt-item-control">
-                                        <span style="color: #ccc;">暂未开放</span>
+                                        <select id="novelai-resolution"
+                                            style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                            <option value="832x1216">竖版 (832×1216)</option>
+                                            <option value="1216x832">横版 (1216×832)</option>
+                                            <option value="1024x1024">方形 (1024×1024)</option>
+                                            <option value="512x768">小竖版 (512×768)</option>
+                                            <option value="768x512">小横版 (768×512)</option>
+                                            <option value="640x640">小方形 (640×640)</option>
+                                        </select>
+                                        <span class="kkt-arrow">›</span>
                                     </div>
                                 </div>
-                                
-                                <div class="kkt-item">
-                                    <div class="kkt-item-label" style="color: #ccc;">生成风格</div>
-                                    <div class="kkt-item-control">
-                                        <span style="color: #ccc;">暂未开放</span>
+
+                                <div class="kkt-item" style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <div class="kkt-item-label">画师串（Artist Tags）</div>
                                     </div>
+                                    <textarea id="novelai-artist-tags" rows="2" placeholder="输入画师串，例如：artist:aki99, artist:ciloranko"
+                                        style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 8px; resize: vertical; font-size: 13px; box-sizing: border-box;"></textarea>
+                                    <p style="font-size: 12px; color: #999; margin-top: 5px; margin-bottom: 0;">
+                                        用于控制画风，多个画师用逗号分隔。如 <code>artist:aki99, artist:ciloranko</code></p>
                                 </div>
                             </div>
                         </div>
@@ -3784,10 +4074,16 @@
                         </select>
                     </div>
                     <div class="theater-control-group">
-                        <label>选择角色</label>
-                        <select id="theater-char-select" class="theater-select">
-                            <option value="">请选择角色（可选）</option>
-                        </select>
+                        <label>选择角色（可多选）</label>
+                        <div class="theater-multiselect-wrapper">
+                            <div class="theater-multiselect-display" id="theater-char-display">
+                                <span class="theater-multiselect-placeholder">请选择角色（可选）</span>
+                                <span class="theater-multiselect-arrow">▼</span>
+                            </div>
+                            <div class="theater-multiselect-dropdown" id="theater-char-dropdown">
+                                <div class="theater-multiselect-options" id="theater-char-options"></div>
+                            </div>
+                        </div>
                     </div>
                     <div class="theater-control-group">
                         <label>选择世界书（可多选）</label>
@@ -3830,6 +4126,8 @@
                             <select id="theater-prompt-preset-select" class="theater-prompt-select">
                                 <option value="">选择预设提示词</option>
                             </select>
+                        </div>
+                        <div class="theater-prompt-buttons">
                             <button id="theater-save-prompt-btn" class="theater-save-prompt-btn">保存为预设</button>
                             <button id="theater-manage-prompt-btn" class="theater-save-prompt-btn">管理预设</button>
                         </div>
@@ -3902,11 +4200,18 @@
                     <!-- 详情内容将由 JS 动态填充 -->
                 </div>
                 <div class="theater-detail-actions">
-                    <button id="theater-favorite-btn" class="theater-action-btn theater-favorite-btn">收藏</button>
-                    <button id="theater-save-edit-btn" class="theater-action-btn theater-save-edit-btn" style="display: none;">保存</button>
-                    <button id="theater-share-btn" class="theater-action-btn theater-share-btn">分享到聊天框</button>
-                    <button id="theater-edit-category-btn" class="theater-action-btn theater-edit-category-btn">修改分类</button>
-                    <button id="theater-delete-btn" class="theater-action-btn theater-delete-btn">删除</button>
+                    <div class="theater-action-row-first">
+                        <button id="theater-favorite-btn" class="theater-action-btn theater-favorite-btn">收藏</button>
+                        <button id="theater-save-edit-btn" class="theater-action-btn theater-save-edit-btn" style="display: none;">保存</button>
+                        <button id="theater-edit-category-btn" class="theater-action-btn theater-edit-category-btn">修改分类</button>
+                        <button id="theater-delete-btn" class="theater-action-btn theater-delete-btn">删除</button>
+                    </div>
+                    <div class="theater-action-row-second">
+                        <button id="theater-share-btn" class="theater-action-btn theater-share-btn">分享到聊天框</button>
+                    </div>
+                    <div class="theater-action-row-third">
+                        <button id="theater-export-btn" class="theater-action-btn theater-export-btn">导出</button>
+                    </div>
                 </div>
             </main>
         </div>
@@ -3929,11 +4234,18 @@
                     <!-- HTML 模式详情内容将由 JS 动态填充 -->
                 </div>
                 <div class="theater-detail-actions">
-                    <button id="theater-html-favorite-btn" class="theater-action-btn theater-favorite-btn">收藏</button>
-                    <button id="theater-html-save-edit-btn" class="theater-action-btn theater-save-edit-btn" style="display: none;">保存</button>
-                    <button id="theater-html-share-btn" class="theater-action-btn theater-share-btn">分享到聊天框</button>
-                    <button id="theater-html-edit-category-btn" class="theater-action-btn theater-edit-category-btn">修改分类</button>
-                    <button id="theater-html-delete-btn" class="theater-action-btn theater-delete-btn">删除</button>
+                    <div class="theater-action-row-first">
+                        <button id="theater-html-favorite-btn" class="theater-action-btn theater-favorite-btn">收藏</button>
+                        <button id="theater-html-save-edit-btn" class="theater-action-btn theater-save-edit-btn" style="display: none;">保存</button>
+                        <button id="theater-html-edit-category-btn" class="theater-action-btn theater-edit-category-btn">修改分类</button>
+                        <button id="theater-html-delete-btn" class="theater-action-btn theater-delete-btn">删除</button>
+                    </div>
+                    <div class="theater-action-row-second">
+                        <button id="theater-html-share-btn" class="theater-action-btn theater-share-btn">分享到聊天框</button>
+                    </div>
+                    <div class="theater-action-row-third">
+                        <button id="theater-html-export-btn" class="theater-action-btn theater-export-btn">导出</button>
+                    </div>
                 </div>
             </main>
         </div>
@@ -4669,6 +4981,59 @@
             </main>
         </div>
 
+        <!-- 小号管理页面 -->
+        <div id="forum-alt-accounts-screen" class="screen">
+            <header class="app-header">
+                <button class="back-btn" data-target="forum-settings-screen">&#8249;</button>
+                <div class="title-container">
+                    <h1 class="title">小号管理</h1>
+                </div>
+                <div class="action-btn-group">
+                    <button type="button" class="btn btn-primary btn-small" id="forum-create-alt-btn">新建小号</button>
+                </div>
+            </header>
+            <main class="content">
+                <div class="kkt-settings-container">
+                    <div class="kkt-group">
+                        <div class="kkt-group-title">当前身份</div>
+                        <div id="forum-active-identity-display" class="forum-alt-identity-card forum-alt-identity-active">
+                            <span class="forum-alt-identity-name">大号</span>
+                            <span class="forum-alt-identity-badge">使用中</span>
+                        </div>
+                    </div>
+                    <div class="kkt-group">
+                        <div class="kkt-group-title">我的小号</div>
+                        <p style="font-size:12px;color:#888;margin:0 0 8px 0;">小号的身份信息不会被角色知道。但如果小号资料与大号太相似，聪明的角色可能会猜出来哦~</p>
+                        <div id="forum-alt-accounts-list"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 小号编辑模态框 -->
+        <div id="forum-alt-edit-modal" class="modal-overlay">
+            <div class="modal-content" style="max-width:400px;">
+                <h3 id="forum-alt-edit-modal-title">新建小号</h3>
+                <div style="text-align:center;margin-bottom:12px;">
+                    <img id="forum-alt-edit-avatar" src="https://i.postimg.cc/GtbTnxhP/o-o-1.jpg" style="width:64px;height:64px;border-radius:50%;object-fit:cover;cursor:pointer;border:2px solid #e0e0e0;">
+                    <input type="file" id="forum-alt-avatar-upload" accept="image/*" style="display:none;">
+                    <p style="font-size:12px;color:#999;margin:4px 0 0;">点击头像更换</p>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:13px;color:#666;display:block;margin-bottom:4px;">昵称</label>
+                    <input type="text" id="forum-alt-edit-username" placeholder="给小号起个名字" autocomplete="off" style="width:100%;padding:8px;border:1px solid #e0e0e0;border-radius:8px;box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="font-size:13px;color:#666;display:block;margin-bottom:4px;">简介</label>
+                    <textarea id="forum-alt-edit-bio" placeholder="小号的个人简介..." rows="3" style="width:100%;padding:8px;border:1px solid #e0e0e0;border-radius:8px;box-sizing:border-box;"></textarea>
+                </div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button type="button" class="btn btn-neutral" id="forum-alt-edit-cancel-btn">取消</button>
+                    <button type="button" class="btn btn-primary" id="forum-alt-edit-save-btn">保存</button>
+                </div>
+            </div>
+        </div>
+
         <div id="forum-settings-screen" class="screen">
             <header class="app-header">
                 <button class="back-btn" data-target="forum-screen">&#8249;</button>
@@ -4737,6 +5102,12 @@
                             <div class="kkt-item-label">个人资料</div>
                             <div class="kkt-item-control">
                                 <button type="button" class="btn btn-primary" id="forum-goto-profile-btn" style="padding:6px 12px;">编辑</button>
+                            </div>
+                        </div>
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">小号管理</div>
+                            <div class="kkt-item-control">
+                                <button type="button" class="btn btn-primary" id="forum-goto-alt-accounts-btn" style="padding:6px 12px;">管理</button>
                             </div>
                         </div>
                         <div class="kkt-item">
@@ -5153,6 +5524,20 @@
 
         <!-- SCENE 2: 通话界面 -->
         <div id="vc-scene-call" class="vc-scene vc-hidden">
+            <!-- NovelAI 生成的角色画面（全屏背景） -->
+            <div id="vc-nai-bg" class="vc-nai-bg" style="display:none;">
+                <img id="vc-nai-bg-img" src="" alt="">
+                <div class="vc-nai-bg-loading" id="vc-nai-bg-loading" style="display:none;">
+                    <div class="vc-nai-spinner"></div>
+                </div>
+            </div>
+            <!-- 保存图片按钮（独立于背景层，确保可点击） -->
+            <button id="vc-nai-save-btn" class="vc-nai-save-btn" style="display:none;" title="保存图片">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                </svg>
+            </button>
             <!-- 用户真实摄像头画中画 -->
             <div id="vc-user-camera-pip" class="vc-user-camera-pip" style="display:none;">
                 <video id="vc-user-camera-video" autoplay playsinline muted></video>
@@ -5172,6 +5557,16 @@
             <div class="vc-chat-area" id="vc-chat-container">
                 <!-- 自动插入的第一条消息 -->
             </div>
+
+            <!-- 收起/展开聊天内容按钮 -->
+            <button id="vc-chat-toggle-btn" class="vc-chat-toggle-btn" title="收起聊天">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="vc-toggle-icon-down">
+                    <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+                </svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="vc-toggle-icon-up" style="display:none;">
+                    <path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/>
+                </svg>
+            </button>
 
             <div class="vc-controls-wrapper">
                 <div class="vc-controls">

@@ -922,6 +922,17 @@
 .pv-card-footer.hidden { opacity: 0; }
 .pv-card-footer svg { width: 14px; height: 14px; fill: white; flex-shrink: 0; }
 
+/* NovelAI 生图加载动画 */
+@keyframes nai-shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+@keyframes nai-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+.image-bubble.nai-generating img { display: none; }
+
 /* 转账卡片 */
 .transfer-card {
     width: 200px;
@@ -2166,6 +2177,170 @@
 .status-panel-overlay.visible .close-status-panel {
     transform: translateX(-50%) scale(1);
     opacity: 1;
+}
+
+/* --- 状态栏管理/多选删除 --- */
+.status-manage-btn {
+    position: absolute;
+    top: 28px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.85);
+    color: #333;
+    border: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 1004;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.3s ease 0.1s;
+    pointer-events: none;
+}
+
+.status-panel-overlay.visible .status-manage-btn {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+.status-manage-btn:active {
+    transform: scale(0.92);
+    background: rgba(255, 255, 255, 1);
+}
+
+/* 多选模式下隐藏管理按钮 */
+.status-panel-overlay.multi-select-mode .status-manage-btn {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* 多选操作栏 */
+.status-multi-select-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: 1005;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+    animation: statusBarSlideUp 0.25s ease-out;
+}
+
+@keyframes statusBarSlideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.status-panel-overlay.multi-select-mode .status-multi-select-bar {
+    display: flex;
+}
+
+.status-multi-select-bar #status-select-count {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.status-multi-select-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.status-multi-select-actions .btn {
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.status-multi-select-actions .btn-small {
+    background: rgba(0, 0, 0, 0.06);
+    color: #333;
+}
+
+.status-multi-select-actions .btn-small:active {
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.status-multi-select-actions .btn-danger {
+    background: #ff4757;
+    color: #fff;
+}
+
+.status-multi-select-actions .btn-danger:disabled {
+    background: #ccc;
+    color: #999;
+}
+
+.status-multi-select-actions .btn-danger:not(:disabled):active {
+    background: #e0313f;
+}
+
+/* 多选模式下隐藏关闭按钮和指示器 */
+.status-panel-overlay.multi-select-mode .close-status-panel {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.status-panel-overlay.multi-select-mode .status-indicator {
+    bottom: 80px;
+}
+
+/* 多选模式下 slide 的选中样式 */
+.status-slide .status-slide-checkbox {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2.5px solid rgba(255, 255, 255, 0.8);
+    background: rgba(0, 0, 0, 0.2);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+.status-panel-overlay.multi-select-mode .status-slide .status-slide-checkbox {
+    display: flex;
+}
+
+.status-slide .status-slide-checkbox.checked {
+    background: #4a90d9;
+    border-color: #4a90d9;
+}
+
+.status-slide .status-slide-checkbox.checked::after {
+    content: '';
+    width: 10px;
+    height: 6px;
+    border-left: 2.5px solid #fff;
+    border-bottom: 2.5px solid #fff;
+    transform: rotate(-45deg) translateY(-1px);
+}
+
+/* 多选模式下 slide 的底部 padding 增大，给操作栏留空间 */
+.status-panel-overlay.multi-select-mode .status-slide {
+    padding-bottom: 180px;
 }
 
 /* 上下文屏蔽样式 */

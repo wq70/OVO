@@ -1,5 +1,217 @@
 // --- 论坛功能 (js/modules/forum.js) ---
 
+// ===== 小号管理系统 =====
+var forumEditingAltId = null; // 当前正在编辑的小号ID，null表示新建
+
+function forumGetActiveAccount() {
+    var activeId = db.forumActiveAccountId || 'main';
+    if (activeId === 'main') {
+        forumInitUserProfile();
+        return { id: 'main', username: db.forumUserProfile.username, avatar: db.forumUserProfile.avatar, bio: db.forumUserProfile.bio, isAlt: false };
+    }
+    var alts = db.forumAltAccounts || [];
+    var alt = alts.find(function(a) { return a.id === activeId; });
+    if (!alt) {
+        db.forumActiveAccountId = 'main';
+        saveData();
+        forumInitUserProfile();
+        return { id: 'main', username: db.forumUserProfile.username, avatar: db.forumUserProfile.avatar, bio: db.forumUserProfile.bio, isAlt: false };
+    }
+    return { id: alt.id, username: alt.username, avatar: alt.avatar, bio: alt.bio, isAlt: true };
+}
+
+function forumSwitchAccount(accountId) {
+    db.forumActiveAccountId = accountId;
+    saveData();
+    forumRenderAltAccountsList();
+    var acc = forumGetActiveAccount();
+    showToast('已切换为: ' + acc.username);
+}
+
+function forumCreateAltAccount(data) {
+    if (!db.forumAltAccounts) db.forumAltAccounts = [];
+    var newAlt = {
+        id: 'alt_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+        username: data.username || '小号' + Math.floor(1000 + Math.random() * 9000),
+        avatar: data.avatar || 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg',
+        bio: data.bio || '',
+        createdAt: Date.now()
+    };
+    db.forumAltAccounts.push(newAlt);
+    saveData();
+    return newAlt;
+}
+
+function forumUpdateAltAccount(altId, data) {
+    var alts = db.forumAltAccounts || [];
+    var alt = alts.find(function(a) { return a.id === altId; });
+    if (!alt) return;
+    if (data.username) alt.username = data.username;
+    if (data.avatar) alt.avatar = data.avatar;
+    if (data.bio !== undefined) alt.bio = data.bio;
+    saveData();
+}
+
+function forumDeleteAltAccount(altId) {
+    if (!db.forumAltAccounts) return;
+    db.forumAltAccounts = db.forumAltAccounts.filter(function(a) { return a.id !== altId; });
+    if (db.forumActiveAccountId === altId) {
+        db.forumActiveAccountId = 'main';
+    }
+    saveData();
+}
+
+function forumRenderAltAccountsList() {
+    var listEl = document.getElementById('forum-alt-accounts-list');
+    var displayEl = document.getElementById('forum-active-identity-display');
+    if (!listEl) return;
+
+    // 渲染当前身份
+    var active = forumGetActiveAccount();
+    if (displayEl) {
+        displayEl.innerHTML = '<img class="forum-alt-identity-avatar" src="' + (active.avatar || 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg') + '">'
+            + '<div class="forum-alt-identity-info"><div class="forum-alt-identity-name">' + (active.username || '未设置') + (active.isAlt ? ' <span style="font-size:11px;color:#999;">(小号)</span>' : ' <span style="font-size:11px;color:#999;">(大号)</span>') + '</div>'
+            + '<div class="forum-alt-identity-bio">' + (active.bio || '暂无简介') + '</div></div>'
+            + '<span class="forum-alt-identity-badge">使用中</span>';
+    }
+
+    // 渲染小号列表
+    var alts = db.forumAltAccounts || [];
+    if (alts.length === 0) {
+        listEl.innerHTML = '<div class="forum-alt-empty-hint">还没有小号，点击右上角「新建小号」创建一个吧</div>';
+        // 渲染大号切换卡片（如果当前不是大号）
+        if (active.isAlt) {
+            forumInitUserProfile();
+            var mainP = db.forumUserProfile;
+            listEl.innerHTML = '<div class="forum-alt-identity-card" data-alt-id="main">'
+                + '<img class="forum-alt-identity-avatar" src="' + (mainP.avatar || 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg') + '">'
+                + '<div class="forum-alt-identity-info"><div class="forum-alt-identity-name">' + (mainP.username || '大号') + ' <span style="font-size:11px;color:#999;">(大号)</span></div>'
+                + '<div class="forum-alt-identity-bio">' + (mainP.bio || '暂无简介') + '</div></div>'
+                + '<button class="btn btn-small btn-primary" style="padding:4px 12px;font-size:12px;" onclick="forumSwitchAccount(\'main\')">切换</button></div>'
+                + '<div class="forum-alt-empty-hint">还没有小号，点击右上角「新建小号」创建一个吧</div>';
+        }
+        return;
+    }
+
+    var html = '';
+    // 如果当前是小号，显示大号切换入口
+    if (active.isAlt) {
+        forumInitUserProfile();
+        var mainProfile = db.forumUserProfile;
+        html += '<div class="forum-alt-identity-card" data-alt-id="main">'
+            + '<img class="forum-alt-identity-avatar" src="' + (mainProfile.avatar || 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg') + '">'
+            + '<div class="forum-alt-identity-info"><div class="forum-alt-identity-name">' + (mainProfile.username || '大号') + ' <span style="font-size:11px;color:#999;">(大号)</span></div>'
+            + '<div class="forum-alt-identity-bio">' + (mainProfile.bio || '暂无简介') + '</div></div>'
+            + '<button class="btn btn-small btn-primary" style="padding:4px 12px;font-size:12px;" onclick="forumSwitchAccount(\'main\')">切换</button></div>';
+    }
+
+    alts.forEach(function(alt) {
+        var isActive = (db.forumActiveAccountId === alt.id);
+        html += '<div class="forum-alt-identity-card' + (isActive ? ' forum-alt-identity-active' : '') + '" data-alt-id="' + alt.id + '">'
+            + '<img class="forum-alt-identity-avatar" src="' + (alt.avatar || 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg') + '">'
+            + '<div class="forum-alt-identity-info"><div class="forum-alt-identity-name">' + (alt.username || '小号') + '</div>'
+            + '<div class="forum-alt-identity-bio">' + (alt.bio || '暂无简介') + '</div></div>'
+            + '<div class="forum-alt-identity-actions">'
+            + (isActive ? '<span class="forum-alt-identity-badge">使用中</span>' : '<button onclick="forumSwitchAccount(\'' + alt.id + '\')">切换</button>')
+            + '<button onclick="forumOpenAltEditModal(\'' + alt.id + '\')">编辑</button>'
+            + '<button class="alt-delete-btn" onclick="event.stopPropagation();forumConfirmDeleteAlt(\'' + alt.id + '\')">删除</button>'
+            + '</div></div>';
+    });
+    listEl.innerHTML = html;
+}
+
+function forumOpenAltEditModal(altId) {
+    var modal = document.getElementById('forum-alt-edit-modal');
+    var titleEl = document.getElementById('forum-alt-edit-modal-title');
+    var avatarEl = document.getElementById('forum-alt-edit-avatar');
+    var usernameEl = document.getElementById('forum-alt-edit-username');
+    var bioEl = document.getElementById('forum-alt-edit-bio');
+    if (!modal) return;
+
+    if (altId) {
+        forumEditingAltId = altId;
+        var alt = (db.forumAltAccounts || []).find(function(a) { return a.id === altId; });
+        if (!alt) return;
+        titleEl.textContent = '编辑小号';
+        avatarEl.src = alt.avatar || 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg';
+        usernameEl.value = alt.username || '';
+        bioEl.value = alt.bio || '';
+    } else {
+        forumEditingAltId = null;
+        titleEl.textContent = '新建小号';
+        avatarEl.src = 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg';
+        usernameEl.value = '';
+        bioEl.value = '';
+    }
+    modal.classList.add('visible');
+}
+
+function forumCloseAltEditModal() {
+    var modal = document.getElementById('forum-alt-edit-modal');
+    if (modal) modal.classList.remove('visible');
+    forumEditingAltId = null;
+}
+
+function forumSaveAltFromModal() {
+    var usernameEl = document.getElementById('forum-alt-edit-username');
+    var bioEl = document.getElementById('forum-alt-edit-bio');
+    var avatarEl = document.getElementById('forum-alt-edit-avatar');
+    var username = (usernameEl && usernameEl.value || '').trim();
+    if (!username) { showToast('昵称不能为空'); return; }
+    var avatar = avatarEl ? avatarEl.src : '';
+    var bio = (bioEl && bioEl.value || '').trim();
+
+    if (forumEditingAltId) {
+        forumUpdateAltAccount(forumEditingAltId, { username: username, avatar: avatar, bio: bio });
+        showToast('小号已更新');
+    } else {
+        forumCreateAltAccount({ username: username, avatar: avatar, bio: bio });
+        showToast('小号创建成功');
+    }
+    forumCloseAltEditModal();
+    forumRenderAltAccountsList();
+}
+
+function forumConfirmDeleteAlt(altId) {
+    var alt = (db.forumAltAccounts || []).find(function(a) { return a.id === altId; });
+    if (!alt) return;
+    if (confirm('确定删除小号「' + alt.username + '」吗？')) {
+        forumDeleteAltAccount(altId);
+        forumRenderAltAccountsList();
+        showToast('小号已删除');
+    }
+}
+
+function forumSetupAltAccountEvents() {
+    var createBtn = document.getElementById('forum-create-alt-btn');
+    if (createBtn) createBtn.addEventListener('click', function() { forumOpenAltEditModal(null); });
+
+    var saveBtn = document.getElementById('forum-alt-edit-save-btn');
+    if (saveBtn) saveBtn.addEventListener('click', forumSaveAltFromModal);
+
+    var cancelBtn = document.getElementById('forum-alt-edit-cancel-btn');
+    if (cancelBtn) cancelBtn.addEventListener('click', forumCloseAltEditModal);
+
+    var modal = document.getElementById('forum-alt-edit-modal');
+    if (modal) modal.addEventListener('click', function(e) { if (e.target === modal) forumCloseAltEditModal(); });
+
+    var avatarImg = document.getElementById('forum-alt-edit-avatar');
+    var avatarUpload = document.getElementById('forum-alt-avatar-upload');
+    if (avatarImg) avatarImg.addEventListener('click', function() { if (avatarUpload) avatarUpload.click(); });
+    if (avatarUpload) avatarUpload.addEventListener('change', function(e) {
+        var f = e.target.files && e.target.files[0];
+        if (!f) return;
+        var reader = new FileReader();
+        reader.onload = function() { if (avatarImg) avatarImg.src = reader.result; };
+        reader.readAsDataURL(f);
+        e.target.value = '';
+    });
+
+    var gotoBtn = document.getElementById('forum-goto-alt-accounts-btn');
+    if (gotoBtn) gotoBtn.addEventListener('click', function() { switchScreen('forum-alt-accounts-screen'); forumRenderAltAccountsList(); });
+}
+// ===== 小号管理系统 END =====
+
 function setupForumBindingFeature() {
     const forumLinkBtn = document.getElementById('forum-link-btn');
     const modal = document.getElementById('forum-binding-modal');
@@ -108,21 +320,27 @@ function renderPostDetail(post) {
     if (post.comments && post.comments.length > 0) {
         post.comments.forEach((comment, index) => {
             const firstChar = (comment.username || '').charAt(0).toUpperCase() || '?';
-            const isUserComment = comment.authorId === 'user';
+            const isUserComment = comment.authorId === 'user' || (comment.authorId && comment.authorId.startsWith('alt_'));
             // 只有用户发的帖子里，用户在自己帖子下的回复才显示楼主
-            const isAuthor = (post.authorId === 'user') && (comment.authorId === post.authorId);
-            const userAvatarUrl = comment.avatar || (db.forumUserProfile && db.forumUserProfile.avatar) || defaultAvatarUrl;
+            const isAuthor = (post.authorId === 'user' || (post.authorId && post.authorId.startsWith('alt_'))) && (comment.authorId === post.authorId);
+            const activeAcc = forumGetActiveAccount();
+            const userAvatarUrl = comment.avatar || (activeAcc.avatar) || defaultAvatarUrl;
             const avatarHtml = isUserComment
                 ? `<img src="${userAvatarUrl}" class="comment-author-avatar" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
                 : `<div class="comment-author-avatar" style="background-color: ${getRandomColor()}">${firstChar}</div>`;
             
             const authorBadge = isAuthor ? '<span class="author-badge">楼主</span>' : '';
+            const isNpcComment = comment.authorId === 'npc';
+            const dmBtnHtml = isNpcComment ? `<button type="button" class="btn btn-primary btn-small comment-dm-btn" data-comment-index="${index}" style="padding:3px 10px;font-size:12px;border-radius:16px;flex-shrink:0;">发私信</button>` : '';
+            
+            const replyToHtml = comment.replyTo ? `<div class="comment-reply-ref">回复 <span class="comment-reply-ref-name">@${comment.replyTo.username || ''}</span></div>` : '';
             
             commentsHtml += `
             <li class="comment-item" data-comment-index="${index}">
                 ${avatarHtml}
                 <div class="comment-body">
-                    <div class="comment-author-name">${comment.username || ''}${authorBadge}</div>
+                    <div class="comment-author-name">${comment.username || ''}${authorBadge}${dmBtnHtml}</div>
+                    ${replyToHtml}
                     <div class="comment-content">${(comment.content || '').replace(/\n/g, '<br>')}</div>
                     <div class="comment-timestamp">${comment.timestamp || ''}</div>
                 </div>
@@ -135,10 +353,10 @@ function renderPostDetail(post) {
     const isLiked = !!post.isLiked;
     const isFavorited = !!post.isFavorited;
     const commentCount = post.comments ? post.comments.length : 0;
-    const isOwnPost = post.authorId === 'user';
+    const isOwnPost = post.authorId === 'user' || (post.authorId && post.authorId.startsWith('alt_'));
 
     const authorAvatarHtml = isOwnPost
-        ? `<img src="${(db.forumUserProfile && db.forumUserProfile.avatar) || defaultAvatarUrl}" class="author-avatar author-avatar-img" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+        ? `<img src="${forumGetActiveAccount().avatar || defaultAvatarUrl}" class="author-avatar author-avatar-img" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
         : (() => { const authorFirstChar = (post.username || '').charAt(0).toUpperCase() || '?'; return `<div class="author-avatar" style="background-color:${getRandomColor()};color:#fff;">${authorFirstChar}</div>`; })();
 
     detailScreen.innerHTML = `
@@ -191,7 +409,12 @@ function renderPostDetail(post) {
             </ul>
         </div>
 
-        <div class="comment-input-wrapper" style="position:sticky;bottom:0;background:var(--panel-bg,#fff);border-top:1px solid #e0e0e0;padding:10px 15px;display:flex;gap:10px;align-items:center;">
+        <div class="comment-input-wrapper" style="position:sticky;bottom:0;background:var(--panel-bg,#fff);border-top:1px solid #e0e0e0;padding:0;display:flex;flex-direction:column;">
+            <div id="forum-reply-bar" class="forum-reply-bar" style="display:none;">
+                <span class="forum-reply-bar-text">回复 <span id="forum-reply-bar-name"></span></span>
+                <button type="button" id="forum-reply-bar-close" class="forum-reply-bar-close">&times;</button>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;padding:10px 15px;">
             <input type="text" id="forum-comment-input" placeholder="写下你的评论..." autocomplete="off" style="flex:1;padding:10px 15px;border:1px solid #e0e0e0;border-radius:20px;outline:none;">
             <button type="button" id="ai-reply-comment-btn" class="icon-btn ai-reply-btn" title="AI回复" style="width:40px;height:40px;">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -202,6 +425,7 @@ function renderPostDetail(post) {
             <button type="button" id="send-forum-comment-btn" class="icon-btn" style="background:var(--primary-color);color:#fff;border:none;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;box-shadow:none;">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>
+            </div>
         </div>
     </main>`;
 
@@ -248,6 +472,42 @@ function renderPostDetail(post) {
         });
     }
 
+    // 评论者私信按钮
+    detailScreen.querySelectorAll('.comment-dm-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(btn.dataset.commentIndex, 10);
+            const comment = post.comments && post.comments[idx];
+            if (!comment || !comment.username) return;
+            const userId = 'npc_' + comment.username;
+            forumOpenDMConversation(userId, comment.username, { postTitle: post.title, commentContent: comment.content });
+        });
+    });
+
+    // 回复栏关闭按钮
+    const replyBarClose = detailScreen.querySelector('#forum-reply-bar-close');
+    if (replyBarClose) {
+        replyBarClose.addEventListener('click', () => {
+            forumReplyTarget = null;
+            const bar = detailScreen.querySelector('#forum-reply-bar');
+            if (bar) bar.style.display = 'none';
+            const input = detailScreen.querySelector('#forum-comment-input');
+            if (input) input.placeholder = '写下你的评论...';
+        });
+    }
+
+    // 恢复回复状态
+    if (forumReplyTarget) {
+        const bar = detailScreen.querySelector('#forum-reply-bar');
+        const nameSpan = detailScreen.querySelector('#forum-reply-bar-name');
+        if (bar && nameSpan) {
+            bar.style.display = 'flex';
+            nameSpan.textContent = '@' + forumReplyTarget.username;
+            const input = detailScreen.querySelector('#forum-comment-input');
+            if (input) input.placeholder = '回复 @' + forumReplyTarget.username + '...';
+        }
+    }
+
     const commentList = detailScreen.querySelector('.comment-list');
     if (commentList) {
         commentList.addEventListener('contextmenu', function(e) {
@@ -270,7 +530,21 @@ function renderPostDetail(post) {
 }
 
 function forumHandleCommentLongPress(postId, commentIndex, x, y) {
+    const post = db.forumPosts.find(p => p.id === postId);
+    const comment = post && post.comments && post.comments[commentIndex];
     const menuItems = [
+        { label: '回复', action: function() {
+            if (!comment) return;
+            forumReplyTarget = { commentId: comment.id, username: comment.username, content: comment.content };
+            const bar = document.getElementById('forum-reply-bar');
+            const nameSpan = document.getElementById('forum-reply-bar-name');
+            if (bar && nameSpan) {
+                bar.style.display = 'flex';
+                nameSpan.textContent = '@' + comment.username;
+            }
+            const input = document.getElementById('forum-comment-input');
+            if (input) { input.placeholder = '回复 @' + comment.username + '...'; input.focus(); }
+        }},
         { label: '分享评论', action: function() { openShareCommentModal(postId, commentIndex); } }
     ];
     if (typeof triggerHapticFeedback === 'function') triggerHapticFeedback('medium');
@@ -281,6 +555,7 @@ function setupForumFeature() {
     forumInitUserProfile();
     forumAddHeaderButtonsAndFAB();
     forumBindNewEvents();
+    forumSetupAltAccountEvents();
 
     const refreshBtn = document.getElementById('forum-refresh-btn');
     const postsContainer = document.getElementById('forum-posts-container');
@@ -522,7 +797,9 @@ function getForumGenerationContext() {
         });
     }
 
-    if (bindings.userPersonaIds && bindings.userPersonaIds.length > 0) {
+    // 小号模式下不注入用户人设，保护隐私
+    const activeAccount = forumGetActiveAccount();
+    if (!activeAccount.isAlt && bindings.userPersonaIds && bindings.userPersonaIds.length > 0) {
         context += "=====  (你) 的人设 =====\n";
         bindings.userPersonaIds.forEach(presetName => {
             const preset = db.myPersonaPresets.find(p => p.name === presetName);
@@ -629,7 +906,7 @@ ${context}
               comments: (post.comments || []).map(c => ({ ...c, authorId: 'npc' }))
             }));
 
-            const userPosts = (db.forumPosts || []).filter(p => p.authorId === 'user');
+            const userPosts = (db.forumPosts || []).filter(p => p.authorId === 'user' || (p.authorId && p.authorId.startsWith('alt_')));
             db.forumPosts = userPosts.concat(enhancedPosts);
             await saveData();
             renderForumPosts(db.forumPosts);
@@ -773,10 +1050,13 @@ function forumTogglePostFavorite(postId) {
 function forumPublishComment(postId, content) {
     const post = db.forumPosts.find(p => p.id === postId);
     if (!post) return;
-    forumInitUserProfile();
-    const profile = db.forumUserProfile;
+    const activeAccount = forumGetActiveAccount();
     const defaultAvatarUrl = 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg';
-    const newComment = { id: 'comment_' + Date.now() + '_' + Math.random(), authorId: 'user', username: profile.username || '用户', avatar: profile.avatar || defaultAvatarUrl, content: content, timestamp: new Date().toLocaleString() };
+    const newComment = { id: 'comment_' + Date.now() + '_' + Math.random(), authorId: activeAccount.isAlt ? activeAccount.id : 'user', username: activeAccount.username || '用户', avatar: activeAccount.avatar || defaultAvatarUrl, content: content, timestamp: new Date().toLocaleString() };
+    if (forumReplyTarget) {
+        newComment.replyTo = { commentId: forumReplyTarget.commentId, username: forumReplyTarget.username };
+        forumReplyTarget = null;
+    }
     if (!post.comments) post.comments = [];
     post.comments.push(newComment);
     saveData();
@@ -793,12 +1073,11 @@ async function forumPublishPost() {
     const content = contentInput && contentInput.value.trim();
     if (!title || !content) { showToast('标题和内容不能为空'); return; }
     
-    forumInitUserProfile();
-    const profile = db.forumUserProfile;
+    const activeAccount = forumGetActiveAccount();
     const newPost = { 
         id: 'post_' + Date.now() + '_' + Math.random(), 
-        authorId: 'user', 
-        username: profile.username || '用户', 
+        authorId: activeAccount.isAlt ? activeAccount.id : 'user', 
+        username: activeAccount.username || '用户', 
         title: title, 
         content: content, 
         summary: content.length > 100 ? content.substring(0, 100) + '...' : content, 
@@ -912,7 +1191,7 @@ function forumDeletePost(postId) {
     const index = db.forumPosts.findIndex(p => p.id === postId);
     if (index === -1) return;
     const post = db.forumPosts[index];
-    if (post.authorId !== 'user') { showToast('只能删除自己的帖子'); return; }
+    if (post.authorId !== 'user' && !(post.authorId && post.authorId.startsWith('alt_'))) { showToast('只能删除自己的帖子'); return; }
     db.forumPosts.splice(index, 1);
     saveData();
     switchScreen('forum-screen');
@@ -1093,10 +1372,11 @@ function forumSaveSettings() {
 function forumGetUserStats() {
     const posts = db.forumPosts || [];
     let postCount = 0, commentCount = 0, likeCount = 0;
+    const isOwnId = function(id) { return id === 'user' || (id && id.startsWith('alt_')); };
     posts.forEach(p => {
-        if (p.authorId === 'user') postCount++;
-        (p.comments || []).forEach(c => { if (c.authorId === 'user') commentCount++; });
-        if (p.authorId === 'user') likeCount += p.likeCount || 0;
+        if (isOwnId(p.authorId)) postCount++;
+        (p.comments || []).forEach(c => { if (isOwnId(c.authorId)) commentCount++; });
+        if (isOwnId(p.authorId)) likeCount += p.likeCount || 0;
     });
     return { posts: postCount, comments: commentCount, likes: likeCount };
 }
@@ -1388,6 +1668,7 @@ function forumRenderDMList() {
 var forumCurrentDMUserId = null;
 var forumDMLongPressTimer = null;
 var forumCommentLongPressTimer = null;
+var forumReplyTarget = null; // { commentId, username, content } 当前回复目标
 var editingForumDMId = null;
 var forumDMListDeleteMode = false;
 var forumDMSelectedUserIds = new Set();
@@ -1414,11 +1695,30 @@ function forumIsFriend(userId) {
     return (db.characters || []).some(function(c) { return c.source === 'forum' && c.forumUserId === userId; });
 }
 
-function forumOpenDMConversation(userId, userName) {
+function forumOpenDMConversation(userId, userName, commentContext) {
     forumCurrentDMUserId = userId;
     forumMarkDMRead(userId);
     forumUpdateDMUnreadBadge();
     document.getElementById('forum-dm-conversation-title').textContent = userName || userId || '私信';
+    
+    // 如果从评论进入且没有历史消息，注入评论上下文作为第一条系统消息
+    if (commentContext && commentContext.commentContent) {
+        const existingMsgs = (db.forumMessages || []).filter(m => (m.fromUserId === 'user' && m.toUserId === userId) || (m.fromUserId === userId && m.toUserId === 'user'));
+        if (existingMsgs.length === 0) {
+            if (!db.forumMessages) db.forumMessages = [];
+            db.forumMessages.push({
+                id: 'dm_ctx_' + Date.now(),
+                fromUserId: 'user',
+                toUserId: userId,
+                content: '（来自帖子「' + (commentContext.postTitle || '') + '」你的评论：' + commentContext.commentContent + '）',
+                timestamp: Date.now(),
+                isRead: true,
+                isCommentContext: true
+            });
+            saveData();
+        }
+    }
+    
     forumRenderDMConversation(userId);
     var addFriendBtn = document.getElementById('forum-dm-add-friend-btn');
     if (addFriendBtn) {
@@ -1524,8 +1824,8 @@ function forumRenderDMConversation(userId) {
     area.innerHTML = '';
     
     forumInitUserProfile();
-    const userProfile = db.forumUserProfile;
-    const userAvatar = (userProfile.avatar && userProfile.avatar.trim()) ? userProfile.avatar : FORUM_DEFAULT_AVATAR;
+    const activeAccount = forumGetActiveAccount();
+    const userAvatar = (activeAccount.avatar && activeAccount.avatar.trim()) ? activeAccount.avatar : FORUM_DEFAULT_AVATAR;
     
     const npcColors = ["#FFB6C1", "#87CEFA", "#98FB98", "#F0E68C", "#DDA0DD", "#FFDAB9", "#B0E0E6"];
     const getStableColor = (id) => {
@@ -1540,6 +1840,7 @@ function forumRenderDMConversation(userId) {
     const npcColor = getStableColor(userId);
     
     messages.forEach(m => {
+        if (m.isCommentContext) return; // 系统上下文消息不显示
         const isUser = m.fromUserId === 'user';
         const div = document.createElement('div');
         div.className = isUser ? 'dm-message dm-message-user' : 'dm-message dm-message-npc';
@@ -1684,9 +1985,9 @@ async function forumGenerateStrangerDMs() {
     showToast('正在生成陌生人私信...');
     try {
         forumInitUserProfile();
-        var userProfile = db.forumUserProfile;
+        var activeAccount = forumGetActiveAccount();
         var worldContext = getForumGenerationContext();
-        var userPosts = (db.forumPosts || []).filter(function(p) { return p.authorId === 'user'; });
+        var userPosts = (db.forumPosts || []).filter(function(p) { return p.authorId === 'user' || (p.authorId && p.authorId.startsWith('alt_')); });
         var userPostsText = '';
         if (userPosts.length === 0) {
             userPostsText = '用户暂无发帖记录。';
@@ -1700,7 +2001,7 @@ async function forumGenerateStrangerDMs() {
         (db.forumPosts || []).forEach(function(p) {
             if (!p.comments) return;
             p.comments.forEach(function(c) {
-                if (c.authorId === 'user' && (c.content || '').trim()) {
+            if ((c.authorId === 'user' || (c.authorId && c.authorId.startsWith('alt_'))) && (c.content || '').trim()) {
                     userCommentsList.push({ postTitle: p.title || '(无标题)', postContent: (p.content || '').slice(0, 80), comment: (c.content || '').trim() });
                 }
             });
@@ -1729,9 +2030,9 @@ async function forumGenerateStrangerDMs() {
         if (normalCount > 0) {
             var systemPrompt;
             if (generateDetailed) {
-                systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景，并为每个陌生人生成一份可聊天的基础人设。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (userProfile.username || '用户') + '\n简介: ' + (userProfile.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n===== 用户在其他帖子下的评论/回复 =====\n' + userCommentsText + '\n请生成 ' + normalCount + ' 条陌生人私信，且为每个陌生人生成基础人设。要求：\n1. 每条私信来自不同的NPC，senderName 为符合世界观的论坛昵称。\n2. 私信内容自然口语化，1～2 句话即可。\n3. 每个 NPC 的 basicPersona 必须包含：性别、性格（如开朗/冷淡/傲娇等）、大致家世或身份（如学生/上班族/家境等）、年龄或年龄段、与世界观的关系等，便于日后加好友聊天，不要纯人机感。用一两段话描述即可。\n4. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"dms":[{"senderName":"NPC昵称","content":"该陌生人发给用户的一条私信内容","basicPersona":"性别、性格、家世/身份、年龄等基础人设描述，一两段话"}]}';
+                systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景，并为每个陌生人生成一份可聊天的基础人设。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (activeAccount.username || '用户') + '\n简介: ' + (activeAccount.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n===== 用户在其他帖子下的评论/回复 =====\n' + userCommentsText + '\n请生成 ' + normalCount + ' 条陌生人私信，且为每个陌生人生成基础人设。要求：\n1. 每条私信来自不同的NPC，senderName 为符合世界观的论坛昵称。\n2. 私信内容自然口语化，1～2 句话即可。\n3. 每个 NPC 的 basicPersona 必须包含：性别、性格（如开朗/冷淡/傲娇等）、大致家世或身份（如学生/上班族/家境等）、年龄或年龄段、与世界观的关系等，便于日后加好友聊天，不要纯人机感。用一两段话描述即可。\n4. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"dms":[{"senderName":"NPC昵称","content":"该陌生人发给用户的一条私信内容","basicPersona":"性别、性格、家世/身份、年龄等基础人设描述，一两段话"}]}';
             } else {
-                systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (userProfile.username || '用户') + '\n简介: ' + (userProfile.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n===== 用户在其他帖子下的评论/回复 =====\n' + userCommentsText + '\n请生成 ' + normalCount + ' 条陌生人私信。要求：\n1. 每条私信来自不同的NPC（陌生人），senderName 为符合世界观的论坛昵称。\n2. 若用户发过帖或发过评论：私信内容可以是看到用户某篇帖子后的搭讪、提问、共鸣，也可以是看到用户在某条帖子下的回复/评论后被吸引来打招呼，语气自然、口语化。\n3. 若用户从未发帖也从未评论：私信可以是简单打招呼、自我介绍、或与世界观/社区氛围相关的一句闲聊。\n4. 每条私信 1～2 句话即可，像真实论坛私信。\n5. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"dms":[{"senderName":"NPC昵称","content":"该陌生人发给用户的一条私信内容"}]}';
+                systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (activeAccount.username || '用户') + '\n简介: ' + (activeAccount.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n===== 用户在其他帖子下的评论/回复 =====\n' + userCommentsText + '\n请生成 ' + normalCount + ' 条陌生人私信。要求：\n1. 每条私信来自不同的NPC（陌生人），senderName 为符合世界观的论坛昵称。\n2. 若用户发过帖或发过评论：私信内容可以是看到用户某篇帖子后的搭讪、提问、共鸣，也可以是看到用户在某条帖子下的回复/评论后被吸引来打招呼，语气自然、口语化。\n3. 若用户从未发帖也从未评论：私信可以是简单打招呼、自我介绍、或与世界观/社区氛围相关的一句闲聊。\n4. 每条私信 1～2 句话即可，像真实论坛私信。\n5. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"dms":[{"senderName":"NPC昵称","content":"该陌生人发给用户的一条私信内容"}]}';
             }
             var url = apiSettings.url;
             if (url.endsWith('/')) url = url.slice(0, -1);
@@ -1867,9 +2168,29 @@ async function forumGenerateAIDMReply() {
             });
         }
         
+        // 注入该NPC在论坛中的评论上下文
+        const npcComments = [];
+        (db.forumPosts || []).forEach(p => {
+            if (p.comments) {
+                p.comments.forEach(c => {
+                    if (c.username === npcName && c.authorId === 'npc') {
+                        npcComments.push({ postTitle: p.title, content: c.content });
+                    }
+                });
+            }
+        });
+        if (npcComments.length > 0) {
+            npcContext += `\n\n以下是Ta在论坛中发过的评论:\n`;
+            npcComments.slice(0, 5).forEach(c => {
+                npcContext += `在帖子「${c.postTitle}」下评论: ${c.content}\n`;
+            });
+        }
+        
         forumInitUserProfile();
-        const userProfile = db.forumUserProfile;
-        const userContext = `用户资料:\n昵称: ${userProfile.username}\n简介: ${userProfile.bio || '无'}`;
+        const activeAccount = forumGetActiveAccount();
+        const userContext = activeAccount.isAlt
+            ? `用户资料:\n昵称: ${activeAccount.username}\n简介: ${activeAccount.bio || '无'}\n（注意：这是一个你不认识的用户，你对Ta一无所知）`
+            : `用户资料:\n昵称: ${activeAccount.username}\n简介: ${activeAccount.bio || '无'}`;
         
         const conversation = (db.forumMessages || [])
             .filter(m => (m.fromUserId === 'user' && m.toUserId === targetUserId) || 
@@ -1880,7 +2201,7 @@ async function forumGenerateAIDMReply() {
         let conversationText = '对话历史:\n';
         if (conversation.length > 0) {
             conversation.forEach(m => {
-                const sender = m.fromUserId === 'user' ? userProfile.username : npcName;
+                const sender = m.fromUserId === 'user' ? activeAccount.username : npcName;
                 conversationText += `${sender}: ${m.content}\n`;
             });
         } else {
@@ -2006,11 +2327,24 @@ async function forumGenerateAICommentReplies(postId) {
         const context = getForumGenerationContext();
         
         let existingComments = '';
+        let repliedNpcNames = [];
         if (post.comments && post.comments.length > 0) {
             existingComments = '现有评论:\n';
             post.comments.forEach(c => {
-                existingComments += `${c.username}: ${c.content}\n`;
+                const replyPrefix = c.replyTo ? `（回复 @${c.replyTo.username}）` : '';
+                existingComments += `${c.username}${replyPrefix}: ${c.content}\n`;
+                // 收集被用户回复过的NPC
+                if (c.replyTo && (c.authorId === 'user' || (c.authorId && c.authorId.startsWith('alt_')))) {
+                    if (!repliedNpcNames.includes(c.replyTo.username)) {
+                        repliedNpcNames.push(c.replyTo.username);
+                    }
+                }
             });
+        }
+        
+        let repliedNpcHint = '';
+        if (repliedNpcNames.length > 0) {
+            repliedNpcHint = `\n重要提示：用户回复了以下NPC的评论，这些NPC大概率会继续参与讨论，请确保至少有${Math.min(repliedNpcNames.length, replyCount)}个出现在新评论中：${repliedNpcNames.join('、')}。他们可以回应用户的回复，继续互动。\n`;
         }
         
         const systemPrompt = `你是一位论坛内容生成专家。
@@ -2023,7 +2357,7 @@ ${context}
 作者: ${post.username}
 
 ${existingComments}
-
+${repliedNpcHint}
 请生成${replyCount}条不同视角的评论。每条评论要有独特的观点，可以互相回复或讨论。评论者都是NPC，要根据背景设定来回复。
 
 返回JSON格式:

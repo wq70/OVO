@@ -114,6 +114,10 @@ function setupChatRoom() {
 
     if (closeStatusBtn) {
         closeStatusBtn.addEventListener('click', () => {
+            if (statusOverlay.classList.contains('multi-select-mode')) {
+                exitStatusMultiSelect();
+                return;
+            }
             statusOverlay.classList.remove('visible');
         });
     }
@@ -121,8 +125,51 @@ function setupChatRoom() {
     if (statusOverlay) {
         statusOverlay.addEventListener('click', (e) => {
             if (e.target === statusOverlay) {
+                if (statusOverlay.classList.contains('multi-select-mode')) {
+                    exitStatusMultiSelect();
+                    return;
+                }
                 statusOverlay.classList.remove('visible');
             }
+        });
+    }
+
+    // 状态栏管理按钮 - 进入多选模式
+    const statusManageBtn = document.getElementById('status-manage-btn');
+    if (statusManageBtn) {
+        statusManageBtn.addEventListener('click', () => {
+            enterStatusMultiSelect();
+        });
+    }
+
+    // 状态栏多选 - 全选
+    const statusSelectAllBtn = document.getElementById('status-select-all-btn');
+    if (statusSelectAllBtn) {
+        statusSelectAllBtn.addEventListener('click', () => {
+            const checkboxes = statusContent.querySelectorAll('.status-slide-checkbox');
+            const allChecked = Array.from(checkboxes).every(cb => cb.classList.contains('checked'));
+            checkboxes.forEach(cb => {
+                if (allChecked) cb.classList.remove('checked');
+                else cb.classList.add('checked');
+            });
+            statusSelectAllBtn.textContent = allChecked ? '全选' : '取消全选';
+            updateStatusSelectCount();
+        });
+    }
+
+    // 状态栏多选 - 删除选中
+    const statusDeleteSelectedBtn = document.getElementById('status-delete-selected-btn');
+    if (statusDeleteSelectedBtn) {
+        statusDeleteSelectedBtn.addEventListener('click', () => {
+            deleteSelectedStatusSlides();
+        });
+    }
+
+    // 状态栏多选 - 取消
+    const statusCancelMultiBtn = document.getElementById('status-cancel-multi-btn');
+    if (statusCancelMultiBtn) {
+        statusCancelMultiBtn.addEventListener('click', () => {
+            exitStatusMultiSelect();
         });
     }
 
@@ -718,4 +765,118 @@ function promptForBackupIfNeeded(triggerType) {
     if (triggerType === 'history_milestone') {
         showToast('uwu提醒您：记得备份噢');
     }
+}
+
+// --- 状态栏多选删除功能 ---
+
+function enterStatusMultiSelect() {
+    const overlay = document.getElementById('char-status-overlay');
+    if (!overlay) return;
+    overlay.classList.add('multi-select-mode');
+
+    // 给每个 slide 添加 checkbox
+    const slides = overlay.querySelectorAll('.status-slide');
+    slides.forEach((slide, index) => {
+        if (slide.querySelector('.status-slide-checkbox')) return;
+        const cb = document.createElement('div');
+        cb.className = 'status-slide-checkbox';
+        cb.dataset.index = index;
+        cb.addEventListener('click', (e) => {
+            e.stopPropagation();
+            cb.classList.toggle('checked');
+            updateStatusSelectCount();
+        });
+        slide.appendChild(cb);
+    });
+
+    // 也允许点击 slide 本身来切换选中
+    slides.forEach(slide => {
+        slide._statusMultiSelectHandler = (e) => {
+            if (e.target.closest('.status-slide-checkbox')) return;
+            const cb = slide.querySelector('.status-slide-checkbox');
+            if (cb) {
+                cb.classList.toggle('checked');
+                updateStatusSelectCount();
+            }
+        };
+        slide.addEventListener('click', slide._statusMultiSelectHandler);
+    });
+
+    updateStatusSelectCount();
+    if (typeof triggerHapticFeedback === 'function') triggerHapticFeedback('light');
+}
+
+function exitStatusMultiSelect() {
+    const overlay = document.getElementById('char-status-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('multi-select-mode');
+
+    // 移除 checkbox 和事件
+    const slides = overlay.querySelectorAll('.status-slide');
+    slides.forEach(slide => {
+        const cb = slide.querySelector('.status-slide-checkbox');
+        if (cb) cb.remove();
+        if (slide._statusMultiSelectHandler) {
+            slide.removeEventListener('click', slide._statusMultiSelectHandler);
+            delete slide._statusMultiSelectHandler;
+        }
+    });
+
+    // 重置全选按钮文字
+    const selectAllBtn = document.getElementById('status-select-all-btn');
+    if (selectAllBtn) selectAllBtn.textContent = '全选';
+}
+
+function updateStatusSelectCount() {
+    const overlay = document.getElementById('char-status-overlay');
+    const checked = overlay ? overlay.querySelectorAll('.status-slide-checkbox.checked') : [];
+    const countEl = document.getElementById('status-select-count');
+    const deleteBtn = document.getElementById('status-delete-selected-btn');
+    if (countEl) countEl.textContent = `已选 ${checked.length} 项`;
+    if (deleteBtn) deleteBtn.disabled = checked.length === 0;
+}
+
+async function deleteSelectedStatusSlides() {
+    const overlay = document.getElementById('char-status-overlay');
+    if (!overlay) return;
+
+    const char = db.characters.find(c => c.id === currentChatId);
+    if (!char || !char.statusPanel || !char.statusPanel.history) return;
+
+    const checked = overlay.querySelectorAll('.status-slide-checkbox.checked');
+    if (checked.length === 0) return;
+
+    // slidesData 是 history reversed，所以 slide index 0 = history 最旧的
+    // history 是 [newest, ..., oldest]，reversed 后是 [oldest, ..., newest]
+    // slide index i 对应 history index = history.length - 1 - i
+    const historyLen = char.statusPanel.history.length;
+    const indicesToDelete = new Set();
+    checked.forEach(cb => {
+        const slideIdx = parseInt(cb.dataset.index);
+        const historyIdx = historyLen - 1 - slideIdx;
+        if (historyIdx >= 0 && historyIdx < historyLen) {
+            indicesToDelete.add(historyIdx);
+        }
+    });
+
+    const deletedCount = indicesToDelete.size;
+
+    // 从 history 中移除
+    char.statusPanel.history = char.statusPanel.history.filter((_, i) => !indicesToDelete.has(i));
+
+    // 更新当前状态
+    if (char.statusPanel.history.length > 0) {
+        char.statusPanel.currentStatusHtml = char.statusPanel.history[0].html;
+        char.statusPanel.currentStatusRaw = char.statusPanel.history[0].raw;
+    } else {
+        char.statusPanel.currentStatusHtml = '';
+        char.statusPanel.currentStatusRaw = '';
+    }
+
+    await saveData();
+
+    // 退出多选模式并关闭面板
+    exitStatusMultiSelect();
+    overlay.classList.remove('visible');
+    showToast(`已删除 ${deletedCount} 条状态栏`);
 }

@@ -408,7 +408,10 @@ function openTokenDistributionModal(charId) {
     }
 
     totalEl.textContent = data.total;
-    const colorPalette = ['#ff80ab', '#90caf9', '#a5d6a7', '#fff59d', '#b39ddb', '#ffcc80'];
+    const colorPalette = [
+        '#ff80ab', '#90caf9', '#a5d6a7', '#fff59d', '#b39ddb', '#ffcc80',
+        '#80deea', '#f48fb1', '#c5e1a5', '#ffe082', '#ce93d8', '#a1887f'
+    ];
     const chartData = data.details.map((d, i) => ({ name: d.name, value: d.value, itemStyle: { color: colorPalette[i % colorPalette.length] } }));
 
     if (typeof echarts !== 'undefined') {
@@ -426,10 +429,10 @@ function openTokenDistributionModal(charId) {
                     name: 'Token 分布',
                     type: 'pie',
                     center: ['50%', '50%'],
-                    radius: ['45%', '70%'],
+                    radius: ['40%', '68%'],
                     avoidLabelOverlap: false,
                     label: { show: false },
-                    emphasis: { label: { show: true, fontSize: '16', fontWeight: 'bold' } },
+                    emphasis: { label: { show: false } },
                     labelLine: { show: false },
                     data: chartData
                 }]

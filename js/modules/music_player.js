@@ -707,13 +707,8 @@
             }
             var count = 0;
             var lrcCount = 0;
-            var failCount = 0;
-            var confirmBtn = getEl('music-upload-confirm-btn');
-            if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = '检测中…'; }
             for (var j = 0; j < urls.length; j++) {
                 var url = urls[j];
-                var ok = await checkUrlOk(url, 6000);
-                if (!ok) { failCount++; continue; }
                 var lrc = lrcList[j] || '';
                 var title = 'URL 音频 ' + (j + 1);
                 try {
@@ -730,12 +725,10 @@
                     playFromUserGesture();
                 }
             }
-            if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = '添加到歌单'; }
             updatePrevNextState();
             if (typeof renderMusicQueuePanel === 'function') renderMusicQueuePanel();
             closeMusicUploadModal();
             var msg = '已添加 ' + count + ' 首（' + lrcCount + ' 首有歌词）';
-            if (failCount > 0) msg += '，' + failCount + ' 个链接无效';
             if (typeof showToast === 'function') showToast(msg);
         }
 
@@ -895,14 +888,6 @@
                         if (!it || !it.playUrl) return;
                         li.style.opacity = '0.5';
                         li.style.pointerEvents = 'none';
-                        // 先检测歌曲有效性
-                        var ok = await checkUrlOk(it.playUrl, 6000);
-                        if (!ok) {
-                            li.style.opacity = '1';
-                            li.style.pointerEvents = '';
-                            if (typeof showToast === 'function') showToast('该歌曲链接无效，请换一首试试');
-                            return;
-                        }
                         // 获取歌词
                         var lrc = '';
                         var api = searchApi ? searchApi.value : 'meting1';
@@ -1023,37 +1008,32 @@
                 }
                 var successCount = 0;
                 var lrcCount = 0;
-                var failNames = [];
                 var listArr = searchResultList;
                 var api = searchApi ? searchApi.value : 'meting1';
                 for (var i = 0; i < searchSelectedIndices.length; i++) {
                     var idx = searchSelectedIndices[i];
                     var it = listArr[idx];
-                    if (!it || !it.playUrl) { failNames.push(it ? it.name : '未知'); continue; }
-                    var ok = await checkUrlOk(it.playUrl, 5000);
-                    if (ok) {
-                        // 获取歌词
-                        var lrc = '';
-                        var sid = it.songId || '';
-                        if (sid) {
-                            try {
-                                if (api === 'meting1') lrc = await fetchLrcFromMeting('https://api.i-meto.com/meting/api', it.source, sid);
-                                else if (api === 'meting2') lrc = await fetchLrcFromMeting('https://meting.qjqq.cn/api.php', it.source, sid);
-                                else if (api === 'meting3') lrc = await fetchLrcFromVkeys(it.source, sid);
-                            } catch (_) {}
-                            if (!lrc) { try { lrc = await fetchLrcFromMeting('https://api.i-meto.com/meting/api', it.source, sid); } catch (_) {} }
-                            if (!lrc) { try { lrc = await fetchLrcFromMeting('https://meting.qjqq.cn/api.php', it.source, sid); } catch (_) {} }
-                        }
-                        var title = it.name + ' - ' + it.artist;
-                        addSongToPlaylist(it.playUrl, title, 'default', lrc, it.cover || '');
-                        successCount++;
-                        if (lrc) lrcCount++;
-                    } else failNames.push(it.name);
+                    if (!it || !it.playUrl) continue;
+                    // 获取歌词
+                    var lrc = '';
+                    var sid = it.songId || '';
+                    if (sid) {
+                        try {
+                            if (api === 'meting1') lrc = await fetchLrcFromMeting('https://api.i-meto.com/meting/api', it.source, sid);
+                            else if (api === 'meting2') lrc = await fetchLrcFromMeting('https://meting.qjqq.cn/api.php', it.source, sid);
+                            else if (api === 'meting3') lrc = await fetchLrcFromVkeys(it.source, sid);
+                        } catch (_) {}
+                        if (!lrc) { try { lrc = await fetchLrcFromMeting('https://api.i-meto.com/meting/api', it.source, sid); } catch (_) {} }
+                        if (!lrc) { try { lrc = await fetchLrcFromMeting('https://meting.qjqq.cn/api.php', it.source, sid); } catch (_) {} }
+                    }
+                    var title = it.name + ' - ' + it.artist;
+                    addSongToPlaylist(it.playUrl, title, 'default', lrc, it.cover || '');
+                    successCount++;
+                    if (lrc) lrcCount++;
                 }
                 if (typeof renderMusicQueuePanel === 'function') renderMusicQueuePanel();
                 updatePrevNextState();
                 var msg = '成功添加 ' + successCount + ' 首（' + lrcCount + ' 首有歌词）';
-                if (failNames.length > 0) msg += '，失败 ' + failNames.length + ' 首';
                 if (typeof showToast === 'function') showToast(msg); else alert(msg);
             });
         }
@@ -1131,16 +1111,7 @@
                     if (typeof showToast === 'function') showToast('请输入有效的 http/https 链接');
                     return;
                 }
-                // 先检测有效性
-                urlApplyBtn.disabled = true;
-                urlApplyBtn.textContent = '检测中…';
-                var ok = await checkUrlOk(url, 6000);
-                urlApplyBtn.disabled = false;
-                urlApplyBtn.textContent = '使用';
-                if (!ok) {
-                    if (typeof showToast === 'function') showToast('该链接无效或无法访问');
-                    return;
-                }
+                // 直接添加，不检测有效性
                 try {
                     localStorage.setItem(STORAGE_KEY_URL, url);
                     localStorage.setItem(STORAGE_KEY_TITLE, 'URL 音频');

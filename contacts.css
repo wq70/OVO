@@ -262,50 +262,64 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    padding: 16px 16px 12px;
 }
 
 .token-distribution-title {
-    margin: 0 0 12px 0;
-    font-size: 18px;
+    margin: 0 0 8px 0;
+    font-size: 17px;
     text-align: center;
     width: 100%;
 }
 
-/* 饼图容器：正中间一个大圆饼，与存储分布一致 */
+/* 饼图 + 合计横向排列 */
+.token-chart-summary {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
 #token-chart-container {
-    width: 280px !important;
-    height: 280px !important;
-    margin: 0 auto 8px;
+    width: 140px !important;
+    height: 140px !important;
     flex-shrink: 0;
 }
 
 .token-total-row {
     display: flex;
-    align-items: baseline;
+    flex-direction: column;
+    align-items: flex-start;
     justify-content: center;
-    gap: 6px;
-    padding: 10px 0;
-    border-bottom: 1px solid #f0f0f0;
-    margin-bottom: 10px;
-    width: 100%;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border-bottom: none;
+    margin-bottom: 0;
 }
 
-.token-total-label { font-size: 14px; color: #666; }
-.token-total-value { font-size: 22px; color: #333; }
+.token-total-label { font-size: 12px; color: #999; }
+.token-total-value { font-size: 28px; color: #333; font-weight: 600; line-height: 1.2; }
 .token-total-unit { font-size: 12px; color: #999; }
 
 .token-details-list {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    margin-bottom: 12px;
+    gap: 3px;
+    margin-bottom: 10px;
     width: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .token-detail-item {
     display: flex;
     align-items: center;
-    padding: 10px 12px;
+    padding: 7px 10px;
     border-radius: 8px;
     border: 1px solid #eee;
     cursor: pointer;
@@ -315,16 +329,16 @@
 .token-detail-item.active { background: #e8f4fd; border-color: var(--primary-color, #5b9bd5); }
 
 .token-detail-color {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    margin-right: 12px;
+    margin-right: 10px;
     flex-shrink: 0;
 }
 
-.token-detail-info { flex: 1; min-width: 0; }
-.token-detail-name { font-size: 14px; font-weight: 500; color: #333; }
-.token-detail-value { font-size: 13px; color: #666; margin-top: 2px; }
+.token-detail-info { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 6px; }
+.token-detail-name { font-size: 13px; font-weight: 500; color: #333; }
+.token-detail-value { font-size: 11px; color: #999; }
 
 .token-detail-percent {
     font-size: 12px;
@@ -333,14 +347,14 @@
 }
 
 .token-detail-desc {
-    font-size: 12px;
+    font-size: 11px;
     color: #666;
-    line-height: 1.5;
-    padding: 10px 12px;
+    line-height: 1.45;
+    padding: 8px 10px;
     background: #f8f9fa;
     border-radius: 8px;
-    margin-bottom: 12px;
-    min-height: 40px;
+    margin-bottom: 8px;
+    min-height: 32px;
     width: 100%;
     box-sizing: border-box;
 }
@@ -348,6 +362,7 @@
 
 .token-distribution-close {
     width: 100%;
+    flex-shrink: 0;
 }
 
 .pc-actions {

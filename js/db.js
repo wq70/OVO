@@ -159,7 +159,7 @@ const DEFAULT_COT_PRESETS = [
 ];
 
 const globalSettingKeys = [
-    'apiSettings', 'summaryApiSettings', 'backgroundApiSettings', 'supplementPersonaApiSettings', 'wallpaper', 'homeScreenMode', 'fontUrl', 'customIcons', 'customAppNames', 'namePresets',
+    'apiSettings', 'summaryApiSettings', 'backgroundApiSettings', 'supplementPersonaApiSettings', 'wallpaper', 'homeScreenMode', 'fontUrl', 'localFontName', 'customIcons', 'customAppNames', 'namePresets',
     'apiPresets', 'summaryApiPresets', 'backgroundApiPresets', 'supplementPersonaApiPresets', 'bubbleCssPresets', 'myPersonaPresets', 'globalCss',
     'globalCssPresets', 'fontPresets', 'homeSignature', 'forumPosts', 'forumBindings', 'forumUserProfile', 'forumSettings', 'forumApiSettings', 'forumMessages', 'forumStrangerProfiles', 'forumFriendRequests', 'forumPendingRequestFromUser', 'pomodoroTasks', 'pomodoroSettings', 'insWidgetSettings', 'homeWidgetSettings',
     'chatFolders', 'fontSizeScale', 'activePersonaId', 'moreProfileCardBg', 'statusBarPresets', 'regexFilterPresets', 'themeSettings', 'themePresets', 'savedKeyboardHeight',
@@ -168,12 +168,28 @@ const globalSettingKeys = [
     'favorites', 'piggyBank',
     'theaterScenarios', 'theaterPromptPresets',
     'theaterHtmlScenarios', 'theaterHtmlPromptPresets', 'theaterMode',
-    'theaterApiSettings'
+    'theaterApiSettings',
+    'novelAiSettings'
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
 
-const appVersion = "3.5";
+const appVersion = "3.7";
 const updateLog = [
+    {
+        version: "3.7",
+        date: "2026-03-07",
+        notes: [
+            "3.7重大更新：",
+            "1.小剧场新增角色主动生成！新增导出功能，并且再度进行优化，感谢豹豹老师！",
+            "2.感谢理芽给UWU接入了生图和视频生图！特别伟大！感谢感谢！现在UWU可以生图啦！！配上1900老师的视频UI特别特别美妙！！",
+            "3.新增本地上传字体",
+            "4.新增状态栏可以多选删除（不删除也会自动屏蔽的）",
+            "5.TOKEN分布更加详细！",
+            "6.删掉音乐自动检测有效的BUG，修复来电提示音的BUG",
+            "7.新增论坛可以创建用户小号，角色不会知道，但是！如果和大号太像了，会掉马！",
+            "8.新增论坛可以私信评论区的人，可以回复评论区的人"
+        ]
+    },
     {
         version: "3.5",
         date: "2026-03-05",
@@ -477,6 +493,7 @@ var db = {
     homeScreenMode: 'night',
     worldBooks: [],
     fontUrl: '',
+    localFontName: '',
     customIcons: {},
     customAppNames: {},
     apiPresets: [],
@@ -632,6 +649,7 @@ function initDatabase() {
                 wallpaper: data.wallpaper || 'https://i.postimg.cc/W4Z9R9x4/ins-1.jpg',
                 homeScreenMode: data.homeScreenMode || 'night',
                 fontUrl: data.fontUrl || '',
+                localFontName: data.localFontName || '',
                 customIcons: data.customIcons || {},
                 apiPresets: data.apiPresets || [],
                 summaryApiPresets: data.summaryApiPresets || [],
@@ -729,6 +747,7 @@ const loadData = async () => {
             wallpaper: 'https://i.postimg.cc/W4Z9R9x4/ins-1.jpg',
             homeScreenMode: 'night',
             fontUrl: '',
+            localFontName: '',
             customIcons: {},
             customAppNames: {},
             apiPresets: [],
@@ -913,6 +932,7 @@ const dataStorage = {
         categorizedSizes.personalization += stringify(db.wallpaper);
         categorizedSizes.personalization += stringify(db.homeScreenMode);
         categorizedSizes.personalization += stringify(db.fontUrl);
+        categorizedSizes.personalization += stringify(db.localFontName);
         categorizedSizes.personalization += stringify(db.customIcons);
         categorizedSizes.personalization += stringify(db.bubbleCssPresets);
         categorizedSizes.personalization += stringify(db.myPersonaPresets);

@@ -619,11 +619,27 @@
 
 .theater-detail-actions {
     display: flex;
-    flex-wrap: nowrap;
+    flex-direction: column;
     gap: 8px;
     margin-top: 24px;
     padding-top: 20px;
     border-top: 0.5px solid rgba(0, 0, 0, 0.08);
+}
+
+.theater-action-row-first {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
+
+.theater-action-row-second {
+    display: flex;
+    width: 100%;
+}
+
+.theater-action-row-third {
+    display: flex;
+    width: 100%;
 }
 
 /* 详情页操作按钮统一样式 - iOS风格，与正文明显区分 */
@@ -642,6 +658,18 @@
     position: relative;
     overflow: hidden;
     text-align: center;
+}
+
+/* 第二行的分享按钮占满整行 */
+.theater-action-row-second .theater-action-btn {
+    width: 100%;
+    flex: none;
+}
+
+/* 第三行的导出按钮占满整行 */
+.theater-action-row-third .theater-action-btn {
+    width: 100%;
+    flex: none;
 }
 
 .theater-detail-actions .theater-action-btn::before {
@@ -1191,6 +1219,12 @@
 
 /* 提示词工具栏与按钮（对齐 ovo 版本） */
 .theater-prompt-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.theater-prompt-buttons {
     display: flex;
     gap: 10px;
     margin-bottom: 8px;

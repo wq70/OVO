@@ -974,3 +974,166 @@
 .vc-user-camera-pip:active .vc-pip-flip-hint {
     opacity: 1;
 }
+
+/* =========================================
+   NovelAI Video Call Background
+   ========================================= */
+.vc-nai-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    overflow: hidden;
+    background: #050505;
+}
+
+.vc-nai-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    opacity: 0;
+    transition: opacity 0.8s ease-in-out;
+}
+
+.vc-nai-bg-loading {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    padding: 8px 16px;
+    border-radius: 20px;
+    z-index: 2;
+}
+
+.vc-nai-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: vc-nai-spin 0.8s linear infinite;
+}
+
+.vc-nai-spinner::after {
+    content: '生成画面中...';
+    display: block;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    margin-left: 24px;
+    margin-top: -2px;
+}
+
+@keyframes vc-nai-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 当 NovelAI 背景启用时，调整上层元素 */
+#vc-scene-call.vc-nai-active .vc-call-header {
+    background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 60%, transparent 100%);
+    z-index: 10;
+}
+
+#vc-scene-call.vc-nai-active .vc-chat-area {
+    z-index: 10;
+    position: relative;
+}
+
+#vc-scene-call.vc-nai-active .vc-controls-wrapper {
+    z-index: 10;
+    position: relative;
+    background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 60%, transparent 100%);
+}
+
+#vc-scene-call.vc-nai-active .vc-user-camera-pip {
+    z-index: 30;
+}
+
+/* 文字阴影增强（有背景图时更清晰） */
+#vc-scene-call.vc-nai-active .vc-text-visual,
+#vc-scene-call.vc-nai-active .vc-text-voice {
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.4);
+}
+
+/* =========================================
+   保存 NovelAI 图片按钮
+   ========================================= */
+.vc-nai-save-btn {
+    position: absolute;
+    bottom: 130px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 20;
+    transition: background 0.2s, transform 0.2s;
+}
+.vc-nai-save-btn:active {
+    background: rgba(0, 0, 0, 0.7);
+    transform: scale(0.92);
+}
+.vc-nai-save-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+/* =========================================
+   收起/展开聊天内容按钮
+   ========================================= */
+.vc-chat-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 6px 0;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.35);
+    cursor: pointer;
+    z-index: 10;
+    position: relative;
+    transition: color 0.2s;
+}
+.vc-chat-toggle-btn:active {
+    color: rgba(255, 255, 255, 0.6);
+}
+.vc-chat-toggle-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+/* 聊天区域收起：只隐藏内容，保持布局不变 */
+.vc-chat-area.vc-chat-collapsed .vc-msg-row {
+    opacity: 0 !important;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+/* NovelAI 背景激活时，保存按钮层级提升 */
+#vc-scene-call.vc-nai-active .vc-nai-save-btn {
+    z-index: 20;
+}
+
+/* NovelAI 激活时收起/展开按钮也需要层级 */
+#vc-scene-call.vc-nai-active .vc-chat-toggle-btn {
+    z-index: 10;
+    position: relative;
+}
