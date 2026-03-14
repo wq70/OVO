@@ -1475,6 +1475,7 @@ function generatePrivateSystemPrompt(character, opts) {
             recentTx = userCardToChar.transactions.slice(0, 5).map(t => (t.time ? new Date(t.time).toLocaleDateString('zh-CN') : '') + ' ' + (t.scene || '') + ' ' + (t.detail || '') + ' -' + (t.amount || 0)).join('\n');
         }
         prompt += '\n<family_card_from_user>\n';
+        prompt += '【注意：以下是你从' + character.myName + '处收到的亲属卡，不是你赠出的。】\n';
         prompt += character.myName + '给了你一张亲属卡（' + (userCardToChar.bankName || '亲属卡') + ' *' + (userCardToChar.cardNumber || '') + '）。额度：' + userCardToChar.limit + '元，已用：' + (userCardToChar.usedAmount || 0) + '，剩余：' + remaining + '元。刷新周期：' + (userCardToChar.refreshPeriod || '每月') + '。\n';
         if (recentTx) prompt += '你最近的消费记录：\n' + recentTx + '\n';
         prompt += '消费会从' + character.myName + '的存钱罐扣除。你可以根据情况冻结、调整额度或收回这张亲属卡。\n</family_card_from_user>\n\n';
@@ -1486,9 +1487,14 @@ function generatePrivateSystemPrompt(character, opts) {
             recentTx = charCardToUser.transactions.slice(0, 5).map(t => (t.time ? new Date(t.time).toLocaleDateString('zh-CN') : '') + ' ' + (t.scene || '') + ' ' + (t.detail || '') + ' -' + (t.amount || 0)).join('\n');
         }
         prompt += '\n<family_card_to_user>\n';
+        prompt += '【注意：以下是你赠给' + character.myName + '的亲属卡，不是你收到的。】\n';
         prompt += '你给了' + character.myName + '一张亲属卡（' + (charCardToUser.bankName || '亲属卡') + ' *' + (charCardToUser.cardNumber || '') + '）。额度：' + charCardToUser.limit + '元，用户已用：' + (charCardToUser.usedAmount || 0) + '，剩余：' + remaining + '元。\n';
         if (recentTx) prompt += character.myName + '最近的使用记录：\n' + recentTx + '\n';
         prompt += '你可以根据情况冻结、调整额度或收回这张亲属卡。\n</family_card_to_user>\n\n';
+    } else if (character.familyCardEnabled) {
+        prompt += '\n<family_card_to_user>\n';
+        prompt += '【注意：你目前没有向' + character.myName + '赠送过亲属卡。只有在对话中实际发送赠送亲属卡指令后，才会出现赠予记录。请勿误称自己已赠出过亲属卡或编造卡号。】\n';
+        prompt += '</family_card_to_user>\n\n';
     }
 
     // 拉黑与好友申请记忆：若角色曾被拉黑并重新加回，注入申请历史与拉黑期间用户独白

@@ -57,6 +57,7 @@ function createFamilyCard(opts) {
         cardNumber: String(Math.floor(1000 + Math.random() * 9000)),
         cardHolder: opts.cardHolder || '',
         cardColor: opts.cardColor || FAMILY_CARD_COLORS[Math.floor(Math.random() * FAMILY_CARD_COLORS.length)],
+        cardCover: String(opts.cardCover || '').trim() || '',
         targetCharId: opts.targetCharId || '',
         targetCharName: opts.targetCharName || '',
         limit: Math.max(1, Number(opts.limit) || 5000),
@@ -87,6 +88,7 @@ function createReceivedFamilyCard(opts) {
         cardNumber: String(Math.floor(1000 + Math.random() * 9000)),
         cardHolder: opts.fromCharName || '',
         cardColor: opts.cardColor || FAMILY_CARD_COLORS[Math.floor(Math.random() * FAMILY_CARD_COLORS.length)],
+        cardCover: String(opts.cardCover || '').trim() || '',
         fromCharId: opts.fromCharId || '',
         fromCharName: opts.fromCharName || '',
         limit: Math.max(1, Number(opts.limit) || 5000),
@@ -202,7 +204,7 @@ function renderPiggyBankScreen() {
 }
 
 function renderFamilyCardList() {
-    const container = document.getElementById('family-card-scroll-list');
+    const container = document.getElementById('family-card-list-container');
     if (!container) return;
     const sent = (db.piggyBank && db.piggyBank.familyCards) ? db.piggyBank.familyCards : [];
     const received = (db.piggyBank && db.piggyBank.receivedFamilyCards) ? db.piggyBank.receivedFamilyCards : [];
@@ -217,8 +219,9 @@ function renderFamilyCardList() {
         mini.className = 'family-card-mini' + (statusClass ? ' ' + statusClass : '');
         mini.dataset.cardId = card.id;
         mini.dataset.received = card.isReceived ? '1' : '0';
+        const hasCover = (card.cardCover || '').trim().length > 0;
         mini.innerHTML = `
-            <div class="mini-card-face" style="background-color:${escapeHtml(card.cardColor)}">
+            <div class="mini-card-face${hasCover ? ' has-cover' : ''}" style="${getCardFaceStyle(card)}">
                 <div class="mini-card-bank">${escapeHtml(card.bankName || '亲属卡')}</div>
                 <div class="mini-card-type">${escapeHtml(typeText)}</div>
                 <div class="mini-card-number">**** ${escapeHtml(card.cardNumber)}</div>
@@ -239,8 +242,9 @@ function openFamilyCardDetail(cardId, isReceived) {
     const statusText = card.status === 'active' ? '正常' : card.status === 'frozen' ? '已冻结' : '已收回';
     const content = document.getElementById('family-card-detail-content');
     if (!content) return;
+    const hasCover = (card.cardCover || '').trim().length > 0;
     content.innerHTML = `
-        <div class="family-card-detail-face" style="background-color:${escapeHtml(card.cardColor)}">
+        <div class="family-card-detail-face${hasCover ? ' has-cover' : ''}" style="${getCardFaceStyle(card)}">
             <div class="family-card-detail-bank">${escapeHtml(card.bankName || '亲属卡')}</div>
             <div class="family-card-detail-limit">${formatMoney(remaining)} / ${formatMoney(card.limit)}</div>
             <div class="family-card-detail-number">**** **** **** ${escapeHtml(card.cardNumber)}</div>
@@ -340,6 +344,15 @@ function escapeHtml(s) {
     const div = document.createElement('div');
     div.textContent = s;
     return div.innerHTML;
+}
+
+/** 生成卡面样式：有封面用背景图，否则用背景色。封面 URL 需转义后放入 style */
+function getCardFaceStyle(card) {
+    const color = escapeHtml(card.cardColor || '#1a1a2e');
+    const cover = (card.cardCover || '').trim();
+    if (!cover) return 'background-color:' + color;
+    const safe = cover.replace(/\\/g, '\\\\').replace(/'/g, "\\27");
+    return 'background-image:url(\'' + safe + '\');background-size:cover;background-position:center;background-color:' + color;
 }
 
 function setupPiggyBankApp() {
@@ -490,6 +503,9 @@ function setupPiggyBankApp() {
         const limit = parseInt(limitInput, 10);
         const refresh = document.getElementById('family-card-refresh').value;
         const refreshDays = parseInt(document.getElementById('family-card-refresh-days').value, 10) || 30;
+        const coverData = document.getElementById('family-card-cover-data');
+        const coverUrl = document.getElementById('family-card-cover-url');
+        const cardCover = (coverData && coverData.value.trim()) || (coverUrl && coverUrl.value.trim()) || '';
         if (!bankName) { showToast('请输入银行名称'); return; }
         if (isNaN(limit) || limit < 1) { showToast('请输入有效额度'); return; }
         const myName = (db.characters && db.characters.length && db.characters[0].myName) ? db.characters[0].myName : '用户';
@@ -498,7 +514,8 @@ function setupPiggyBankApp() {
             limit,
             refreshPeriod: refresh,
             refreshDays: refresh === 'custom' ? refreshDays : 30,
-            cardHolder: myName
+            cardHolder: myName,
+            cardCover: cardCover
         });
         if (familyCardCreateModal) familyCardCreateModal.classList.remove('visible');
         if (typeof saveData === 'function') saveData();
@@ -566,8 +583,79 @@ function setupPiggyBankApp() {
     familyCardCreateBtnInList && familyCardCreateBtnInList.addEventListener('click', () => {
         if (familyCardCreateForm) familyCardCreateForm.reset();
         if (familyCardRefreshDaysWrap) familyCardRefreshDaysWrap.style.display = 'none';
+        const coverData = document.getElementById('family-card-cover-data');
+        const coverUrl = document.getElementById('family-card-cover-url');
+        const coverFile = document.getElementById('family-card-cover-file');
+        const previewWrap = document.getElementById('family-card-cover-preview-wrap');
+        const previewImg = document.getElementById('family-card-cover-preview');
+        if (coverData) coverData.value = '';
+        if (coverUrl) coverUrl.value = '';
+        if (coverFile) coverFile.value = '';
+        if (previewWrap) previewWrap.style.display = 'none';
+        if (previewImg) previewImg.src = '';
         if (familyCardCreateModal) familyCardCreateModal.classList.add('visible');
     });
+
+    (function initFamilyCardCoverInputs() {
+        const MAX_COVER_SIZE = 2 * 1024 * 1024;
+        const coverUrl = document.getElementById('family-card-cover-url');
+        const coverFile = document.getElementById('family-card-cover-file');
+        const coverData = document.getElementById('family-card-cover-data');
+        const previewWrap = document.getElementById('family-card-cover-preview-wrap');
+        const previewImg = document.getElementById('family-card-cover-preview');
+        const clearBtn = document.getElementById('family-card-cover-clear');
+
+        function showPreview(src) {
+            if (!previewWrap || !previewImg) return;
+            if (src) {
+                previewImg.src = src;
+                previewImg.onerror = () => { previewWrap.style.display = 'none'; };
+                previewWrap.style.display = 'block';
+            } else {
+                previewImg.src = '';
+                previewWrap.style.display = 'none';
+            }
+        }
+
+        if (coverUrl) {
+            coverUrl.addEventListener('input', function () {
+                const v = this.value.trim();
+                if (coverData) coverData.value = '';
+                showPreview(v || null);
+            });
+        }
+        if (coverFile) {
+            coverFile.addEventListener('change', function () {
+                const file = this.files && this.files[0];
+                if (!file || !file.type.startsWith('image/')) {
+                    if (coverData) coverData.value = '';
+                    showPreview(coverUrl && coverUrl.value.trim() || null);
+                    return;
+                }
+                if (file.size > MAX_COVER_SIZE) {
+                    showToast('图片建议不超过 2MB');
+                    this.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function () {
+                    const dataUrl = reader.result;
+                    if (coverData) coverData.value = dataUrl;
+                    if (coverUrl) coverUrl.value = '';
+                    showPreview(dataUrl);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                if (coverData) coverData.value = '';
+                if (coverUrl) coverUrl.value = '';
+                if (coverFile) coverFile.value = '';
+                showPreview(null);
+            });
+        }
+    })();
 }
 
 if (typeof window !== 'undefined') {

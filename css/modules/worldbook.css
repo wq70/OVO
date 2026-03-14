@@ -85,8 +85,9 @@
 }
 
 .world-book-category-group.open .world-book-items-list {
-    max-height: 1000px;
+    max-height: 5000px;
     padding-bottom: 10px;
+    overflow-y: auto;
 }
 
 /* 世界书条目 */

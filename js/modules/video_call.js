@@ -219,12 +219,7 @@ const VideoCallModule = {
         // 绑定说话按钮 -> 显示输入框
         const actionVoiceBtn = document.getElementById('vc-action-voice-btn');
         if (actionVoiceBtn) {
-            actionVoiceBtn.addEventListener('click', async () => {
-                // 点击说话按钮时激活音频上下文
-                if (typeof MinimaxTTSService !== 'undefined') {
-                    await MinimaxTTSService.activateAudioContext();
-                }
-                
+            actionVoiceBtn.addEventListener('click', () => {
                 const overlay = document.getElementById('vc-input-overlay');
                 const input = document.getElementById('vc-input-text');
                 const chatArea = document.getElementById('vc-chat-container');
@@ -589,14 +584,8 @@ const VideoCallModule = {
         }
     },
 
-    acceptCall: async function() {
+    acceptCall: function() {
         this.stopRingSound();
-        
-        // 接听来电时激活音频上下文
-        if (typeof MinimaxTTSService !== 'undefined') {
-            await MinimaxTTSService.activateAudioContext();
-        }
-        
         const modal = document.getElementById('vc-incoming-modal');
         modal.classList.remove('visible');
         setTimeout(() => {
@@ -649,12 +638,6 @@ const VideoCallModule = {
 
     startCall: async function(type, isIncoming = false, chatObject = null) {
         this.hideCallTypeModal();
-        
-        // 在用户交互时立即激活音频上下文，确保后续TTS能自动播放
-        if (typeof MinimaxTTSService !== 'undefined') {
-            await MinimaxTTSService.activateAudioContext();
-        }
-        
         this.state.callType = type;
         this.state.isCallActive = true;
         this.state.hasEnteredCallScene = false;
@@ -1078,10 +1061,6 @@ const VideoCallModule = {
                     // 添加点击事件
                     voiceElement.addEventListener('click', async (e) => {
                         e.stopPropagation();
-                        // 手动点击时也激活音频上下文
-                        if (typeof MinimaxTTSService !== 'undefined') {
-                            await MinimaxTTSService.activateAudioContext();
-                        }
                         await this.handleTTSClick(content);
                     });
                     
@@ -1236,11 +1215,6 @@ const VideoCallModule = {
             return;
         }
 
-        // 点击头像时激活音频上下文
-        if (typeof MinimaxTTSService !== 'undefined') {
-            await MinimaxTTSService.activateAudioContext();
-        }
-
         // 真实摄像头：点击头像触发时也截取一帧
         if (this.state.realCameraActive) {
             const frame = this.captureFrame();
@@ -1288,11 +1262,6 @@ const VideoCallModule = {
 
     sendUserAction: async function(text) {
         if (!text) return;
-
-        // 发送消息时激活音频上下文（因为AI可能会自动回复）
-        if (typeof MinimaxTTSService !== 'undefined') {
-            await MinimaxTTSService.activateAudioContext();
-        }
 
         // 真实摄像头：发送时截取一帧
         if (this.state.realCameraActive) {

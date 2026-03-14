@@ -6850,6 +6850,20 @@
                         <label for="family-card-refresh-days">刷新天数</label>
                         <input type="number" id="family-card-refresh-days" placeholder="30" min="1" value="30">
                     </div>
+                    <div class="form-group">
+                        <label>卡面封面（选填）</label>
+                        <input type="url" id="family-card-cover-url" placeholder="输入图片链接" class="family-card-cover-input">
+                        <div class="family-card-cover-actions">
+                            <label class="btn btn-neutral btn-small family-card-cover-file-label">
+                                <input type="file" id="family-card-cover-file" accept="image/*" style="display:none;">本地上传
+                            </label>
+                            <button type="button" class="btn btn-neutral btn-small" id="family-card-cover-clear">清除封面</button>
+                        </div>
+                        <input type="hidden" id="family-card-cover-data">
+                        <div class="family-card-cover-preview-wrap" id="family-card-cover-preview-wrap" style="display:none;">
+                            <img id="family-card-cover-preview" class="family-card-cover-preview" alt="封面预览">
+                        </div>
+                    </div>
                     <div style="display: flex; gap: 10px;">
                         <button type="button" class="btn btn-neutral" id="family-card-create-cancel" style="flex:1;">取消</button>
                         <button type="submit" class="btn btn-primary" id="family-card-create-submit" style="flex:1;">创建并发送</button>

@@ -297,7 +297,7 @@ function setupChatRoom() {
         });
     }
     
-    messageArea.addEventListener('click', async (e) => {
+    messageArea.addEventListener('click', (e) => {
         if (isDebugMode) {
             const messageWrapper = e.target.closest('.message-wrapper');
             if (messageWrapper) {
@@ -331,11 +331,6 @@ function setupChatRoom() {
                     if (voiceTranslation) voiceTranslation.classList.toggle('active');
                     const voiceText = transcript.textContent.trim();
                     if (!voiceText) return;
-
-                    // 点击语音气泡时激活音频上下文
-                    if (typeof MinimaxTTSService !== 'undefined') {
-                        await MinimaxTTSService.activateAudioContext();
-                    }
 
                     const playKey = wrapper ? wrapper.dataset.id : null;
                     const svc = typeof MinimaxTTSService !== 'undefined' ? MinimaxTTSService : null;
@@ -719,12 +714,6 @@ function openChatRoom(chatId, type) {
 async function sendMessage() {
     const text = messageInput.value.trim();
     if (!text || isGenerating) return;
-    
-    // 发送消息时激活音频上下文（因为AI可能会自动回复并播放TTS）
-    if (typeof MinimaxTTSService !== 'undefined') {
-        MinimaxTTSService.activateAudioContext().catch(() => {}); // 不阻塞发送流程
-    }
-    
     messageInput.value = '';
     const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
 
