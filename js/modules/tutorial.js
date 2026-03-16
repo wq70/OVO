@@ -1436,17 +1436,23 @@ function renderTutorialContent() {
     feedbackSection.rel = 'noopener noreferrer';
     feedbackSection.style.cssText = 'display:block; text-decoration:none; color:inherit; margin-top:12px;';
     const iconMessage = `<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+    const cardClass = isModern ? 'tutorial-modern-gh-card' : (isRabbit ? 'tutorial-rabbit-card' : 'btn-white');
+    const cardStyle = isModern || isRabbit ? '' : 'display:block; cursor:pointer; background:#fff; border:1px solid #e0e0e0; border-radius:8px; padding:12px;';
+    const innerPad = isRabbit ? '12px 20px' : '0';
     feedbackSection.innerHTML = `
-        <div class="${isModern ? 'tutorial-modern-gh-card' : (isRabbit ? 'tutorial-rabbit-card' : 'btn-white')}" style="${isModern || isRabbit ? '' : 'display:block; cursor:pointer; background:#fff; border:1px solid #e0e0e0; border-radius:8px; padding:12px;'}">
-            <div style="display:flex; align-items:center; gap:12px; padding:${isRabbit ? '12px 20px' : '0'};">
+        <div class="${cardClass}" style="${cardStyle}">
+            <div style="display:flex; align-items:center; gap:12px; padding:${innerPad};">
                 <div style="width:40px; height:40px; border-radius:8px; background:${isRabbit ? '#f5f0f1' : '#f5f5f5'}; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:${isRabbit ? '#888' : '#666'};">
                     ${iconMessage}
                 </div>
                 <div style="flex:1; min-width:0;">
-                    <div style="color:${isRabbit ? '#444' : '#333'}; font-weight:500; font-size:${isRabbit ? '15px' : '0.89rem'}; margin-bottom:2px;">反馈 · 许愿</div>
+                    <div style="color:${isRabbit ? '#444' : '#333'}; font-weight:500; font-size:${isRabbit ? '15px' : '0.89rem'}; margin-bottom:2px;">匿名许愿</div>
                     <div style="font-size:0.81rem; color:#888;">匿名投喂 BUG / 想法 / 愿望，完全保密</div>
                 </div>
                 <svg style="width:14px; height:14px; color:#999; flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+            <div style="padding:${isRabbit ? '4px 20px 12px' : '8px 0 0'}; font-size:0.75rem; color:#aaa; line-height:1.5;">
+                <span style="color:#ccc;">ℹ</span> 该网站为匿名单向通道：提交后如显示错误属于网站问题，实际已成功提交。作者的回复你不会看到，请放心留言。
             </div>
         </div>
     `;
@@ -1455,6 +1461,36 @@ function renderTutorialContent() {
         if (card) card.style.opacity = '0.9';
     };
     feedbackSection.onmouseout = function() {
+        const card = this.querySelector('div');
+        if (card) card.style.opacity = '';
+    };
+
+    // 公开许愿 - 链接到金山文档
+    const publicWishSection = document.createElement('a');
+    publicWishSection.href = 'https://www.kdocs.cn/l/csKWtfIfdwDy';
+    publicWishSection.target = '_blank';
+    publicWishSection.rel = 'noopener noreferrer';
+    publicWishSection.style.cssText = 'display:block; text-decoration:none; color:inherit; margin-top:12px;';
+    const iconStar = `<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+    publicWishSection.innerHTML = `
+        <div class="${cardClass}" style="${cardStyle}">
+            <div style="display:flex; align-items:center; gap:12px; padding:${innerPad};">
+                <div style="width:40px; height:40px; border-radius:8px; background:${isRabbit ? '#f5f0f1' : '#f5f5f5'}; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:${isRabbit ? '#888' : '#666'};">
+                    ${iconStar}
+                </div>
+                <div style="flex:1; min-width:0;">
+                    <div style="color:${isRabbit ? '#444' : '#333'}; font-weight:500; font-size:${isRabbit ? '15px' : '0.89rem'}; margin-bottom:2px;">公开许愿</div>
+                    <div style="font-size:0.81rem; color:#888;">在文档中公开写下你的愿望，大家都能看到</div>
+                </div>
+                <svg style="width:14px; height:14px; color:#999; flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+        </div>
+    `;
+    publicWishSection.onmouseover = function() {
+        const card = this.querySelector('div');
+        if (card) card.style.opacity = '0.9';
+    };
+    publicWishSection.onmouseout = function() {
         const card = this.querySelector('div');
         if (card) card.style.opacity = '';
     };
@@ -1532,9 +1568,11 @@ function renderTutorialContent() {
     if (isModern) {
         modernGroups.github.appendChild(githubSection);
         modernGroups.github.appendChild(feedbackSection);
+        modernGroups.github.appendChild(publicWishSection);
     } else {
         tutorialContentArea.appendChild(githubSection);
         tutorialContentArea.appendChild(feedbackSection);
+        tutorialContentArea.appendChild(publicWishSection);
     }
 
     const existingOverlay = document.getElementById('gh-help-overlay');
