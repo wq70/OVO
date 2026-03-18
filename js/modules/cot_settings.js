@@ -135,12 +135,6 @@ function initCotSettings() {
     });
     document.getElementById('cot-import-file').addEventListener('change', importCotPreset);
 
-    // 绑定酒馆思维链导入按钮
-    document.getElementById('cot-import-tavern-btn').addEventListener('click', () => {
-        document.getElementById('cot-import-tavern-file').click();
-    });
-    document.getElementById('cot-import-tavern-file').addEventListener('change', importTavernCotPreset);
-
     // 初始化 XML 说明功能
     initXmlHelpFeature();
 }
@@ -810,66 +804,6 @@ async function importCotPreset(e) {
     }
 }
 
-// 导入酒馆(SillyTavern)思维链
-async function importTavernCotPreset(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-        const text = await file.text();
-        const tavernData = JSON.parse(text);
-
-        // 验证酒馆格式：必须有 prompts 数组
-        if (!tavernData.prompts || !Array.isArray(tavernData.prompts)) {
-            throw new Error('格式错误：不是有效的酒馆(SillyTavern)思维链文件，缺少 prompts 数组');
-        }
-
-        // 过滤掉 marker 条目（占位符，如 chatHistory、charDescription 等）
-        const validPrompts = tavernData.prompts.filter(p => !p.marker && p.content);
-
-        if (validPrompts.length === 0) {
-            throw new Error('未找到有效的 prompt 条目（所有条目均为占位符或无内容）');
-        }
-
-        // 转换酒馆 prompts 为 CoT items
-        const items = validPrompts.map((p, index) => ({
-            id: `cot_tavern_${Date.now()}_${index}`,
-            name: p.name || `条目 ${index + 1}`,
-            content: p.content,
-            enabled: p.enabled !== undefined ? p.enabled : true,
-            locked: false
-        }));
-
-        // 从文件名提取预设名称
-        const baseName = file.name.replace(/\.json$/i, '');
-
-        const newPreset = {
-            id: `cot_preset_${Date.now()}`,
-            name: `${baseName} (酒馆导入)`,
-            items: items
-        };
-
-        db.cotPresets.push(newPreset);
-
-        if (currentCotMode === 'chat') {
-            db.cotSettings.activePresetId = newPreset.id;
-        } else if (currentCotMode === 'call') {
-            db.cotSettings.activeCallPresetId = newPreset.id;
-        } else if (currentCotMode === 'offline') {
-            db.cotSettings.activeOfflinePresetId = newPreset.id;
-        }
-        await saveData();
-
-        document.getElementById('cot-preset-manage-modal').classList.remove('visible');
-        loadCotSettings();
-        showToast(`酒馆思维链导入成功，共 ${items.length} 个条目`);
-    } catch (err) {
-        console.error(err);
-        showToast('导入失败：' + err.message);
-    } finally {
-        e.target.value = '';
-    }
-}
 
 // 暴露给全局
 window.initCotSettings = initCotSettings;

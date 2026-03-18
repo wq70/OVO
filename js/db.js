@@ -163,7 +163,7 @@ const DEFAULT_COT_PRESETS = [
 const globalSettingKeys = [
     'apiSettings', 'summaryApiSettings', 'backgroundApiSettings', 'supplementPersonaApiSettings', 'peekApiSettings', 'wallpaper', 'homeScreenMode', 'fontUrl', 'localFontName', 'customIcons', 'customAppNames', 'namePresets',
     'apiPresets', 'summaryApiPresets', 'backgroundApiPresets', 'supplementPersonaApiPresets', 'peekApiPresets', 'bubbleCssPresets', 'myPersonaPresets', 'globalCss',
-    'globalCssPresets', 'fontPresets', 'homeSignature', 'forumPosts', 'forumBindings', 'forumUserProfile', 'forumSettings', 'forumApiSettings', 'forumMessages', 'forumStrangerProfiles', 'forumFriendRequests', 'forumPendingRequestFromUser', 'pomodoroTasks', 'pomodoroSettings', 'insWidgetSettings', 'homeWidgetSettings',
+    'globalCssPresets', 'fontPresets', 'homeSignature', 'forumPosts', 'forumBindings', 'forumUserProfile', 'forumSettings', 'forumApiSettings', 'forumMessages', 'forumStrangerProfiles', 'forumFriendRequests', 'forumPendingRequestFromUser', 'forumAltAccounts', 'forumActiveAccountId', 'pomodoroTasks', 'pomodoroSettings', 'insWidgetSettings', 'homeWidgetSettings',
     'chatFolders', 'fontSizeScale', 'activePersonaId', 'moreProfileCardBg', 'statusBarPresets', 'regexFilterPresets', 'themeSettings', 'themePresets', 'savedKeyboardHeight',
     'globalSendSound', 'globalReceiveSound', 'globalMessageSentSound', 'globalIncomingCallSound', 'multiMsgSoundEnabled', 'soundPresets', 'galleryPresets', 'iconPresets', 'homeWidgetPresets', 'widgetWallpaperPresets', 'voicePresets',
     'cotSettings', 'cotPresets', 'hasSeenVideoCallDisclaimer', 'hasSeenVideoCallAvatarHint',
@@ -184,17 +184,16 @@ const updateLog = [
         date: "2026-03-18",
         notes: [
             "3.18更新：",
-            "1.新增节点系统，可以线下、真心话、番外等等，所有人具体的去看1900DC的视频教程！",
-            "2.新增思维链可以导入酒馆思维链",
-            "3.修复新增CHAR消息后续报错的BUG",
-            "4.新增下载语音TTS，在TTS开启情况下会出现在长按菜单里",
-            "5.新增中途意外挂断通话的保护，会自动保存在通话记录并且总结",
-            "6.新增10楼外仅发送摘要的数字变量自定义（1900提供想法）",
-            "7.自定义输出消息格式时，勾选上第三方的话选项那条消息在被渲染的时候就以系统消息的样式显示，如没勾选会默认以char的气泡显示",
-            "8.配置的导出导入文件（1900的想法）",
-            "9.新增可以保存重说消息，可以切换",
-            "10.新增可以单独ROLL生图",
-            "11.新增夜间模式和顶栏电量和时间"
+            "1.新增节点系统，可以线下、真心话、番外等等，所有人具体的去看1900DC的文字教程！",
+            "2.修复新增CHAR消息后续报错的BUG",
+            "3.新增下载语音TTS，在TTS开启情况下会出现在长按菜单里",
+            "4.新增中途意外挂断通话的保护，会自动保存在通话记录并且总结",
+            "5.新增10楼外仅发送摘要的数字变量自定义（1900提供想法）",
+            "6.自定义输出消息格式时，勾选上第三方的话选项那条消息在被渲染的时候就以系统消息的样式显示，如没勾选会默认以char的气泡显示",
+            "7.配置的导出导入文件（1900的想法）",
+            "8.新增可以保存重说消息，可以切换",
+            "9.新增可以单独ROLL生图",
+            "10.新增夜间模式和顶栏电量和时间"
         ]
     },
     {

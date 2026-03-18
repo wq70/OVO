@@ -492,6 +492,14 @@ function setupHomeScreen() {
     document.querySelector('[data-action="biekan-app"]')?.addEventListener('click', (e) => { e.preventDefault(); showToast('别看APP正在开发中…'); });
     document.querySelector('[data-action="xiaowu-app"]')?.addEventListener('click', (e) => { e.preventDefault(); showToast('小屋APP正在开发中…'); });
     if (typeof setupPiggyBankApp === 'function') setupPiggyBankApp();
+    if (typeof setupReminderModule === 'function') setupReminderModule();
+
+    // 主屏 app-icon 入口：拦截 main.js 全局委托中对 piggy-bank / music 的"开发中"拦截
+    const piggyIcon = homeScreen.querySelector('.app-icon[data-target="piggy-bank-screen"]');
+    if (piggyIcon) piggyIcon.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); switchScreen('piggy-bank-screen'); });
+    const musicIcon = homeScreen.querySelector('.app-icon[data-target="music-screen"]');
+    if (musicIcon) musicIcon.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); switchScreen('music-screen'); });
+
     updateBatteryStatus();
 
     const homeWidgetContainer = homeScreen.querySelector('.home-widget-container');
