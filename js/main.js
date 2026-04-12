@@ -1,1 +1,712 @@
-const _0x3d9db5=_0x14ed;(function(_0x2b9657,_0xd5b5d6){const _0x28ab47=_0x14ed,_0x6bb1cc=_0x2b9657();while(!![]){try{const _0x3c9d4b=parseInt(_0x28ab47(0x1eb))/0x1*(parseInt(_0x28ab47(0x252))/0x2)+parseInt(_0x28ab47(0x22b))/0x3+-parseInt(_0x28ab47(0x1fb))/0x4+parseInt(_0x28ab47(0x22f))/0x5+parseInt(_0x28ab47(0x226))/0x6*(-parseInt(_0x28ab47(0x1ef))/0x7)+parseInt(_0x28ab47(0x254))/0x8+parseInt(_0x28ab47(0x23a))/0x9*(parseInt(_0x28ab47(0x238))/0xa);if(_0x3c9d4b===_0xd5b5d6)break;else _0x6bb1cc['push'](_0x6bb1cc['shift']());}catch(_0x4294b4){_0x6bb1cc['push'](_0x6bb1cc['shift']());}}}(_0x32cf,0x2ab36));_0x3d9db5(0x237)in navigator&&window[_0x3d9db5(0x200)](_0x3d9db5(0x242),()=>{const _0x174383=_0x3d9db5;navigator[_0x174383(0x237)][_0x174383(0x1f5)](_0x174383(0x1dc))[_0x174383(0x1da)](_0x2d0531=>{const _0x54b8f7=_0x174383;console['log'](_0x54b8f7(0x219),_0x2d0531[_0x54b8f7(0x231)]);})[_0x174383(0x212)](_0x19ff0a=>{const _0x7918=_0x174383;console[_0x7918(0x245)](_0x7918(0x228),_0x19ff0a);});});const init=async()=>{const _0x5d909b=_0x3d9db5;await loadData();(!db[_0x5d909b(0x210)]||!db[_0x5d909b(0x210)][_0x5d909b(0x24a)])&&(db[_0x5d909b(0x210)]=JSON[_0x5d909b(0x20e)](JSON[_0x5d909b(0x1f4)](defaultWidgetSettings)));document[_0x5d909b(0x202)][_0x5d909b(0x200)](_0x5d909b(0x1e2),_0x20e00e=>{const _0x28b79f=_0x5d909b;if(_0x20e00e['target'][_0x28b79f(0x1e4)](_0x28b79f(0x1e1))){_0x20e00e[_0x28b79f(0x218)]();return;}removeContextMenu();const _0xaf1b38=_0x20e00e[_0x28b79f(0x1ee)]['closest'](_0x28b79f(0x1f7));_0xaf1b38&&(_0x20e00e[_0x28b79f(0x240)](),switchScreen(_0xaf1b38['getAttribute'](_0x28b79f(0x223))));const _0x5f018b=document['querySelector'](_0x28b79f(0x1d5));_0x5f018b&&_0x20e00e[_0x28b79f(0x1ee)]===_0x5f018b&&_0x5f018b[_0x28b79f(0x1dd)][_0x28b79f(0x1d8)](_0x28b79f(0x224));}),document[_0x5d909b(0x202)]['addEventListener'](_0x5d909b(0x1e2),_0x49c9d9=>{const _0x20f97f=_0x5d909b,_0x296067=_0x49c9d9[_0x20f97f(0x1ee)][_0x20f97f(0x1e4)]('.app-icon[data-target]');if(_0x296067){_0x49c9d9['preventDefault']();const _0x1280ea=_0x296067['getAttribute'](_0x20f97f(0x223));if(_0x1280ea===_0x20f97f(0x1f2)||_0x1280ea===_0x20f97f(0x251)||_0x1280ea===_0x20f97f(0x22d)){showToast('该应用正在开发中，敬请期待！');return;}switchScreen(_0x1280ea);}}),updateClock(),setInterval(updateClock,0x7530),setInterval(checkAutoReply,0xea60),applyGlobalFont(db[_0x5d909b(0x235)]),applyGlobalCss(db['globalCss']),applyFontSize(db[_0x5d909b(0x250)]||0x1),applyPomodoroBackgrounds();if(typeof applyThemeSettings==='function')applyThemeSettings();setupGlobalRescueGesture(),setupHomeScreen(),setupChatListScreen(),setupContactsScreen(),setupBottomNavigation(),setupAddCharModal(),setupChatRoom(),setupChatSettings(),setupArchiveApp(),setupApiSettingsApp(),setupWallpaperApp(),await setupStickerSystem(),setupPresetFeatures(),setupVoiceMessageSystem(),setupPhotoVideoSystem(),setupImageRecognition(),setupWalletSystem(),setupGiftSystem(),setupTimeSkipSystem(),setupGalleryManagement();try{setupWorldBookApp();}catch(_0x4bc67e){console[_0x5d909b(0x1fe)](_0x5d909b(0x21e),_0x4bc67e);}try{setupGroupChatSystem();}catch(_0x463de2){console[_0x5d909b(0x1fe)](_0x5d909b(0x236),_0x463de2);}try{setupCustomizeApp();}catch(_0x3226a8){console[_0x5d909b(0x1fe)](_0x5d909b(0x241),_0x3226a8);}try{setupTutorialApp();}catch(_0x457522){console[_0x5d909b(0x1fe)](_0x5d909b(0x1ea),_0x457522);}checkForUpdates(),setupPeekFeature(),setupMemoryJournalScreen(),setupDeleteHistoryChunk(),setupForumBindingFeature(),setupForumFeature(),setupShareModal(),setupStorageAnalysisScreen(),setupPomodoroApp(),setupPomodoroSettings(),setupPomodoroGlobalSettings(),setupInsWidgetAvatarModal(),setupHeartPhotoModal(),setupMoreCardBgModal();if(typeof setupShopSystem==='function')setupShopSystem();if(window[_0x5d909b(0x207)])window[_0x5d909b(0x207)][_0x5d909b(0x1f9)]();if(typeof initMoreMenu===_0x5d909b(0x1d1))initMoreMenu();if(typeof setupPhoneScreen==='function')setupPhoneScreen();if(typeof initCotSettings==='function')initCotSettings();if(window[_0x5d909b(0x23b)])window[_0x5d909b(0x23b)][_0x5d909b(0x1f9)]();if(typeof NodeSystem!==_0x5d909b(0x21f))NodeSystem[_0x5d909b(0x1f9)]();const _0x2ef02a=document['getElementById']('delete-selected-world-books-btn');if(_0x2ef02a)_0x2ef02a[_0x5d909b(0x200)](_0x5d909b(0x1e2),deleteSelectedWorldBooks);const _0x5a56d8=document[_0x5d909b(0x215)](_0x5d909b(0x1e7));if(_0x5a56d8)_0x5a56d8[_0x5d909b(0x200)](_0x5d909b(0x1e2),exitWorldBookMultiSelectMode);window[_0x5d909b(0x230)]&&window[_0x5d909b(0x230)][_0x5d909b(0x1f9)](),window['fetchAndPopulateModels']&&db[_0x5d909b(0x1e0)]&&db[_0x5d909b(0x1e0)][_0x5d909b(0x20b)]&&db['apiSettings'][_0x5d909b(0x211)]&&setTimeout(()=>{const _0x123cdd=_0x5d909b;window[_0x123cdd(0x1e6)](!![]);},0x3e8),typeof checkAndRequestPersistence===_0x5d909b(0x1d1)&&setTimeout(checkAndRequestPersistence,0x7d0);};async function checkAutoReply(){const _0x258227=_0x3d9db5,_0x39eb94=Date[_0x258227(0x221)]();for(const _0x3f8587 of db[_0x258227(0x24d)]){if(_0x3f8587[_0x258227(0x22e)]&&_0x3f8587[_0x258227(0x22e)]['enabled']){const _0x287016=(_0x3f8587[_0x258227(0x22e)][_0x258227(0x253)]||0x3c)*0x3c*0x3e8,_0x90264e=_0x3f8587[_0x258227(0x22e)][_0x258227(0x1d0)]||0x0;if(_0x39eb94-_0x90264e<_0x287016)continue;let _0x1edf20=0x0;if(_0x3f8587[_0x258227(0x204)]&&_0x3f8587[_0x258227(0x204)][_0x258227(0x1e5)]>0x0)_0x1edf20=_0x3f8587['history'][_0x3f8587[_0x258227(0x204)][_0x258227(0x1e5)]-0x1][_0x258227(0x229)];else continue;_0x39eb94-_0x1edf20>_0x287016&&(console[_0x258227(0x245)](_0x258227(0x1fa)+_0x3f8587[_0x258227(0x246)]),_0x3f8587[_0x258227(0x22e)][_0x258227(0x1d0)]=_0x39eb94,await saveData(),await getAiReply(_0x3f8587['id'],_0x258227(0x232),!![]));}}}function _0x14ed(_0x8b93a0,_0x4b6e3d){const _0x32cfb5=_0x32cf();return _0x14ed=function(_0x14ed8b,_0x380fa2){_0x14ed8b=_0x14ed8b-0x1d0;let _0x36bbd2=_0x32cfb5[_0x14ed8b];return _0x36bbd2;},_0x14ed(_0x8b93a0,_0x4b6e3d);}function renderLoginOverlay(){const _0x5bf360=_0x3d9db5;if(document[_0x5bf360(0x215)](_0x5bf360(0x239)))return;const _0x5eec72=document[_0x5bf360(0x21d)]('div');_0x5eec72['id']=_0x5bf360(0x239),_0x5eec72[_0x5bf360(0x1d3)][_0x5bf360(0x214)]=_0x5bf360(0x1e9);const _0x12d74b=document[_0x5bf360(0x21d)](_0x5bf360(0x1d3));_0x12d74b['textContent']=_0x5bf360(0x24c),document[_0x5bf360(0x1db)]['appendChild'](_0x12d74b),_0x5eec72[_0x5bf360(0x201)]=_0x5bf360(0x24f),document['body'][_0x5bf360(0x209)](_0x5eec72),document[_0x5bf360(0x215)](_0x5bf360(0x1e8))[_0x5bf360(0x1f8)]=tryLogin,document['getElementById'](_0x5bf360(0x23e))[_0x5bf360(0x234)]=function(_0x27dfca){const _0x4a0fc1=_0x5bf360;if(_0x27dfca['key']===_0x4a0fc1(0x24b))tryLogin();},_0x5eec72['querySelector'](_0x5bf360(0x1fc))[_0x5bf360(0x1f8)]=()=>{const _0x54e9ea=_0x5bf360;document[_0x54e9ea(0x215)](_0x54e9ea(0x1e3))['value']='',document[_0x54e9ea(0x215)](_0x54e9ea(0x23e))[_0x54e9ea(0x244)]='',document['getElementById'](_0x54e9ea(0x255))[_0x54e9ea(0x225)]='';};const _0x389044=document[_0x5bf360(0x215)]('forgot-pwd-link');_0x389044&&(_0x389044['onclick']=()=>{const _0x2b7fe3=_0x5bf360,_0x33b542=document[_0x2b7fe3(0x21d)](_0x2b7fe3(0x1ec));_0x33b542['id']=_0x2b7fe3(0x217),_0x33b542['innerHTML']=_0x2b7fe3(0x203),document[_0x2b7fe3(0x202)][_0x2b7fe3(0x206)](_0x33b542);const _0xbaf64c=document[_0x2b7fe3(0x215)](_0x2b7fe3(0x23c));let _0x3f29a4=0xa;const _0x542641=setInterval(()=>{const _0x819ac=_0x2b7fe3;_0x3f29a4--,_0x3f29a4>0x0?_0xbaf64c[_0x819ac(0x225)]=_0x819ac(0x1ff)+_0x3f29a4+'s)':(clearInterval(_0x542641),_0xbaf64c['textContent']=_0x819ac(0x222),_0xbaf64c[_0x819ac(0x1d2)]=![],_0xbaf64c[_0x819ac(0x1dd)]['add'](_0x819ac(0x1d9)),_0xbaf64c['onclick']=()=>_0x33b542[_0x819ac(0x1d8)]());},0x3e8);});}function _0x32cf(){const _0x11481c=['active','then','head','sw.js','classList','正在连接服务器验证...','json','apiSettings','.context-menu','click','login-uid','closest','length','fetchAndPopulateModels','cancel-wb-multi-select-btn','btn-login-submit','\x0a\x20\x20\x20\x20\x20\x20\x20\x20position:\x20fixed;\x20top:\x200;\x20left:\x200;\x20width:\x20100%;\x20height:\x20100%;\x20\x0a\x20\x20\x20\x20\x20\x20\x20\x20background:\x20rgba(0,0,0,0.85);\x20z-index:\x2099999;\x20\x0a\x20\x20\x20\x20\x20\x20\x20\x20display:\x20flex;\x20flex-direction:\x20column;\x20\x0a\x20\x20\x20\x20\x20\x20\x20\x20justify-content:\x20center;\x20align-items:\x20center;\x20\x0a\x20\x20\x20\x20\x20\x20\x20\x20backdrop-filter:\x20blur(5px);\x0a\x20\x20\x20\x20','setupTutorialApp\x20failed:','1SAAaOl','div','ephone_auth','target','938drWtLk','全局\x20CSS\x20已清空，界面应已恢复正常。','message','music-screen','trim','stringify','register','opacity','.back-btn','onclick','init','Auto-reply\x20triggered\x20for\x20','199568RhoExm','.window-close','#007aff','error','请阅读\x20(','addEventListener','innerHTML','body','\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20id=\x22forced-modal-window\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20id=\x22forced-modal-title\x22>获取账密方法</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20id=\x22forced-modal-content\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20请前往\x20<span\x20style=\x22color:\x20#ff453a;\x22>dc尾巴镇-ee小手机主频道</span><br>发送<span\x20style=\x22color:\x20#ff453a;\x22>/小手机</span>指令获取账密。<br><br>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<strong>注意事项：</strong><br>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x201.\x20输入/小手机时，输入框上方会自动弹出<strong\x20style=\x22color:\x20#ff453a;\x22>小狗图标</strong>的可点击指令，点击小狗图标指令<strong\x20style=\x22color:\x20#ff453a;\x22>再点击发送</strong><br>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x202.\x20如未自动出现带图标的指令，优先更新discord或使用网页端<br>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x203.\x20发送指令时<strong>【仅限ee小手机频道】</strong>，其他频道无效<br>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x204.\x20如发送指令未能成功获取账密，请<strong\x20style=\x22color:\x20#ff453a;\x22>自行删除</strong>那条消息\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button\x20id=\x22forced-modal-btn\x22\x20disabled>请阅读\x20(10s)</button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20','history','color','appendChild','BatteryInteraction','rescue-clear-btn','prepend','setItem','url','true','global-rescue-panel','parse','application/json','homeWidgetSettings','key','catch','transition','cssText','getElementById','\x0a\x20\x20\x20\x20\x20\x20\x20\x20position:\x20fixed;\x20top:\x200;\x20left:\x200;\x20width:\x20100%;\x20height:\x20100%;\x0a\x20\x20\x20\x20\x20\x20\x20\x20background:\x20rgba(0,0,0,0.85);\x20z-index:\x20999999;\x0a\x20\x20\x20\x20\x20\x20\x20\x20display:\x20flex;\x20flex-direction:\x20column;\x0a\x20\x20\x20\x20\x20\x20\x20\x20justify-content:\x20center;\x20align-items:\x20center;\x0a\x20\x20\x20\x20\x20\x20\x20\x20backdrop-filter:\x20blur(5px);\x0a\x20\x20\x20\x20','forced-modal-overlay','stopPropagation','ServiceWorker\x20registration\x20successful\x20with\x20scope:\x20','success','验证通过，正在进入...','globalCss','createElement','setupWorldBookApp\x20failed:','undefined','background','now','我已了解','data-target','visible','textContent','14826TJgrSg','[GlobalGesture]\x20Triggering\x20rescue\x20panel!','ServiceWorker\x20registration\x20failed:\x20','timestamp','自动登录出错，重置状态:','340926HozBoK','验证失败:\x20','piggy-bank-screen','autoReply','124115XfqZgq','GitHubMgr','scope','private','网络错误','onkeypress','fontUrl','setupGroupChatSystem\x20failed:','serviceWorker','681650qmXoZE','login-overlay','27uTzTpJ','VideoCallModule','forced-modal-btn','opacity\x200.5s\x20ease','login-pwd','https://puppy-subscription-api.zeabur.app/api/verify','preventDefault','setupCustomizeApp\x20failed:','load','#32d74b','value','log','remarkName','DOMContentLoaded','账号或密码错误','rescue-cancel-btn','topLeft','Enter','\x0a\x20\x20\x20\x20\x20\x20\x20\x20.browser\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20width:\x20100%;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20height:\x20100%;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background:\x20#c7cccd;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20border-radius:\x200;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20display:\x20flex;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20flex-direction:\x20column;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20overflow:\x20hidden;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20position:\x20relative;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20box-shadow:\x20none;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-family:\x20-apple-system,\x20BlinkMacSystemFont,\x20\x22Segoe\x20UI\x22,\x20Roboto,\x20sans-serif;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20animation:\x20fadeIn\x200.3s\x20ease-out;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20@keyframes\x20fadeIn\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20from\x20{\x20opacity:\x200;\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20to\x20{\x20opacity:\x201;\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20/*\x20标签栏\x20*/\x0a\x20\x20\x20\x20\x20\x20\x20\x20.tabs-head\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background-color:\x20#bababa;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20height:\x2040px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20display:\x20flex;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20justify-content:\x20space-between;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20align-items:\x20flex-end;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20padding-left:\x2015px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20padding-right:\x2012px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20.tabs-head\x20.tab-open\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20width:\x20100px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20height:\x2032px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20border-radius:\x208px\x208px\x200\x200;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background-color:\x20#eaf5ff;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20display:\x20flex;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20gap:\x205px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20align-items:\x20center;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20justify-content:\x20space-between;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20padding:\x200\x2010px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20position:\x20relative;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20.tabs-head\x20.tab-open\x20.rounded-l\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20position:\x20absolute;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background-color:\x20#eaf5ff;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20width:\x2020px;\x20height:\x2020px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20bottom:\x200;\x20left:\x20-20px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20overflow:\x20hidden;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.tabs-head\x20.tab-open\x20.rounded-l\x20.mask-round\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20width:\x20100%;\x20height:\x20100%;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background-color:\x20#bababa;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20border-radius:\x200\x200\x2010px\x200;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20.tabs-head\x20.tab-open\x20.rounded-r\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20position:\x20absolute;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background-color:\x20#eaf5ff;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20width:\x2020px;\x20height:\x2020px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20bottom:\x200;\x20right:\x20-20px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20overflow:\x20hidden;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.tabs-head\x20.tab-open\x20.rounded-r\x20.mask-round\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20width:\x20100%;\x20height:\x20100%;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background-color:\x20#bababa;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20border-radius:\x200\x200\x200\x2010px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20.tabs-head\x20.tab-open\x20span\x20{\x20color:\x20#555;\x20font-size:\x2012px;\x20font-weight:\x20600;\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.tabs-head\x20.tab-open\x20.close-tab\x20{\x20color:\x20#999;\x20font-size:\x2010px;\x20cursor:\x20pointer;\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20.window-opt\x20{\x20display:\x20flex;\x20gap:\x206px;\x20margin-bottom:\x2010px;\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.window-opt\x20button\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20width:\x2010px;\x20height:\x2010px;\x20border-radius:\x2050%;\x20border:\x20none;\x20padding:\x200;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20cursor:\x20pointer;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.window-opt\x20button:nth-child(1)\x20{\x20background:\x20#ff5f57;\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.window-opt\x20button:nth-child(2)\x20{\x20background:\x20#ffbd2e;\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.window-opt\x20button:nth-child(3)\x20{\x20background:\x20#28c940;\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20/*\x20地址栏\x20*/\x0a\x20\x20\x20\x20\x20\x20\x20\x20.head-browser\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background-color:\x20#eaf5ff;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20padding:\x208px\x2015px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20display:\x20flex;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20align-items:\x20center;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20gap:\x2010px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20border-bottom:\x201px\x20solid\x20#c7e0f8;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.head-browser\x20button\x20{\x20color:\x20#888;\x20background:\x20none;\x20border:\x20none;\x20font-size:\x2014px;\x20cursor:\x20pointer;\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.head-browser\x20input\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20flex:\x201;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background:\x20#fdffff;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20border:\x201px\x20solid\x20#c7e0f8;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20border-radius:\x2015px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20height:\x2026px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20padding:\x200\x2015px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-size:\x2012px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20color:\x20#666;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20outline:\x20none;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20text-align:\x20center;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20/*\x20内容区域\x20*/\x0a\x20\x20\x20\x20\x20\x20\x20\x20.browser-content\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20flex:\x201;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background:\x20#fdffff;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20padding:\x2030px\x2025px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20display:\x20flex;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20flex-direction:\x20column;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20align-items:\x20center;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20justify-content:\x20center;\x20/*\x20垂直居中\x20*/\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20/*\x20限制内容最大宽度，优化排版\x20*/\x0a\x20\x20\x20\x20\x20\x20\x20\x20.login-form-container\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20width:\x20100%;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20max-width:\x20320px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20display:\x20flex;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20flex-direction:\x20column;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20align-items:\x20center;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20.login-title\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-size:\x2024px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-weight:\x20700;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20color:\x20#555;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20margin-bottom:\x208px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20letter-spacing:\x201px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20text-align:\x20center;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20.login-divider\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-size:\x2012px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20color:\x20#c7e0f8;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20margin-bottom:\x2035px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-family:\x20monospace;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20text-align:\x20center;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20.login-input\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20width:\x20100%;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20padding:\x2014px\x2015px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20margin-bottom:\x2018px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20border:\x202px\x20solid\x20#eaf5ff;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background:\x20#f8fdff;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20border-radius:\x2012px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-size:\x2015px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20outline:\x20none;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20transition:\x20all\x200.3s;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20box-sizing:\x20border-box;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20color:\x20#555;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.login-input:focus\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20border-color:\x20#c7e0f8;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background:\x20#fff;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20box-shadow:\x200\x200\x200\x204px\x20rgba(199,\x20224,\x20248,\x200.2);\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.login-input::placeholder\x20{\x20color:\x20#bababa;\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20.login-btn\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20width:\x20100%;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20padding:\x2014px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20margin-top:\x2015px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background:\x20#c7e0f8;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20color:\x20#fff;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20border:\x20none;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20border-radius:\x2012px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-size:\x2016px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-weight:\x20600;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20cursor:\x20pointer;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20transition:\x20all\x200.2s;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20box-shadow:\x200\x204px\x2015px\x20rgba(199,\x20224,\x20248,\x200.4);\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.login-btn:hover\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20transform:\x20translateY(-2px);\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20box-shadow:\x200\x208px\x2020px\x20rgba(199,\x20224,\x20248,\x200.6);\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20filter:\x20brightness(0.95);\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.login-btn:active\x20{\x20transform:\x20translateY(1px);\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20.login-hint\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20margin-top:\x2020px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-size:\x2012px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20color:\x20#007aff;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20text-align:\x20center;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20line-height:\x201.6;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20cursor:\x20pointer;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20text-decoration:\x20underline;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.login-hint:hover\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20color:\x20#0056b3;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20/*\x20强制弹窗样式\x20*/\x0a\x20\x20\x20\x20\x20\x20\x20\x20#forced-modal-overlay\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20position:\x20fixed;\x20top:\x200;\x20left:\x200;\x20width:\x20100%;\x20height:\x20100%;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background:\x20rgba(0,0,0,0.6);\x20z-index:\x20100000;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20display:\x20flex;\x20justify-content:\x20center;\x20align-items:\x20center;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20backdrop-filter:\x20blur(3px);\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20animation:\x20fadeIn\x200.3s;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20#forced-modal-window\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background:\x20#fff;\x20width:\x2085%;\x20max-width:\x20320px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20border-radius:\x2012px;\x20padding:\x2020px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20box-shadow:\x200\x2010px\x2025px\x20rgba(0,0,0,0.2);\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20text-align:\x20left;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-family:\x20-apple-system,\x20BlinkMacSystemFont,\x20\x22Segoe\x20UI\x22,\x20Roboto,\x20sans-serif;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20#forced-modal-title\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-size:\x2018px;\x20font-weight:\x20bold;\x20color:\x20#333;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20margin-bottom:\x2015px;\x20text-align:\x20center;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20#forced-modal-content\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-size:\x2014px;\x20color:\x20#555;\x20line-height:\x201.6;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20margin-bottom:\x2020px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20#forced-modal-btn\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20width:\x20100%;\x20padding:\x2012px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background:\x20#ccc;\x20color:\x20#fff;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20border:\x20none;\x20border-radius:\x208px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-size:\x2014px;\x20cursor:\x20not-allowed;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20transition:\x20background\x200.3s;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20\x20\x20\x20\x20#forced-modal-btn.active\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20background:\x20#007aff;\x20cursor:\x20pointer;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20#login-msg\x20{\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20margin-top:\x2015px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-size:\x2013px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20min-height:\x2020px;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20text-align:\x20center;\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-weight:\x20500;\x0a\x20\x20\x20\x20\x20\x20\x20\x20}\x0a\x20\x20\x20\x20','characters','#ff453a','\x0a\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22browser\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22tabs-head\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22tabs\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22tab-open\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22rounded-l\x22><div\x20class=\x22mask-round\x22></div></div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<span>UwU</span>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22close-tab\x22>✕</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22rounded-r\x22><div\x20class=\x22mask-round\x22></div></div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22window-opt\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button></button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button></button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button\x20class=\x22window-close\x22></button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22head-browser\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button>←</button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button\x20style=\x22opacity:0.5\x22>→</button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<input\x20type=\x22text\x22\x20value=\x22UwUbibobibo.com\x22\x20readonly>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button>⋮</button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button\x20class=\x22star\x22>✰</button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22browser-content\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22login-form-container\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22login-title\x22>小章鱼UwU登录系统</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22login-divider\x22>₊┈𓏴𓏴₊-୨★୧-₊𓏴𓏴┈₊</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<input\x20type=\x22text\x22\x20id=\x22login-uid\x22\x20placeholder=\x22请输入账号\x20ID\x22\x20class=\x22login-input\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<input\x20type=\x22password\x22\x20id=\x22login-pwd\x22\x20placeholder=\x22请输入密码\x22\x20class=\x22login-input\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button\x20id=\x22btn-login-submit\x22\x20class=\x22login-btn\x22>登\x20录</button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22login-hint\x22\x20id=\x22forgot-pwd-link\x22>忘记密码？(点击查看获取方法)</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<p\x20id=\x22login-msg\x22></p>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20','fontSizeScale','diary-screen','248852LnWyxx','interval','708176SctAMZ','login-msg','lastTriggerTime','function','disabled','style','[Auto\x20Login]\x20检测到已授权状态','.modal-overlay.visible,\x20.action-sheet-overlay.visible','验证中...','找不到登录输入框，请刷新页面','remove'];_0x32cf=function(){return _0x11481c;};return _0x32cf();}async function tryLogin(){const _0x4c4ed7=_0x3d9db5,_0x3ce770=document['getElementById'](_0x4c4ed7(0x1e3)),_0x34f60e=document['getElementById'](_0x4c4ed7(0x23e)),_0x1792a3=document['getElementById'](_0x4c4ed7(0x255)),_0x1b19e0=document[_0x4c4ed7(0x215)]('btn-login-submit');if(!_0x3ce770||!_0x34f60e){console[_0x4c4ed7(0x1fe)](_0x4c4ed7(0x1d7));return;}const _0x507611=_0x3ce770['value'][_0x4c4ed7(0x1f3)](),_0x47019a=_0x34f60e['value'][_0x4c4ed7(0x1f3)]();if(!_0x507611||!_0x47019a){_0x1792a3[_0x4c4ed7(0x225)]='请输入完整的账号和密码';return;}_0x1792a3[_0x4c4ed7(0x1d3)][_0x4c4ed7(0x205)]=_0x4c4ed7(0x1fd),_0x1792a3[_0x4c4ed7(0x225)]=_0x4c4ed7(0x1de);const _0x35b048=_0x1b19e0['textContent'];_0x1b19e0[_0x4c4ed7(0x1d2)]=!![],_0x1b19e0['textContent']=_0x4c4ed7(0x1d6);try{const _0xb9d19f=await fetch(_0x4c4ed7(0x23f),{'method':'POST','headers':{'Content-Type':_0x4c4ed7(0x20f)},'body':JSON['stringify']({'account':_0x507611,'password':_0x47019a})}),_0xd30a46=await _0xb9d19f[_0x4c4ed7(0x1df)]();if(_0xd30a46[_0x4c4ed7(0x21a)]){_0x1792a3[_0x4c4ed7(0x1d3)][_0x4c4ed7(0x205)]=_0x4c4ed7(0x243),_0x1792a3[_0x4c4ed7(0x225)]=_0x4c4ed7(0x21b),localStorage[_0x4c4ed7(0x20a)](_0x4c4ed7(0x1ed),_0x4c4ed7(0x20c)),initDatabase();const _0x2fad91=document[_0x4c4ed7(0x215)](_0x4c4ed7(0x239));_0x2fad91&&(_0x2fad91[_0x4c4ed7(0x1d3)][_0x4c4ed7(0x213)]=_0x4c4ed7(0x23d),_0x2fad91['style'][_0x4c4ed7(0x1f6)]='0',setTimeout(()=>_0x2fad91['remove'](),0x1f4)),init();}else throw new Error(_0xd30a46[_0x4c4ed7(0x1f1)]||_0x4c4ed7(0x248));}catch(_0x3178bc){console[_0x4c4ed7(0x1fe)](_0x3178bc),_0x1792a3[_0x4c4ed7(0x1d3)][_0x4c4ed7(0x205)]='#ff453a',_0x1792a3[_0x4c4ed7(0x225)]=_0x4c4ed7(0x22c)+(_0x3178bc[_0x4c4ed7(0x1f1)]||_0x4c4ed7(0x233)),_0x1b19e0[_0x4c4ed7(0x1d3)][_0x4c4ed7(0x220)]=_0x4c4ed7(0x24e),setTimeout(()=>_0x1b19e0[_0x4c4ed7(0x1d3)]['background']='#007aff',0x1f4);}finally{_0x1b19e0[_0x4c4ed7(0x1d2)]=![],_0x1b19e0[_0x4c4ed7(0x225)]=_0x35b048;}}document['addEventListener'](_0x3d9db5(0x247),()=>{const _0x2879c4=_0x3d9db5,_0x105a76=localStorage['getItem'](_0x2879c4(0x1ed));if(_0x105a76==='true'){console[_0x2879c4(0x245)](_0x2879c4(0x1d4));try{initDatabase(),init();}catch(_0x4c5b4d){console[_0x2879c4(0x1fe)](_0x2879c4(0x22a),_0x4c5b4d),localStorage['removeItem'](_0x2879c4(0x1ed)),renderLoginOverlay();}}else renderLoginOverlay();});let globalRescueClickCount=0x0,globalRescueLastClickTime=0x0;function setupGlobalRescueGesture(){const _0x5c6156=_0x3d9db5,_0x57c102=0x190;document[_0x5c6156(0x200)]('click',_0x10f16a=>{const _0xf941b9=_0x5c6156,_0x2294bc=Date[_0xf941b9(0x221)](),_0x5de32e=_0x2294bc-globalRescueLastClickTime;_0x5de32e<_0x57c102?globalRescueClickCount++:globalRescueClickCount=0x1,globalRescueLastClickTime=_0x2294bc,globalRescueClickCount===0x5&&(console[_0xf941b9(0x245)](_0xf941b9(0x227)),showGlobalRescuePanel(),globalRescueClickCount=0x0);},!![]);}function showGlobalRescuePanel(){const _0x50ad61=_0x3d9db5;if(document['getElementById'](_0x50ad61(0x20d)))return;const _0x3e2bf3=document[_0x50ad61(0x21d)](_0x50ad61(0x1ec));_0x3e2bf3['id']=_0x50ad61(0x20d),_0x3e2bf3[_0x50ad61(0x1d3)]['cssText']=_0x50ad61(0x216),_0x3e2bf3['innerHTML']='\x0a\x20\x20\x20\x20\x20\x20\x20\x20<div\x20style=\x22background:\x20#fff;\x20width:\x2085%;\x20max-width:\x20320px;\x20border-radius:\x2016px;\x20padding:\x2025px;\x20text-align:\x20center;\x20box-shadow:\x200\x2010px\x2030px\x20rgba(0,0,0,0.3);\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20style=\x22width:\x2060px;\x20height:\x2060px;\x20background:\x20#ffebee;\x20border-radius:\x2050%;\x20display:\x20flex;\x20align-items:\x20center;\x20justify-content:\x20center;\x20margin:\x200\x20auto\x2015px;\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<svg\x20style=\x22width:\x2032px;\x20height:\x2032px;\x20color:\x20#d32f2f;\x22\x20viewBox=\x220\x200\x2024\x2024\x22\x20fill=\x22none\x22\x20stroke=\x22currentColor\x22\x20stroke-width=\x222\x22\x20stroke-linecap=\x22round\x22\x20stroke-linejoin=\x22round\x22><path\x20d=\x22M10.29\x203.86L1.82\x2018a2\x202\x200\x200\x200\x201.71\x203h16.94a2\x202\x200\x200\x200\x201.71-3L13.71\x203.86a2\x202\x200\x200\x200-3.42\x200z\x22></path><line\x20x1=\x2212\x22\x20y1=\x229\x22\x20x2=\x2212\x22\x20y2=\x2213\x22></line><line\x20x1=\x2212\x22\x20y1=\x2217\x22\x20x2=\x2212.01\x22\x20y2=\x2217\x22></line></svg>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<h3\x20style=\x22margin:\x200\x200\x2010px;\x20color:\x20#333;\x20font-size:\x2018px;\x22>全局样式救援</h3>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<p\x20style=\x22margin:\x200\x200\x2020px;\x20color:\x20#666;\x20font-size:\x2014px;\x20line-height:\x201.5;\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20检测到您快速点击了五次屏幕。<br>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20如果因为错误的全局\x20CSS\x20导致界面错乱，您可以在这里一键清空。\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</p>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20style=\x22display:\x20flex;\x20flex-direction:\x20column;\x20gap:\x2010px;\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button\x20id=\x22rescue-clear-btn\x22\x20style=\x22background:\x20#d32f2f;\x20color:\x20#fff;\x20border:\x20none;\x20padding:\x2012px;\x20border-radius:\x2010px;\x20font-size:\x2015px;\x20font-weight:\x20600;\x20cursor:\x20pointer;\x22>清空全局\x20CSS</button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button\x20id=\x22rescue-cancel-btn\x22\x20style=\x22background:\x20#f5f5f5;\x20color:\x20#666;\x20border:\x20none;\x20padding:\x2012px;\x20border-radius:\x2010px;\x20font-size:\x2015px;\x20font-weight:\x20600;\x20cursor:\x20pointer;\x22>取消</button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20',document[_0x50ad61(0x202)][_0x50ad61(0x206)](_0x3e2bf3),document['getElementById'](_0x50ad61(0x208))[_0x50ad61(0x1f8)]=async()=>{const _0x52ccb6=_0x50ad61;if(confirm('确定要清空全局\x20CSS\x20吗？此操作不可撤销。')){db[_0x52ccb6(0x21c)]='',await saveData(),applyGlobalCss('');const _0x4d62f4=document['getElementById']('global-beautification-css');if(_0x4d62f4)_0x4d62f4['value']='';showToast(_0x52ccb6(0x1f0)),_0x3e2bf3['remove']();}},document[_0x50ad61(0x215)](_0x50ad61(0x249))[_0x50ad61(0x1f8)]=()=>{const _0x57108b=_0x50ad61;_0x3e2bf3[_0x57108b(0x1d8)]();};}
+// --- 主程序入口 (js/main.js) ---
+
+// 注册 Service Worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+            .then(registration => {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(err => {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+    });
+}
+
+const init = async () => {
+    await loadData();
+    if (!db.homeWidgetSettings || !db.homeWidgetSettings.topLeft) {
+        db.homeWidgetSettings = JSON.parse(JSON.stringify(defaultWidgetSettings));
+    }
+
+    // 全局点击事件委托
+    document.body.addEventListener('click', (e) => {
+        // 全局点击触感反馈
+        // if (e.target.closest('button, .btn, .action-btn, .nav-item, .icon-btn, .list-item, input[type="checkbox"], input[type="radio"], .back-btn')) {
+        //     triggerHapticFeedback('light');
+        // }
+
+        if (e.target.closest('.context-menu')) {
+            e.stopPropagation();
+            return;
+        }
+        removeContextMenu();
+
+        const backBtn = e.target.closest('.back-btn');
+        if (backBtn) {
+            e.preventDefault();
+            switchScreen(backBtn.getAttribute('data-target'));
+        }
+
+        const openOverlay = document.querySelector('.modal-overlay.visible, .action-sheet-overlay.visible');
+        if (openOverlay && e.target === openOverlay) {
+            openOverlay.classList.remove('visible');
+        }
+    });
+
+    // 导航栏跳转
+    document.body.addEventListener('click', e => {
+        const navLink = e.target.closest('.app-icon[data-target]');
+        if (navLink) {
+            e.preventDefault();
+            const target = navLink.getAttribute('data-target');
+            if (target === 'music-screen' || target === 'diary-screen' || target === 'piggy-bank-screen') {
+                showToast('该应用正在开发中，敬请期待！');
+                return;
+            }
+            switchScreen(target);
+        }
+    });
+
+    // 定时任务
+    updateClock();
+    setInterval(updateClock, 30000);
+    setInterval(checkAutoReply, 60000);
+
+    // 应用全局设置
+    applyGlobalFont(db.fontUrl);
+    applyGlobalCss(db.globalCss);
+    applyFontSize(db.fontSizeScale || 1.0);
+    applyPomodoroBackgrounds();
+    if (typeof applyThemeSettings === 'function') applyThemeSettings();
+
+    if (typeof db.globalToastEnabled === 'undefined') {
+        db.globalToastEnabled = true;
+    }
+
+    // 初始化各个模块
+    setupGlobalRescueGesture(); // 全局救援手势
+    setupHomeScreen();
+    setupChatListScreen();
+    setupContactsScreen();
+    setupBottomNavigation();
+    setupAddCharModal();
+    setupChatRoom();
+    setupChatSettings();
+    setupApiSettingsApp();
+    setupWallpaperApp();
+    await setupStickerSystem();
+    setupPresetFeatures();
+    setupVoiceMessageSystem();
+    setupPhotoVideoSystem();
+    setupImageRecognition();
+    setupWalletSystem();
+    setupGiftSystem();
+    setupTimeSkipSystem();
+    setupGalleryManagement();
+    
+    // 错误处理包裹的模块初始化
+    try { setupArchiveApp(); } catch(e) { console.error("setupArchiveApp failed:", e); }
+    try { setupWorldBookApp(); } catch(e) { console.error("setupWorldBookApp failed:", e); }
+    try { setupGroupChatSystem(); } catch(e) { console.error("setupGroupChatSystem failed:", e); }
+    try { setupCustomizeApp(); } catch(e) { console.error("setupCustomizeApp failed:", e); }
+    try { setupTutorialApp(); } catch(e) { console.error("setupTutorialApp failed:", e); }
+    
+    checkForUpdates();
+    setupPeekFeature();
+    setupMemoryJournalScreen(); 
+    setupDeleteHistoryChunk();
+    setupForumBindingFeature();
+    setupForumFeature();
+    setupShareModal();
+    setupStorageAnalysisScreen();
+    setupPomodoroApp();
+    setupPomodoroSettings();
+    setupPomodoroGlobalSettings(); 
+    setupInsWidgetAvatarModal();
+    setupHeartPhotoModal();
+    setupMoreCardBgModal();
+    if (typeof setupShopSystem === 'function') setupShopSystem();
+    // if (typeof initKeyboardDetection === 'function') initKeyboardDetection();
+    if (window.BatteryInteraction) window.BatteryInteraction.init();
+    if (typeof initMoreMenu === 'function') initMoreMenu();
+    if (typeof setupPhoneScreen === 'function') setupPhoneScreen();
+    if (typeof initCotSettings === 'function') initCotSettings();
+    if (window.VideoCallModule) window.VideoCallModule.init();
+
+    // 全局事件绑定
+    const delWBBtn = document.getElementById('delete-selected-world-books-btn');
+    if(delWBBtn) delWBBtn.addEventListener('click', deleteSelectedWorldBooks);
+    
+    const cancelWBBtn = document.getElementById('cancel-wb-multi-select-btn');
+    if(cancelWBBtn) cancelWBBtn.addEventListener('click', exitWorldBookMultiSelectMode);
+    
+    if(window.GitHubMgr) {
+        window.GitHubMgr.init();
+    }
+
+    // 自动尝试拉取模型列表
+    if (window.fetchAndPopulateModels && db.apiSettings && db.apiSettings.url && db.apiSettings.key) {
+        // 稍微延迟一点，确保 API 设置 DOM 已加载
+        setTimeout(() => {
+            window.fetchAndPopulateModels(true);
+        }, 1000);
+    }
+
+    // 检查并请求持久化存储 (抗系统清理)
+    if (typeof checkAndRequestPersistence === 'function') {
+        setTimeout(checkAndRequestPersistence, 2000); // 延迟一点，避免与初始化逻辑冲突
+    }
+};
+
+async function checkAutoReply() {
+    const now = Date.now();
+    for (const char of db.characters) {
+        if (char.autoReply && char.autoReply.enabled) {
+            const intervalMs = (char.autoReply.interval || 60) * 60 * 1000;
+            const lastTriggerTime = char.autoReply.lastTriggerTime || 0;
+            
+            // 检查上次触发时间
+            if (now - lastTriggerTime < intervalMs) continue;
+
+            let lastMsgTime = 0;
+            if (char.history && char.history.length > 0) {
+                lastMsgTime = char.history[char.history.length - 1].timestamp;
+            } else {
+                // 如果没有历史记录，暂不触发，或者可以设置为创建时间
+                continue;
+            }
+
+            // 检查无操作时间 (最后一条消息到现在的时间)
+            if (now - lastMsgTime > intervalMs) {
+                console.log(`Auto-reply triggered for ${char.remarkName}`);
+                char.autoReply.lastTriggerTime = now;
+                await saveData(); // 先保存触发时间，防止重复触发
+                await getAiReply(char.id, 'private', true);
+            }
+        }
+    }
+}
+
+// === 登录界面与逻辑 ===
+function renderLoginOverlay() {
+    // 防止重复生成
+    if (document.getElementById('login-overlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'login-overlay';
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.85); z-index: 99999; 
+        display: flex; flex-direction: column; 
+        justify-content: center; align-items: center; 
+        backdrop-filter: blur(5px);
+    `;
+
+    // 注入 CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .browser {
+            width: 100%;
+            height: 100%;
+            background: #c7cccd;
+            border-radius: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            box-shadow: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* 标签栏 */
+        .tabs-head {
+            background-color: #bababa;
+            height: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-left: 15px;
+            padding-right: 12px;
+        }
+
+        .tabs-head .tab-open {
+            width: 100px;
+            height: 32px;
+            border-radius: 8px 8px 0 0;
+            background-color: #eaf5ff;
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            position: relative;
+        }
+
+        .tabs-head .tab-open .rounded-l {
+            position: absolute;
+            background-color: #eaf5ff;
+            width: 20px; height: 20px;
+            bottom: 0; left: -20px;
+            overflow: hidden;
+        }
+        .tabs-head .tab-open .rounded-l .mask-round {
+            width: 100%; height: 100%;
+            background-color: #bababa;
+            border-radius: 0 0 10px 0;
+        }
+
+        .tabs-head .tab-open .rounded-r {
+            position: absolute;
+            background-color: #eaf5ff;
+            width: 20px; height: 20px;
+            bottom: 0; right: -20px;
+            overflow: hidden;
+        }
+        .tabs-head .tab-open .rounded-r .mask-round {
+            width: 100%; height: 100%;
+            background-color: #bababa;
+            border-radius: 0 0 0 10px;
+        }
+
+        .tabs-head .tab-open span { color: #555; font-size: 12px; font-weight: 600; }
+        .tabs-head .tab-open .close-tab { color: #999; font-size: 10px; cursor: pointer; }
+
+        .window-opt { display: flex; gap: 6px; margin-bottom: 10px; }
+        .window-opt button {
+            width: 10px; height: 10px; border-radius: 50%; border: none; padding: 0;
+            cursor: pointer;
+        }
+        .window-opt button:nth-child(1) { background: #ff5f57; }
+        .window-opt button:nth-child(2) { background: #ffbd2e; }
+        .window-opt button:nth-child(3) { background: #28c940; }
+
+        /* 地址栏 */
+        .head-browser {
+            background-color: #eaf5ff;
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #c7e0f8;
+        }
+        .head-browser button { color: #888; background: none; border: none; font-size: 14px; cursor: pointer; }
+        .head-browser input {
+            flex: 1;
+            background: #fdffff;
+            border: 1px solid #c7e0f8;
+            border-radius: 15px;
+            height: 26px;
+            padding: 0 15px;
+            font-size: 12px;
+            color: #666;
+            outline: none;
+            text-align: center;
+        }
+
+        /* 内容区域 */
+        .browser-content {
+            flex: 1;
+            background: #fdffff;
+            padding: 30px 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; /* 垂直居中 */
+        }
+
+        /* 限制内容最大宽度，优化排版 */
+        .login-form-container {
+            width: 100%;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #555;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .login-divider {
+            font-size: 12px;
+            color: #c7e0f8;
+            margin-bottom: 35px;
+            font-family: monospace;
+            text-align: center;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 14px 15px;
+            margin-bottom: 18px;
+            border: 2px solid #eaf5ff;
+            background: #f8fdff;
+            border-radius: 12px;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.3s;
+            box-sizing: border-box;
+            color: #555;
+        }
+        .login-input:focus {
+            border-color: #c7e0f8;
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(199, 224, 248, 0.2);
+        }
+        .login-input::placeholder { color: #bababa; }
+
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            margin-top: 15px;
+            background: #c7e0f8;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(199, 224, 248, 0.4);
+        }
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(199, 224, 248, 0.6);
+            filter: brightness(0.95);
+        }
+        .login-btn:active { transform: translateY(1px); }
+
+        .login-hint {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #007aff;
+            text-align: center;
+            line-height: 1.6;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .login-hint:hover {
+            color: #0056b3;
+        }
+
+        /* 强制弹窗样式 */
+        #forced-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 100000;
+            display: flex; justify-content: center; align-items: center;
+            backdrop-filter: blur(3px);
+            animation: fadeIn 0.3s;
+        }
+        #forced-modal-window {
+            background: #fff; width: 85%; max-width: 320px;
+            border-radius: 12px; padding: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            text-align: left;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        #forced-modal-title {
+            font-size: 18px; font-weight: bold; color: #333;
+            margin-bottom: 15px; text-align: center;
+        }
+        #forced-modal-content {
+            font-size: 14px; color: #555; line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        #forced-modal-btn {
+            width: 100%; padding: 12px;
+            background: #ccc; color: #fff;
+            border: none; border-radius: 8px;
+            font-size: 14px; cursor: not-allowed;
+            transition: background 0.3s;
+        }
+        #forced-modal-btn.active {
+            background: #007aff; cursor: pointer;
+        }
+
+        #login-msg {
+            margin-top: 15px;
+            font-size: 13px;
+            min-height: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+    `;
+    document.head.appendChild(style);
+
+    overlay.innerHTML = `
+        <div class="browser">
+            <div class="tabs-head">
+                <div class="tabs">
+                    <div class="tab-open">
+                        <div class="rounded-l"><div class="mask-round"></div></div>
+                        <span>UwU</span>
+                        <div class="close-tab">✕</div>
+                        <div class="rounded-r"><div class="mask-round"></div></div>
+                    </div>
+                </div>
+                <div class="window-opt">
+                    <button></button>
+                    <button></button>
+                    <button class="window-close"></button>
+                </div>
+            </div>
+
+            <div class="head-browser">
+                <button>←</button>
+                <button style="opacity:0.5">→</button>
+                <input type="text" value="UwUbibobibo.com" readonly>
+                <button>⋮</button>
+                <button class="star">✰</button>
+            </div>
+
+            <div class="browser-content">
+                <div class="login-form-container">
+                    <div class="login-title">小章鱼UwU登录系统</div>
+                    <div class="login-divider">₊┈𓏴𓏴₊-୨★୧-₊𓏴𓏴┈₊</div>
+                    
+                    <input type="text" id="login-uid" placeholder="请输入账号 ID" class="login-input">
+                    <input type="password" id="login-pwd" placeholder="请输入密码" class="login-input">
+                    
+                    <button id="btn-login-submit" class="login-btn">登 录</button>
+                    <div class="login-hint" id="forgot-pwd-link">忘记密码？(点击查看获取方法)</div>
+                    <p id="login-msg"></p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.prepend(overlay);
+
+    // 绑定事件 (确保元素存在后才绑定)
+    document.getElementById('btn-login-submit').onclick = tryLogin;
+    document.getElementById('login-pwd').onkeypress = function(e) {
+        if (e.key === 'Enter') tryLogin();
+    };
+    
+    // 绑定关闭按钮（可选：清空输入）
+    overlay.querySelector('.window-close').onclick = () => {
+        document.getElementById('login-uid').value = '';
+        document.getElementById('login-pwd').value = '';
+        document.getElementById('login-msg').textContent = '';
+    };
+
+    // 忘记密码弹窗逻辑
+    const forgotLink = document.getElementById('forgot-pwd-link');
+    if (forgotLink) {
+        forgotLink.onclick = () => {
+            const modal = document.createElement('div');
+            modal.id = 'forced-modal-overlay';
+            modal.innerHTML = `
+                <div id="forced-modal-window">
+                    <div id="forced-modal-title">获取账密方法</div>
+                    <div id="forced-modal-content">
+                        请前往 <span style="color: #ff453a;">dc尾巴镇-ee小手机主频道</span><br>发送<span style="color: #ff453a;">/小手机</span>指令获取账密。<br><br>
+                        <strong>注意事项：</strong><br>
+                        1. 输入/小手机时，输入框上方会自动弹出<strong style="color: #ff453a;">小狗图标</strong>的可点击指令，点击小狗图标指令<strong style="color: #ff453a;">再点击发送</strong><br>
+                        2. 如未自动出现带图标的指令，优先更新discord或使用网页端<br>
+                        3. 发送指令时<strong>【仅限ee小手机频道】</strong>，其他频道无效<br>
+                        4. 如发送指令未能成功获取账密，请<strong style="color: #ff453a;">自行删除</strong>那条消息
+                    </div>
+                    <button id="forced-modal-btn" disabled>请阅读 (10s)</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            const btn = document.getElementById('forced-modal-btn');
+            let timeLeft = 10;
+            
+            const timer = setInterval(() => {
+                timeLeft--;
+                if (timeLeft > 0) {
+                    btn.textContent = `请阅读 (${timeLeft}s)`;
+                } else {
+                    clearInterval(timer);
+                    btn.textContent = '我已了解';
+                    btn.disabled = false;
+                    btn.classList.add('active');
+                    btn.onclick = () => modal.remove();
+                }
+            }, 1000);
+        };
+    }
+}
+
+async function tryLogin() {
+    // 获取元素
+    const uidEl = document.getElementById('login-uid');
+    const pwdEl = document.getElementById('login-pwd');
+    const msgEl = document.getElementById('login-msg');
+    const btn = document.getElementById('btn-login-submit');
+
+    // 安全检查
+    if (!uidEl || !pwdEl) {
+        console.error("找不到登录输入框，请刷新页面");
+        return;
+    }
+
+    const uid = uidEl.value.trim();
+    const pwd = pwdEl.value.trim();
+
+    if (!uid || !pwd) {
+        msgEl.textContent = "请输入完整的账号和密码";
+        return;
+    }
+
+    // UI 反馈：正在验证
+    msgEl.style.color = "#007aff";
+    msgEl.textContent = "正在连接服务器验证...";
+    const originalBtnText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "验证中...";
+
+    try {
+        // 调用新 API 验证
+        const res = await fetch('https://puppy-subscription-api.zeabur.app/api/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ account: uid, password: pwd })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            // 验证成功
+            msgEl.style.color = "#32d74b";
+            msgEl.textContent = "验证通过，正在进入...";
+
+            // 保存登录状态
+            localStorage.setItem('ephone_auth', 'true');
+
+            // 初始化数据库 (无参数，使用默认库名)
+            initDatabase();
+            
+            // 移除遮罩
+            const overlay = document.getElementById('login-overlay');
+            if (overlay) {
+                overlay.style.transition = 'opacity 0.5s ease';
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 500);
+            }
+            
+            // 启动 App
+            init(); 
+        } else {
+            // 验证失败
+            throw new Error(data.message || '账号或密码错误');
+        }
+    } catch (error) {
+        console.error(error);
+        msgEl.style.color = "#ff453a";
+        msgEl.textContent = "验证失败: " + (error.message || "网络错误");
+        btn.style.background = "#ff453a";
+        setTimeout(() => btn.style.background = "#007aff", 500);
+    } finally {
+        // 恢复按钮状态
+        btn.disabled = false;
+        btn.textContent = originalBtnText;
+    }
+}
+
+// === 主入口 ===
+document.addEventListener('DOMContentLoaded', () => {
+    // 检查本地是否已登录
+    const isAuth = localStorage.getItem('ephone_auth');
+
+    if (isAuth === 'true') {
+        console.log(`[Auto Login] 检测到已授权状态`);
+        try {
+            // 已登录：直接初始化数据库并启动
+            initDatabase();
+            init(); 
+        } catch (e) {
+            console.error("自动登录出错，重置状态:", e);
+            localStorage.removeItem('ephone_auth');
+            renderLoginOverlay();
+        }
+    } else {
+        // 未登录：显示登录框
+        renderLoginOverlay();
+    }
+});
+
+// === 全局救援手势 (三击清空全局CSS) ===
+// 将变量提升到顶层，防止混淆器错误处理闭包作用域
+let globalRescueClickCount = 0;
+let globalRescueLastClickTime = 0;
+
+function setupGlobalRescueGesture() {
+    const CLICK_TIMEOUT = 400; // 400ms 间隔
+
+    document.addEventListener('click', (e) => {
+        const now = Date.now();
+        const gap = now - globalRescueLastClickTime;
+        
+        if (gap < CLICK_TIMEOUT) {
+            globalRescueClickCount++;
+        } else {
+            globalRescueClickCount = 1;
+        }
+        
+        
+        globalRescueLastClickTime = now;
+
+        if (globalRescueClickCount === 5) {
+            console.log('[GlobalGesture] Triggering rescue panel!');
+            showGlobalRescuePanel();
+            globalRescueClickCount = 0;
+        }
+    }, true); // 使用捕获阶段，确保尽早触发
+}
+
+function showGlobalRescuePanel() {
+    // 防止重复创建
+    if (document.getElementById('global-rescue-panel')) return;
+
+    const panel = document.createElement('div');
+    panel.id = 'global-rescue-panel';
+    panel.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); z-index: 999999;
+        display: flex; flex-direction: column;
+        justify-content: center; align-items: center;
+        backdrop-filter: blur(5px);
+    `;
+
+    panel.innerHTML = `
+        <div style="background: #fff; width: 85%; max-width: 320px; border-radius: 16px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div style="width: 60px; height: 60px; background: #ffebee; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                <svg style="width: 32px; height: 32px; color: #d32f2f;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </div>
+            <h3 style="margin: 0 0 10px; color: #333; font-size: 18px;">全局样式救援</h3>
+            <p style="margin: 0 0 20px; color: #666; font-size: 14px; line-height: 1.5;">
+                检测到您快速点击了五次屏幕。<br>
+                如果因为错误的全局 CSS 导致界面错乱，您可以在这里一键清空。
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button id="rescue-clear-btn" style="background: #d32f2f; color: #fff; border: none; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;">清空全局 CSS</button>
+                <button id="rescue-cancel-btn" style="background: #f5f5f5; color: #666; border: none; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;">取消</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(panel);
+
+    document.getElementById('rescue-clear-btn').onclick = async () => {
+        if (confirm('确定要清空全局 CSS 吗？此操作不可撤销。')) {
+            db.globalCss = '';
+            await saveData();
+            applyGlobalCss('');
+            // 更新设置页面的文本框（如果存在）
+            const textarea = document.getElementById('global-beautification-css');
+            if (textarea) textarea.value = '';
+            
+            showToast('全局 CSS 已清空，界面应已恢复正常。');
+            panel.remove();
+        }
+    };
+
+    document.getElementById('rescue-cancel-btn').onclick = () => {
+        panel.remove();
+    };
+}

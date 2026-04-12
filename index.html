@@ -16,6 +16,7 @@
 
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://unpkg.com/dompurify@2.3.8/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <script src="https://cdn.bootcdn.net/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
@@ -649,6 +650,7 @@
                 <button class="btn btn-danger" id="delete-selected-btn" style="width: auto; padding: 8px 16px;">删除已选</button>
                 <button class="btn btn-primary" id="favorite-selected-btn" style="display: none; width: auto; padding: 8px 16px;">收藏选中</button>
                 <button class="btn btn-primary" id="favorite-merge-btn" style="display: none; width: auto; padding: 8px 16px;" title="将选中的多条消息合并为一条收藏">合并为一条</button>
+                <button class="btn btn-primary" id="forward-selected-btn" style="display: none; width: auto; padding: 8px 16px;">转发选中</button>
             </div>
             <div id="capture-mode-bar">
                 <span id="capture-select-count">已选择 0 项</span>
@@ -3191,6 +3193,7 @@
                 <div class="action-sheet-title">创建新角色</div>
                 <button class="action-sheet-button" id="method-manual-btn">手动创建</button>
                 <button class="action-sheet-button" id="method-import-doc-btn">导入文档</button>
+                <button class="action-sheet-button" id="method-import-ovo-card-btn">导入专属角色卡（非酒馆）</button>
                 <button class="action-sheet-button danger" id="method-cancel-btn">取消</button>
             </div>
         </div>
@@ -3432,6 +3435,21 @@
                 <h3 id="group-recipient-selection-title">选择收件人</h3>
                 <ul id="group-recipient-selection-list"></ul>
                 <button class="btn btn-primary" id="confirm-group-recipient-btn" style="margin-top: 20px;">确认</button>
+            </div>
+        </div>
+
+        <!-- 转发消息选择目标模态框 -->
+        <div id="forward-message-modal" class="modal-overlay">
+            <div class="modal-window" style="max-height: 80vh; display: flex; flex-direction: column;">
+                <h3>选择转发对象（可多选）</h3>
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <input type="text" id="forward-search-input" placeholder="搜索联系人或群聊..." style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #eee;">
+                </div>
+                <ul id="forward-target-list" class="member-selection-list" style="flex: 1; overflow-y: auto; padding: 0; margin: 0; border: 1px solid #eee; border-radius: 8px; padding: 5px;"></ul>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="btn btn-primary" id="confirm-forward-btn" style="flex:1;">确认转发</button>
+                    <button class="btn btn-neutral" id="cancel-forward-btn" style="flex:1;">取消</button>
+                </div>
             </div>
         </div>
 
@@ -3837,6 +3855,19 @@
                                 </div>
                             </div>
 
+                            <!-- 消息弹窗设置 -->
+                            <div class="kkt-group" style="margin-top:15px;">
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">消息弹窗</div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                            <input type="checkbox" id="setting-bg-toast-enabled" checked>
+                                            <span class="kkt-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- 小剧场设置 -->
                             <div class="kkt-group" style="margin-top:15px;">
                                 <div class="kkt-item">
@@ -4142,15 +4173,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="kkt-item">
-                                    <div class="kkt-item-label">后台消息弹窗通知</div>
-                                    <div class="kkt-item-control">
-                                        <label class="kkt-switch">
-                                            <input type="checkbox" id="setting-bg-toast-enabled" checked>
-                                            <span class="kkt-slider"></span>
-                                        </label>
-                                    </div>
-                                </div>
                             </div>
 
                             <button type="button" class="kkt-danger-btn" id="block-character-btn">拉黑角色</button>
@@ -4213,18 +4235,20 @@
                                         <span id="setting-phone-control-view-limit-value" style="min-width:28px;text-align:right;">10</span> 条
                                     </div>
                                 </div>
-                                <div class="kkt-item" id="setting-phone-control-folder-filter" style="display:none;">
-                                    <div class="kkt-item-label">只让角色看到指定分组的角色</div>
+                                <div class="kkt-item" id="setting-phone-control-char-filter" style="display:none;">
+                                    <div class="kkt-item-label">只让角色看到指定的角色</div>
                                     <div class="kkt-item-control">
                                         <label class="kkt-switch">
-                                            <input type="checkbox" id="setting-phone-control-folder-filter-enabled">
+                                            <input type="checkbox" id="setting-phone-control-char-filter-enabled">
                                             <span class="kkt-slider"></span>
                                         </label>
                                     </div>
                                 </div>
-                                <div class="kkt-item" id="setting-phone-control-folder-selection" style="display:none;">
-                                    <div class="kkt-item-label">可见分组</div>
-                                    <div class="kkt-item-control" id="setting-phone-control-folder-checkboxes"></div>
+                                <div class="kkt-item" id="setting-phone-control-char-selection" style="display:none;">
+                                    <div class="kkt-item-label">可见角色</div>
+                                    <div class="kkt-item-control">
+                                        <button type="button" class="btn btn-small btn-secondary" id="setting-phone-control-select-chars-btn">选择角色</button>
+                                    </div>
                                 </div>
                                 <div class="kkt-item" id="setting-phone-control-actions" style="display:none;">
                                     <button type="button" class="btn btn-small btn-secondary" id="setting-phone-control-log-btn">查看操控日志</button>
@@ -4262,6 +4286,25 @@
                                     </div>
                                 </div>
                             </div>
+                            <!-- 手机掌控：选择可见角色弹窗 -->
+                            <div id="phone-control-char-select-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10001;align-items:center;justify-content:center;padding:20px;">
+                                <div style="background:#fff;border-radius:12px;width:90%;max-width:400px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,0.2);">
+                                    <div style="padding:16px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+                                        <span style="font-weight:600;font-size:16px;">选择可见角色</span>
+                                        <label style="font-size:14px;color:#333;cursor:pointer;display:flex;align-items:center;gap:6px;margin:0;">
+                                            <input type="checkbox" id="phone-control-char-select-all" style="margin:0;"> 全选
+                                        </label>
+                                    </div>
+                                    <div id="phone-control-char-list" style="flex:1;overflow-y:auto;padding:10px;min-height:200px;">
+                                        <!-- JS populated -->
+                                    </div>
+                                    <div style="padding:16px;border-top:1px solid #eee;display:flex;gap:10px;">
+                                        <button type="button" class="btn btn-neutral" id="phone-control-char-cancel-btn" style="flex:1;">取消</button>
+                                        <button type="button" class="btn btn-primary" id="phone-control-char-confirm-btn" style="flex:1;">确认</button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div id="phone-control-recycle-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;align-items:center;justify-content:center;padding:20px;">
                                 <div style="background:#fff;border-radius:12px;width:90%;max-width:480px;min-width:320px;max-height:70vh;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.2);">
                                     <div style="padding:16px;border-bottom:1px solid #eee;font-weight:600;">回收站</div>
@@ -4821,6 +4864,25 @@
                                 </div>
                             </div>
 
+                            <!-- 角色卡导出 -->
+                            <div class="kkt-group" style="margin-top:15px;">
+                                <div style="margin-bottom: 10px; padding-top: 5px; padding-left: 8px;">
+                                    <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">导出角色卡</div>
+                                    <p style="font-size: 11px; color: #999; margin: 5px 0 0;">导出当前角色的专属角色卡（包含所有配置）</p>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">导出为 PNG 格式</div>
+                                    <div class="kkt-item-control">
+                                        <button type="button" id="export-ovo-card-png-btn" class="btn btn-small btn-primary" style="padding: 4px 12px;">导出</button>
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">导出为 JSON 格式</div>
+                                    <div class="kkt-item-control">
+                                        <button type="button" id="export-ovo-card-json-btn" class="btn btn-small btn-secondary" style="padding: 4px 12px;">导出</button>
+                                    </div>
+                                </div>
+                            </div>
 
                         </div>
 
@@ -5597,7 +5659,10 @@
 
             <!-- 日记多选操作栏 -->
             <div id="journal-multi-select-bar" style="display: none;">
-                <span id="journal-select-count">已选 0 篇</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="journal-select-count">已选 0 篇</span>
+                    <button class="btn btn-text btn-small" id="journal-select-all-btn">全选</button>
+                </div>
                 <div style="display: flex; gap: 10px;">
                     <button class="btn btn-danger btn-small" id="journal-batch-delete-btn">删除</button>
                     <button class="btn btn-primary btn-small" id="journal-merge-btn">合并精简</button>
@@ -5658,8 +5723,9 @@
             <div id="favorites-multi-select-bar" class="favorites-multi-select-bar" style="display: none;">
                 <span id="favorites-select-count">已选 0 项</span>
                 <div class="favorites-multi-select-actions">
-                    <button type="button" class="btn btn-neutral btn-small" id="favorites-multi-select-cancel-btn">取消</button>
+                    <button type="button" class="btn btn-neutral btn-small" id="favorites-select-all-btn">全选</button>
                     <button type="button" class="btn btn-danger btn-small" id="favorites-batch-delete-btn">删除已选</button>
+                    <button type="button" class="btn btn-neutral btn-small" id="favorites-multi-select-cancel-btn">取消</button>
                 </div>
             </div>
         </div>
@@ -5952,8 +6018,8 @@
             </header>
             <main class="content">
                 <div class="kkt-settings-container">
-                    <div class="kkt-group">
-                        <div class="kkt-group-title">论坛专属API设置</div>
+                    <div class="kkt-group forum-setting-group">
+                        <div class="kkt-group-title"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px; vertical-align:text-bottom; color:var(--primary-color);"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path><path d="M12 6v6l4 2"></path></svg>论坛专属API设置</div>
                         <div class="kkt-item">
                             <div class="kkt-item-label">使用论坛专属API</div>
                             <div class="kkt-item-control">
@@ -6004,8 +6070,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="kkt-group">
-                        <div class="kkt-group-title">AI生成设置</div>
+                    <div class="kkt-group forum-setting-group">
+                        <div class="kkt-group-title"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px; vertical-align:text-bottom; color:var(--primary-color);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>AI生成设置</div>
                         <div class="kkt-item">
                             <div class="kkt-item-label">个人资料</div>
                             <div class="kkt-item-control">
@@ -6049,8 +6115,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="kkt-group">
-                        <div class="kkt-group-title">私信</div>
+                    <div class="kkt-group forum-setting-group">
+                        <div class="kkt-group-title"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px; vertical-align:text-bottom; color:var(--primary-color);"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 10h.01M12 10h.01M16 10h.01"></path></svg>私信</div>
                         <div class="kkt-item">
                             <div class="kkt-item-label">私信生成NPC个数</div>
                             <div class="kkt-item-control">
@@ -6059,8 +6125,8 @@
                         </div>
                         <p style="font-size:12px;color:#888;margin:4px 0 8px 0;">每次点击「生成陌生人私信」时生成的私信条数。若开启角色小号，其中会按占比有一部分是角色小号（占用条数）。</p>
                     </div>
-                    <div class="kkt-group">
-                        <div class="kkt-group-title">角色小号私信</div>
+                    <div class="kkt-group forum-setting-group">
+                        <div class="kkt-group-title"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px; vertical-align:text-bottom; color:var(--primary-color);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>角色小号私信</div>
                         <div class="kkt-item">
                             <div class="kkt-item-label">允许角色用小号私信你</div>
                             <div class="kkt-item-control">
@@ -6282,6 +6348,32 @@
                     </div>
                 </form>
             </div>
+        </div>
+
+        <div id="app-settings-screen" class="screen">
+            <header class="app-header">
+                <button class="back-btn" data-target="home-screen">‹</button>
+                <div class="title-container">
+                    <h1 class="title">应用设置</h1>
+                </div>
+                <div class="placeholder"></div>
+            </header>
+            <main class="content">
+                <div class="kkt-settings-container">
+                    <div class="kkt-group" style="margin-top: 15px;">
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">全局消息弹窗通知</div>
+                            <div class="kkt-item-control">
+                                <label class="kkt-switch">
+                                    <input type="checkbox" id="setting-global-toast-enabled" checked>
+                                    <span class="kkt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <p style="font-size: 12px; color: #999; margin: 10px 15px;">开启后默认允许消息弹窗。注意：角色的单人弹窗设置优先级高于此全局设置。</p>
+                    </div>
+                </div>
+            </main>
         </div>
 
         <div id="storage-analysis-screen" class="screen">
@@ -8111,6 +8203,7 @@
     <input type="file" id="import-partial-data-input" accept=".ee" style="display: none;">
     <div id="storage-screen" class="screen"></div>
     <input type="file" id="character-card-input" accept="image/png,application/json" style="display: none;">
+    <input type="file" id="ovo-character-card-input" accept="image/png,application/json" style="display: none;">
     <!-- INS Widget Avatar Modal -->
     <div id="ins-widget-avatar-modal" class="modal-overlay">
         <div class="modal-window">

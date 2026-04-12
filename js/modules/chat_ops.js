@@ -138,6 +138,10 @@ function handleMessageLongPress(messageWrapper, x, y) {
                 }
                 // 提取纯文本
                 let text = message.content || '';
+                const textMatch = text.match(/^\[.*?：([\s\S]*?)\]$/);
+                if (textMatch && textMatch[1]) {
+                    text = textMatch[1];
+                }
                 text = text.replace(/\[.*?\]/g, '').replace(/[\(（].*?[\)）]/g, '').replace(/「.*?」/g, '').trim();
                 if (!text) {
                     showToast('消息内容为空');
@@ -199,6 +203,14 @@ function handleMessageLongPress(messageWrapper, x, y) {
     if (!isInvisibleMessage) {
         menuItems.push({label: '多选收藏', action: () => enterMultiSelectMode(messageId, 'favorite')});
     }
+    
+    // 新增：转发选项
+    menuItems.push({
+        label: '转发',
+        action: () => {
+            enterMultiSelectMode(messageId, 'forward');
+        }
+    });
 
     if (menuItems.length > 0) {
         triggerHapticFeedback('medium');
@@ -581,25 +593,35 @@ function enterMultiSelectMode(initialMessageId, mode = 'delete') {
     chatRoomHeaderSelect.style.display = 'flex';
     document.querySelector('.chat-input-wrapper').style.display = 'none';
     
+    const delBtn = document.getElementById('delete-selected-btn');
+    const favBtn = document.getElementById('favorite-selected-btn');
+    const mergeBtn = document.getElementById('favorite-merge-btn');
+    const fwdBtn = document.getElementById('forward-selected-btn');
+
     if (mode === 'delete') {
         multiSelectBar.classList.add('visible');
         document.getElementById('multi-select-title').textContent = '选择消息';
-        const delBtn = document.getElementById('delete-selected-btn');
-        const favBtn = document.getElementById('favorite-selected-btn');
         if (delBtn) delBtn.style.display = '';
         if (favBtn) favBtn.style.display = 'none';
+        if (mergeBtn) mergeBtn.style.display = 'none';
+        if (fwdBtn) fwdBtn.style.display = 'none';
     } else if (mode === 'capture') {
         document.getElementById('capture-mode-bar').classList.add('visible');
         document.getElementById('multi-select-title').textContent = '选择截图范围';
     } else if (mode === 'favorite') {
         multiSelectBar.classList.add('visible');
         document.getElementById('multi-select-title').textContent = '选择要收藏的消息';
-        const delBtn = document.getElementById('delete-selected-btn');
-        const favBtn = document.getElementById('favorite-selected-btn');
-        const mergeBtn = document.getElementById('favorite-merge-btn');
         if (delBtn) delBtn.style.display = 'none';
+        if (fwdBtn) fwdBtn.style.display = 'none';
         if (favBtn) { favBtn.style.display = ''; favBtn.disabled = selectedMessageIds.size === 0; }
         if (mergeBtn) { mergeBtn.style.display = ''; mergeBtn.disabled = selectedMessageIds.size === 0; }
+    } else if (mode === 'forward') {
+        multiSelectBar.classList.add('visible');
+        document.getElementById('multi-select-title').textContent = '选择要转发的消息';
+        if (delBtn) delBtn.style.display = 'none';
+        if (favBtn) favBtn.style.display = 'none';
+        if (mergeBtn) mergeBtn.style.display = 'none';
+        if (fwdBtn) { fwdBtn.style.display = ''; fwdBtn.disabled = selectedMessageIds.size === 0; }
     }
     
     chatRoomScreen.classList.add('multi-select-active');
@@ -619,8 +641,12 @@ function exitMultiSelectMode() {
     document.getElementById('capture-mode-bar').classList.remove('visible');
     const delBtn = document.getElementById('delete-selected-btn');
     const favBtn = document.getElementById('favorite-selected-btn');
+    const mergeBtn = document.getElementById('favorite-merge-btn');
+    const fwdBtn = document.getElementById('forward-selected-btn');
     if (delBtn) delBtn.style.display = '';
     if (favBtn) favBtn.style.display = 'none';
+    if (mergeBtn) mergeBtn.style.display = 'none';
+    if (fwdBtn) fwdBtn.style.display = 'none';
     
     chatRoomScreen.classList.remove('multi-select-active');
     selectedMessageIds.forEach(id => {
@@ -653,6 +679,10 @@ function toggleMessageSelection(messageId) {
         const mergeBtn = document.getElementById('favorite-merge-btn');
         if (favBtn) favBtn.disabled = selectedMessageIds.size === 0;
         if (mergeBtn) mergeBtn.disabled = selectedMessageIds.size === 0;
+    } else if (currentMultiSelectMode === 'forward') {
+        selectCount.textContent = `已选择 ${selectedMessageIds.size} 项`;
+        const fwdBtn = document.getElementById('forward-selected-btn');
+        if (fwdBtn) fwdBtn.disabled = selectedMessageIds.size === 0;
     }
 }
 
@@ -1260,3 +1290,201 @@ async function confirmInsertMessage() {
     
     showToast('新消息已插入');
 }
+
+// 打开转发选择目标弹窗
+function openForwardModal() {
+    if (selectedMessageIds.size === 0) {
+        showToast('请至少选择一条要转发的消息');
+        return;
+    }
+
+    const modal = document.getElementById('forward-message-modal');
+    const targetList = document.getElementById('forward-target-list');
+    const searchInput = document.getElementById('forward-search-input');
+    if (!modal || !targetList) return;
+
+    // 获取所有联系人(角色)和群聊
+    let allTargets = [];
+    db.characters.forEach(c => {
+        allTargets.push({
+            id: c.id,
+            type: 'private',
+            name: c.remarkName || c.realName || c.name,
+            avatar: c.avatar || 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg'
+        });
+    });
+    db.groups.forEach(g => {
+        allTargets.push({
+            id: g.id,
+            type: 'group',
+            name: g.name,
+            avatar: g.avatar || 'https://i.postimg.cc/mDMBh2R8/group-default.png'
+        });
+    });
+
+    // 渲染列表函数
+    const renderList = (targets) => {
+        targetList.innerHTML = '';
+        if (targets.length === 0) {
+            targetList.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">没有找到联系人</div>';
+            return;
+        }
+
+        targets.forEach(target => {
+            const li = document.createElement('li');
+            li.style.display = 'flex';
+            li.style.alignItems = 'center';
+            li.style.padding = '10px';
+            li.style.borderBottom = '1px solid #f0f0f0';
+            li.style.cursor = 'pointer';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = `${target.type}:${target.id}`;
+            checkbox.className = 'forward-target-checkbox';
+            checkbox.style.marginRight = '10px';
+            checkbox.style.width = '18px';
+            checkbox.style.height = '18px';
+
+            const avatar = document.createElement('img');
+            avatar.src = target.avatar;
+            avatar.className = 'squircle';
+            avatar.style.width = '40px';
+            avatar.style.height = '40px';
+            avatar.style.marginRight = '10px';
+            avatar.style.objectFit = 'cover';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = target.name;
+            nameSpan.style.flex = '1';
+            nameSpan.style.fontSize = '14px';
+            nameSpan.style.fontWeight = '500';
+
+            li.appendChild(checkbox);
+            li.appendChild(avatar);
+            li.appendChild(nameSpan);
+
+            // 点击整行触发选中
+            li.addEventListener('click', (e) => {
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                }
+            });
+
+            targetList.appendChild(li);
+        });
+    };
+
+    renderList(allTargets);
+
+    // 搜索功能
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.oninput = () => {
+            const keyword = searchInput.value.toLowerCase();
+            const filtered = allTargets.filter(t => t.name.toLowerCase().includes(keyword));
+            renderList(filtered);
+        };
+    }
+
+    modal.classList.add('visible');
+
+    // 绑定确认/取消按钮
+    document.getElementById('confirm-forward-btn').onclick = confirmForwardMessages;
+    document.getElementById('cancel-forward-btn').onclick = () => modal.classList.remove('visible');
+}
+
+// 确认转发消息
+async function confirmForwardMessages() {
+    const checkboxes = document.querySelectorAll('.forward-target-checkbox:checked');
+    if (checkboxes.length === 0) {
+        showToast('请至少选择一个转发目标');
+        return;
+    }
+
+    // 获取当前聊天中选中的消息
+    const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
+    if (!chat || !chat.history) return;
+
+    // 按时间顺序获取选中的消息内容
+    const messagesToForward = chat.history
+        .filter(m => selectedMessageIds.has(m.id))
+        .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+    let forwardCount = 0;
+
+    // 遍历选中的接收目标
+    for (const cb of checkboxes) {
+        const [targetType, targetId] = cb.value.split(':');
+        const targetChat = (targetType === 'private') ? db.characters.find(c => c.id === targetId) : db.groups.find(g => g.id === targetId);
+        
+        if (!targetChat) continue;
+        if (!targetChat.history) targetChat.history = [];
+
+        // 获取用户在这个聊天里的名字
+        const myName = (targetType === 'private') ? (targetChat.myName || '我') : (targetChat.me ? targetChat.me.nickname : '我');
+
+        // 转发每条消息
+        for (let i = 0; i < messagesToForward.length; i++) {
+            const originalMsg = messagesToForward[i];
+            let cleanText = '';
+
+            // 提取纯文本内容，去掉原本的 [xxx的消息：...] 等
+            if (typeof originalMsg.content === 'string') {
+                const match = originalMsg.content.match(/^\[.*?：([\s\S]*?)\]$/);
+                if (match && match[1]) {
+                    cleanText = match[1].trim();
+                } else {
+                    // 如果不是标准格式，直接取原内容但需要稍微清理可能的括号
+                    cleanText = originalMsg.content.replace(/^\[(.*?)\]$/, '$1').trim();
+                }
+            } else if (originalMsg.parts && originalMsg.parts.length > 0) {
+                // 如果是复合消息(通常新版不会，但以防万一)
+                cleanText = originalMsg.parts.map(p => p.text || '').join('');
+                const match = cleanText.match(/^\[.*?：([\s\S]*?)\]$/);
+                if (match && match[1]) cleanText = match[1].trim();
+            }
+
+            if (!cleanText) cleanText = "不支持转发的消息格式";
+
+            const newContent = `[${myName}的消息：${cleanText}]`;
+            
+            // 为了保证时间戳递增，在当前时间基础上微加偏移
+            const newTimestamp = Date.now() + i;
+
+            const newMessage = {
+                id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                role: 'user', // 转成用户发出的
+                content: newContent,
+                parts: [{type: 'text', text: newContent}],
+                timestamp: newTimestamp,
+                senderId: 'user_me'
+            };
+
+            targetChat.history.push(newMessage);
+        }
+
+        // 如果是私聊，更新一下状态
+        if (targetType === 'private' && typeof recalculateChatStatus === 'function') {
+            recalculateChatStatus(targetChat);
+        }
+
+        forwardCount++;
+    }
+
+    await saveData();
+    
+    // 更新外层聊天列表显示
+    if (typeof renderChatList === 'function') {
+        renderChatList();
+    }
+
+    // 关闭弹窗和多选模式
+    document.getElementById('forward-message-modal').classList.remove('visible');
+    exitMultiSelectMode();
+
+    showToast(`已成功转发 ${messagesToForward.length} 条消息给 ${forwardCount} 个联系人`);
+}
+
+// 供外部调用
+window.openForwardModal = openForwardModal;

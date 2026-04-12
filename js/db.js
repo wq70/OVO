@@ -75,7 +75,7 @@ const defaultWidgetSettings = {
 
 const defaultIcons = {
     'chat-list-screen': {name: '404', url: 'https://i.postimg.cc/VvQB8dQT/chan-143.png'},
-    'api-settings-screen': {name: 'api', url: 'https://i.postimg.cc/50FqT8GL/chan-125.png'},
+    'api-settings-screen': {name: 'api', url: 'https://i.postimg.cc/mr45mv5b/png-(103).png'},
     'wallpaper-screen': {name: '壁纸', url: 'https://i.postimg.cc/3wqFttL3/chan-90.png'},
     'world-book-screen': {name: '世界书', url: 'https://i.postimg.cc/prCWkrKT/chan-74.png'},
     'customize-screen': {name: '自定义', url: 'https://i.postimg.cc/vZVdC7gt/chan-133.png'},
@@ -177,8 +177,29 @@ const globalSettingKeys = [
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
 
-const appVersion = "3.18";
+const appVersion = "4.9";
 const updateLog = [
+    {
+        version: "4.9",
+        date: "2026-04-12",
+        notes: [
+            "4.9更新：",
+            "1.新增触感开关，默认开启",
+            "2.新增日记可以全选",
+            "3.适配 Markdown 格式的文字",
+            "4.新增收藏删除可以全选或者按照角色删除",
+            "5.优化角色高级清理",
+            "6.修复角色语音下载为空的问题",
+            "7.修复正则BUG问题",
+            "8.修复转账偶发点不动的情况",
+            "9.优化论坛大小号包括掉马的提示词",
+            "10.优化退出后聊天丢失的情况",
+            "11.修复跟随开场白导入导致白屏的BUG",
+            "12.新增转发消息",
+            "13.新增高级清理可以清除角色转账记录等",
+            "14.新增导出角色卡，是专属章鱼机的角色卡"
+        ]
+    },
     {
         version: "3.18",
         date: "2026-03-18",
@@ -648,6 +669,7 @@ var db = {
     globalMessageSentSound: '',
     globalIncomingCallSound: '',
     multiMsgSoundEnabled: false,
+    hapticEnabled: true,  // 触感反馈开关，默认开启
     soundPresets: [],
     galleryPresets: [],
     iconPresets: [],
@@ -774,21 +796,28 @@ function initDatabase() {
 
 // 数据保存与加载
 const saveData = async () => {
-    await dexieDB.transaction('rw', dexieDB.tables, async () => {
-        await dexieDB.characters.bulkPut(db.characters);
-        await dexieDB.groups.bulkPut(db.groups);
-        await dexieDB.worldBooks.bulkPut(db.worldBooks);
-        await dexieDB.myStickers.bulkPut(db.myStickers);
-        if (dexieDB.archives) await dexieDB.archives.bulkPut(db.archives || []);
+    try {
+        await dexieDB.transaction('rw', dexieDB.tables, async () => {
+            await dexieDB.characters.bulkPut(db.characters);
+            await dexieDB.groups.bulkPut(db.groups);
+            await dexieDB.worldBooks.bulkPut(db.worldBooks);
+            await dexieDB.myStickers.bulkPut(db.myStickers);
+            if (dexieDB.archives) await dexieDB.archives.bulkPut(db.archives || []);
 
-        const settingsPromises = globalSettingKeys.map(key => {
-            if (db[key] !== undefined) {
-                return dexieDB.globalSettings.put({ key: key, value: db[key] });
-            }
-            return null;
-        }).filter(p => p);
-        await Promise.all(settingsPromises);
-    });
+            const settingsPromises = globalSettingKeys.map(key => {
+                if (db[key] !== undefined) {
+                    return dexieDB.globalSettings.put({ key: key, value: db[key] });
+                }
+                return null;
+            }).filter(p => p);
+            await Promise.all(settingsPromises);
+        });
+    } catch (e) {
+        console.error("saveData failed:", e);
+        if (typeof showToast === 'function') {
+            showToast("保存数据失败: " + e.message);
+        }
+    }
 };
 
 const loadData = async () => {

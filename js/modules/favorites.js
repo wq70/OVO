@@ -285,9 +285,13 @@ function renderFavoritesList(filter) {
                 }).join('');
                 return `
                 <div class="favorites-group character-favorites-group">
-                    <div class="favorites-group-header">
+                    <div class="favorites-group-header" style="display: flex; align-items: center;">
                         <span class="favorites-group-name">${escapeHtml(g.characterName)}</span>
                         <span class="favorites-group-badge character-favorite-badge">角色收藏</span>
+                        <div style="flex: 1;"></div>
+                        <button class="icon-btn-simple favorites-group-delete-btn" data-chat-id="${g.characterId}" data-favorite-by="character" title="删除该角色所有收藏">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff4d4f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </button>
                     </div>
                     <div class="favorites-group-list">${itemsHtml}</div>
                 </div>`;
@@ -324,9 +328,13 @@ function renderFavoritesList(filter) {
                 }).join('');
                 return `
                 <div class="favorites-group" data-chat-id="${g.chatId}" data-chat-type="${g.chatType}">
-                    <div class="favorites-group-header">
+                    <div class="favorites-group-header" style="display: flex; align-items: center;">
                         <span class="favorites-group-name">${escapeHtml(g.chatName)}</span>
                         <span class="favorites-group-badge">${typeLabel}</span>
+                        <div style="flex: 1;"></div>
+                        <button class="icon-btn-simple favorites-group-delete-btn" data-chat-id="${g.chatId}" data-chat-type="${g.chatType}" data-favorite-by="user" title="删除该分组所有收藏">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff4d4f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </button>
                     </div>
                     <div class="favorites-group-list">${itemsHtml}</div>
                 </div>`;
@@ -392,6 +400,42 @@ function exitFavoritesMultiSelectMode() {
     if (deleteBtn) deleteBtn.style.display = '';
     const container = document.getElementById('favorites-list-container');
     if (container) container.querySelectorAll('.favorite-checkbox').forEach(cb => cb.classList.remove('checked'));
+    
+    // 恢复全选按钮文本
+    const selectAllBtn = document.getElementById('favorites-select-all-btn');
+    if (selectAllBtn) selectAllBtn.textContent = '全选';
+}
+
+function selectAllFavorites() {
+    const container = document.getElementById('favorites-list-container');
+    if (!container) return;
+    
+    const allCards = container.querySelectorAll('.favorite-card');
+    if (allCards.length === 0) return;
+    
+    if (selectedFavoriteIds.size === allCards.length) {
+        // 如果已经全选，则取消全选
+        selectedFavoriteIds.clear();
+        allCards.forEach(card => {
+            const cb = card.querySelector('.favorite-checkbox');
+            if (cb) cb.classList.remove('checked');
+        });
+        const selectAllBtn = document.getElementById('favorites-select-all-btn');
+        if (selectAllBtn) selectAllBtn.textContent = '全选';
+    } else {
+        // 否则全选
+        allCards.forEach(card => {
+            const id = card.dataset.favoriteId;
+            if (id) {
+                selectedFavoriteIds.add(id);
+                const cb = card.querySelector('.favorite-checkbox');
+                if (cb) cb.classList.add('checked');
+            }
+        });
+        const selectAllBtn = document.getElementById('favorites-select-all-btn');
+        if (selectAllBtn) selectAllBtn.textContent = '取消全选';
+    }
+    updateFavoritesSelectCount();
 }
 
 function deleteSelectedFavorites() {
@@ -401,6 +445,24 @@ function deleteSelectedFavorites() {
     saveData().then(() => {
         showToast('已删除');
         exitFavoritesMultiSelectMode();
+        renderFavoritesList(currentFavoritesFilter);
+    });
+}
+
+function deleteFavoritesByGroup(chatType, chatId, favoriteBy) {
+    if (!confirm('确定要删除该分组下的所有收藏记录吗？此操作不可恢复。')) return;
+    
+    db.favorites = (db.favorites || []).filter(f => {
+        if (favoriteBy === 'character') {
+            const key = f.characterId || f.chatId;
+            return !(f.favoriteBy === 'character' && key === chatId);
+        } else {
+            return !(f.favoriteBy !== 'character' && f.chatType === chatType && f.chatId === chatId);
+        }
+    });
+    
+    saveData().then(() => {
+        showToast('已删除该分组所有收藏');
         renderFavoritesList(currentFavoritesFilter);
     });
 }
@@ -521,9 +583,22 @@ function initFavoritesScreen() {
     const saveNoteBtn = document.getElementById('favorite-detail-save-note-btn');
     if (saveNoteBtn) saveNoteBtn.addEventListener('click', saveFavoriteNote);
 
-    // 收藏列表点击委托：多选时勾选/取消，否则进入详情
+    // 收藏列表点击委托：多选时勾选/取消，否则进入详情，处理分组删除
     const listContainer = document.getElementById('favorites-list-container');
-    if (listContainer) listContainer.addEventListener('click', onFavoritesListClick);
+    if (listContainer) {
+        listContainer.addEventListener('click', (e) => {
+            const deleteGroupBtn = e.target.closest('.favorites-group-delete-btn');
+            if (deleteGroupBtn) {
+                e.stopPropagation();
+                const chatId = deleteGroupBtn.dataset.chatId;
+                const chatType = deleteGroupBtn.dataset.chatType;
+                const favoriteBy = deleteGroupBtn.dataset.favoriteBy;
+                deleteFavoritesByGroup(chatType, chatId, favoriteBy);
+                return;
+            }
+            onFavoritesListClick(e);
+        });
+    }
 
     // 右上角删除按钮：进入多选删除模式
     const deleteBtn = document.getElementById('favorites-delete-btn');
@@ -534,6 +609,9 @@ function initFavoritesScreen() {
 
     const batchDeleteBtn = document.getElementById('favorites-batch-delete-btn');
     if (batchDeleteBtn) batchDeleteBtn.addEventListener('click', deleteSelectedFavorites);
+    
+    const selectAllBtn = document.getElementById('favorites-select-all-btn');
+    if (selectAllBtn) selectAllBtn.addEventListener('click', selectAllFavorites);
 
     document.querySelectorAll('.favorites-tab').forEach(tab => {
         tab.addEventListener('click', () => {

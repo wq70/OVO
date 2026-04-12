@@ -366,6 +366,86 @@ window.GuideSystem = GuideSystem;
 
 let loadingBtn = false
 
+function customConfirm(message, title = '确认') {
+    return new Promise((resolve) => {
+        const modalId = 'custom-confirm-modal';
+        let modal = document.getElementById(modalId);
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.className = 'modal-overlay';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.zIndex = '100000';
+            modal.innerHTML = `
+                <div class="modal-window custom-confirm-window" style="max-width: 320px; width: 90%; padding: 20px;">
+                    <h3 id="custom-confirm-title" style="margin-top:0; margin-bottom: 12px; font-size: 1.1rem; color: #333; text-align: center;"></h3>
+                    <p id="custom-confirm-message" style="font-size: 0.95rem; color: #555; margin-bottom: 20px; line-height: 1.5; text-align: center; white-space: pre-wrap; max-height: 50vh; overflow-y: auto; text-align: left;"></p>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" id="custom-confirm-ok-btn" class="btn btn-primary" style="flex:1; background: var(--primary-color, #ff6b81); border: none;">确定</button>
+                        <button type="button" id="custom-confirm-cancel-btn" class="btn btn-neutral" style="flex:1;">取消</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        document.getElementById('custom-confirm-title').textContent = title;
+        document.getElementById('custom-confirm-message').textContent = message;
+        modal.style.display = 'flex';
+        
+        const okBtn = document.getElementById('custom-confirm-ok-btn');
+        const cancelBtn = document.getElementById('custom-confirm-cancel-btn');
+        
+        const cleanup = () => {
+            modal.style.display = 'none';
+            okBtn.onclick = null;
+            cancelBtn.onclick = null;
+        };
+        
+        okBtn.onclick = () => { cleanup(); resolve(true); };
+        cancelBtn.onclick = () => { cleanup(); resolve(false); };
+    });
+}
+
+function customAlert(message, title = '提示') {
+    return new Promise((resolve) => {
+        const modalId = 'custom-alert-modal';
+        let modal = document.getElementById(modalId);
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.className = 'modal-overlay';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.zIndex = '100000';
+            modal.innerHTML = `
+                <div class="modal-window custom-alert-window" style="max-width: 320px; width: 90%; padding: 20px;">
+                    <h3 id="custom-alert-title" style="margin-top:0; margin-bottom: 12px; font-size: 1.1rem; color: #333; text-align: center;"></h3>
+                    <p id="custom-alert-message" style="font-size: 0.95rem; color: #555; margin-bottom: 20px; line-height: 1.5; text-align: center; white-space: pre-wrap; max-height: 50vh; overflow-y: auto; text-align: left;"></p>
+                    <div style="display: flex; justify-content: center;">
+                        <button type="button" id="custom-alert-ok-btn" class="btn btn-primary" style="min-width: 120px; background: var(--primary-color, #ff6b81); border: none;">我知道了</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        document.getElementById('custom-alert-title').textContent = title;
+        document.getElementById('custom-alert-message').textContent = message;
+        modal.style.display = 'flex';
+        
+        const okBtn = document.getElementById('custom-alert-ok-btn');
+        
+        const cleanup = () => {
+            modal.style.display = 'none';
+            okBtn.onclick = null;
+        };
+        
+        okBtn.onclick = () => { cleanup(); resolve(); };
+    });
+}
+
 function renderTutorialContent() {
     const tutorialContentArea = document.getElementById('tutorial-content-area');
     const mode = typeof getAppearanceMode === 'function' ? getAppearanceMode() : 'classic';
@@ -679,7 +759,8 @@ function renderTutorialContent() {
             return;
         }
         const labels = selected.map(k => ADVANCED_CLEAN_OPTIONS.find(o => o.key === k).label).join('、');
-        if (!confirm('即将清空以下数据：\n\n' + labels + '\n\n此操作不可恢复，确定继续？')) return;
+        const confirmed = await customConfirm('即将清空以下数据：\n\n' + labels + '\n\n此操作不可恢复，确定继续？', '高级清理确认');
+        if (!confirmed) return;
 
         document.getElementById(advancedCleanModalId).style.display = 'none';
         if (loadingBtn) return;
@@ -745,14 +826,12 @@ function renderTutorialContent() {
             await saveData(db);
             const summary = report.length ? report.join('\n') : '已清理所选数据';
             showToast('高级清理完成');
-            alert('高级清理完成！\n\n' + summary);
-            if (selected.includes('chat')) {
-                setTimeout(() => window.location.reload(), 500);
-            }
+            await customAlert('高级清理完成！\n\n' + summary, '清理完成');
+            setTimeout(() => window.location.reload(), 500);
         } catch (e) {
             console.error('高级清理失败:', e);
             showToast('高级清理失败: ' + e.message);
-            alert('清理过程中发生错误：\n' + e.message);
+            await customAlert('清理过程中发生错误：\n' + e.message, '清理失败');
         } finally {
             loadingBtn = false;
             advancedCleanBtn.disabled = false;
@@ -768,7 +847,8 @@ function renderTutorialContent() {
         { key: 'peekData', label: '窥屏数据' },
         { key: 'userAvatarLibrary', label: '用户头像库' },
         { key: 'charAvatarLibrary', label: '角色头像库' },
-        { key: 'worldBookIds', label: '绑定世界书' }
+        { key: 'worldBookIds', label: '绑定世界书' },
+        { key: 'piggyBank', label: '钱包转账/亲属卡记录' }
     ];
     const charCleanModalId = 'char-advanced-clean-modal';
     const charCleanModal = document.createElement('div');
@@ -778,20 +858,20 @@ function renderTutorialContent() {
     charCleanModal.style.alignItems = 'center';
     charCleanModal.style.justifyContent = 'center';
     charCleanModal.innerHTML = `
-        <div class="modal-window char-advanced-clean-window" style="max-width: 380px; max-height: 85vh; display: flex; flex-direction: column; padding: 18px;">
-            <h3 style="margin:0 0 8px; font-size:1.05rem;">角色高级清理</h3>
-            <p style="font-size: 0.85rem; color: #666; margin: 0 0 16px; line-height: 1.45;">选择要清理的角色/群聊，再选择要清空的数据项。仅清空所选对象的数据，不删除角色/群聊本身。</p>
-            <div style="flex:1; min-height:0; overflow-y: auto; margin-bottom: 16px;">
+        <div class="modal-window char-advanced-clean-window" style="max-width: 420px; max-height: 88vh; display: flex; flex-direction: column; padding: 20px;">
+            <h3 style="margin:0 0 8px; font-size:1.15rem; color:#333; text-align:center;">角色高级清理</h3>
+            <p style="font-size: 0.88rem; color: #777; margin: 0 0 16px; line-height: 1.5; text-align:center;">选择要清理的角色/群聊，再选择要清空的数据项。<br>仅清空选中对象的数据，不删除对象本身。</p>
+            <div style="flex:1; min-height:0; overflow-y: auto; margin-bottom: 16px; padding-right:4px;">
                 <div class="char-clean-section-head">
-                    <span style="font-weight:600; font-size:0.9rem;">选择角色/群聊</span>
+                    <span class="char-clean-section-title">选择角色/群聊</span>
                     <span class="char-clean-head-actions">
                         <button type="button" id="char-clean-entity-select-all" class="btn btn-neutral char-clean-head-btn">全选</button>
                         <button type="button" id="char-clean-entity-select-none" class="btn btn-neutral char-clean-head-btn">取消全选</button>
                     </span>
                 </div>
                 <div id="char-clean-entity-list" class="char-clean-entity-list"></div>
-                <div class="char-clean-section-head" style="margin-top:16px;">
-                    <span style="font-weight:600; font-size:0.9rem;">选择要清理的数据项</span>
+                <div class="char-clean-section-head" style="margin-top:20px;">
+                    <span class="char-clean-section-title">选择要清理的数据项</span>
                     <span class="char-clean-head-actions">
                         <button type="button" id="char-clean-options-select-all" class="btn btn-neutral char-clean-head-btn">全选</button>
                         <button type="button" id="char-clean-options-select-none" class="btn btn-neutral char-clean-head-btn">取消全选</button>
@@ -799,9 +879,9 @@ function renderTutorialContent() {
                 </div>
                 <div id="char-clean-options-list" class="char-clean-options-list"></div>
             </div>
-            <div style="display: flex; gap: 10px; flex-shrink: 0; padding-top: 4px; border-top: 1px solid #eee;">
-                <button type="button" id="char-clean-do-btn" class="btn btn-danger" style="flex:1;">执行清理</button>
-                <button type="button" id="char-clean-cancel-btn" class="btn btn-neutral" style="flex:1;">取消</button>
+            <div style="display: flex; gap: 12px; flex-shrink: 0; padding-top: 12px; border-top: 1px solid #f0f0f0;">
+                <button type="button" id="char-clean-do-btn" class="btn btn-danger" style="flex:1; padding: 10px; border-radius: 10px; font-weight: 500;">执行清理</button>
+                <button type="button" id="char-clean-cancel-btn" class="btn btn-neutral" style="flex:1; padding: 10px; border-radius: 10px; font-weight: 500;">取消</button>
             </div>
         </div>
     `;
@@ -920,7 +1000,8 @@ function renderTutorialContent() {
             return;
         }
         const keyLabels = selectedKeys.map(k => CHAR_CLEAN_DATA_OPTIONS.find(o => o.key === k).label).join('、');
-        if (!confirm(`将对 ${selectedEntities.length} 个对象清理以下数据：\n\n${keyLabels}\n\n此操作不可恢复，确定继续？`)) return;
+        const confirmed = await customConfirm(`将对 ${selectedEntities.length} 个对象清理以下数据：\n\n${keyLabels}\n\n此操作不可恢复，确定继续？`, '确认清理');
+        if (!confirmed) return;
 
         document.getElementById(charCleanModalId).style.display = 'none';
         if (loadingBtn) return;
@@ -970,6 +1051,33 @@ function renderTutorialContent() {
                         char.worldBookIds = [];
                         cleared.push('绑定世界书');
                     }
+                    if (selectedKeys.includes('piggyBank') && db.piggyBank) {
+                        let piggyCleared = false;
+                        // 清理该角色与用户的存钱罐交易（根据 charName 匹配，如果有的话，目前 transactions 里的 charName 是角色名）
+                        // 为精准匹配，最好能查找到相关的交易。这里根据 charName (如果记录了的话) 或者是 source
+                        const nameToMatch = char.realName || char.remarkName || '';
+                        if (nameToMatch && db.piggyBank.transactions) {
+                            const beforeLen = db.piggyBank.transactions.length;
+                            const toRemove = db.piggyBank.transactions.filter(t => t.charName === nameToMatch);
+                            if (toRemove.length > 0) {
+                                // 不退还金额，因为是强制清理，直接删记录
+                                db.piggyBank.transactions = db.piggyBank.transactions.filter(t => t.charName !== nameToMatch);
+                                piggyCleared = true;
+                            }
+                        }
+                        // 清理亲属卡
+                        if (db.piggyBank.familyCards) {
+                            const beforeLen = db.piggyBank.familyCards.length;
+                            db.piggyBank.familyCards = db.piggyBank.familyCards.filter(c => c.targetCharId !== id);
+                            if (beforeLen !== db.piggyBank.familyCards.length) piggyCleared = true;
+                        }
+                        if (db.piggyBank.receivedFamilyCards) {
+                            const beforeLen = db.piggyBank.receivedFamilyCards.length;
+                            db.piggyBank.receivedFamilyCards = db.piggyBank.receivedFamilyCards.filter(c => c.fromCharId !== id);
+                            if (beforeLen !== db.piggyBank.receivedFamilyCards.length) piggyCleared = true;
+                        }
+                        if (piggyCleared) cleared.push('钱包转账/亲属卡记录');
+                    }
                     if (cleared.length) report.push(`${name}：${cleared.join('、')}`);
                 } else if (type === 'group') {
                     const group = (db.groups || []).find(g => g.id === id);
@@ -988,21 +1096,35 @@ function renderTutorialContent() {
                         group.worldBookIds = [];
                         cleared.push('绑定世界书');
                     }
+                    // 群聊目前不支持存钱罐亲属卡，但如果将来有相关交易记录，也可以清理
+                    if (selectedKeys.includes('piggyBank') && db.piggyBank) {
+                        let piggyCleared = false;
+                        const nameToMatch = group.name || '';
+                        if (nameToMatch && db.piggyBank.transactions) {
+                            const toRemove = db.piggyBank.transactions.filter(t => t.charName === nameToMatch);
+                            if (toRemove.length > 0) {
+                                db.piggyBank.transactions = db.piggyBank.transactions.filter(t => t.charName !== nameToMatch);
+                                piggyCleared = true;
+                            }
+                        }
+                        if (piggyCleared) cleared.push('钱包转账记录');
+                    }
                     if (cleared.length) report.push(`[群] ${name}：${cleared.join('、')}`);
                 }
             }
             await saveData(db);
             showToast('角色高级清理完成');
             if (report.length > 0) {
-                alert('角色高级清理完成！\n\n' + report.slice(0, 15).join('\n') + (report.length > 15 ? '\n… 等 ' + report.length + ' 项' : ''));
+                await customAlert('角色高级清理完成！\n\n' + report.slice(0, 15).join('\n') + (report.length > 15 ? '\n… 等 ' + report.length + ' 项' : ''), '清理完成');
             } else {
-                alert('角色高级清理完成（所选对象中无匹配数据）');
+                await customAlert('角色高级清理完成（所选对象中无匹配数据）', '清理完成');
             }
             if (typeof window.refreshChatList === 'function') window.refreshChatList();
+            setTimeout(() => window.location.reload(), 500);
         } catch (e) {
             console.error('角色高级清理失败:', e);
             showToast('角色高级清理失败: ' + e.message);
-            alert('清理过程中发生错误：\n' + e.message);
+            await customAlert('清理过程中发生错误：\n' + e.message, '清理失败');
         } finally {
             loadingBtn = false;
             charCleanBtn.disabled = false;
@@ -1101,38 +1223,41 @@ function renderTutorialContent() {
                     showToast('请至少选择一个角色或群聊');
                     return;
                 }
-                if (!confirm(`即将清理 ${selected.length} 个会话中的本地图片，图片将被清空。确定继续？`)) return;
+                customConfirm(`即将清理 ${selected.length} 个会话中的本地图片，图片将被清空。确定继续？`, '清理图片').then(confirmed => {
+                    if (!confirmed) return;
 
-                modalEl.style.display = 'none';
-                if (loadingBtn) return;
-                loadingBtn = true;
-                const openBtn = document.getElementById('clean-local-images-open-btn');
-                if (openBtn) openBtn.disabled = true;
+                    modalEl.style.display = 'none';
+                    if (loadingBtn) return;
+                    loadingBtn = true;
+                    const openBtn = document.getElementById('clean-local-images-open-btn');
+                    if (openBtn) openBtn.disabled = true;
 
-                (async () => {
-                    try {
-                        showToast('正在清理本地图片...');
-                        selected.forEach(({ id, type }) => {
-                            if (type === 'private') {
-                                const char = db.characters.find(c => c.id === id);
-                                if (char && char.history) clearLocalImagesInHistory(char.history);
-                            } else {
-                                const group = db.groups.find(g => g.id === id);
-                                if (group && group.history) clearLocalImagesInHistory(group.history);
-                            }
-                        });
-                        await saveData(db);
-                        showToast('清理完成');
-                        alert('清理完成！所选会话中的本地图片已清空，占用已为空。');
-                    } catch (err) {
-                        console.error('清理本地图片失败:', err);
-                        showToast('清理失败: ' + err.message);
-                        alert('清理过程中发生错误：\n' + err.message);
-                    } finally {
-                        loadingBtn = false;
-                        if (openBtn) openBtn.disabled = false;
-                    }
-                })();
+                    (async () => {
+                        try {
+                            showToast('正在清理本地图片...');
+                            selected.forEach(({ id, type }) => {
+                                if (type === 'private') {
+                                    const char = db.characters.find(c => c.id === id);
+                                    if (char && char.history) clearLocalImagesInHistory(char.history);
+                                } else {
+                                    const group = db.groups.find(g => g.id === id);
+                                    if (group && group.history) clearLocalImagesInHistory(group.history);
+                                }
+                            });
+                            await saveData(db);
+                            showToast('清理完成');
+                            await customAlert('清理完成！所选会话中的本地图片已清空，占用已为空。', '清理完成');
+                            setTimeout(() => window.location.reload(), 500);
+                        } catch (err) {
+                            console.error('清理本地图片失败:', err);
+                            showToast('清理失败: ' + err.message);
+                            await customAlert('清理过程中发生错误：\n' + err.message, '清理失败');
+                        } finally {
+                            loadingBtn = false;
+                            if (openBtn) openBtn.disabled = false;
+                        }
+                    })();
+                });
             }
         });
     }
@@ -1179,7 +1304,8 @@ function renderTutorialContent() {
         const file = event.target.files[0];
         if (!file) return;
 
-        if(confirm('此操作将覆盖当前所有聊天记录和设置。此操作不可撤销。确定要继续吗？')){
+        const confirmed = await customConfirm('此操作将覆盖当前所有聊天记录和设置。此操作不可撤销。确定要继续吗？', '确认导入');
+        if(confirmed){
             try {
                 showToast('正在导入数据，请稍候...');
 
@@ -1224,7 +1350,8 @@ function renderTutorialContent() {
             '• 无效的表情包（无链接等）\n\n' +
             '⚠️ 不会影响有聊天记录的角色和正在使用的数据。\n\n确定继续吗？';
 
-        if (!confirm(msg)) return;
+        const confirmed = await customConfirm(msg, '清除无用数据');
+        if (!confirmed) return;
 
         loadingBtn = true;
         cleanRedundantDataBtn.disabled = true;
@@ -1311,15 +1438,16 @@ function renderTutorialContent() {
                 await saveData(db);
                 const summary = report.join('\n');
                 showToast(`清理完成！共清理 ${cleanCount} 项冗余数据`);
-                alert(`清理完成！\n\n${summary}\n\n共清理了 ${cleanCount} 项冗余数据。`);
+                await customAlert(`清理完成！\n\n${summary}\n\n共清理了 ${cleanCount} 项冗余数据。`, '清理完成');
+                setTimeout(() => window.location.reload(), 500);
             } else {
                 showToast('没有发现需要清理的冗余数据');
-                alert('检查完成！\n\n未发现需要清理的冗余数据，您的数据很健康。');
+                await customAlert('检查完成！\n\n未发现需要清理的冗余数据，您的数据很健康。', '清理完成');
             }
         } catch (e) {
             console.error('清理失败:', e);
             showToast('清理失败: ' + e.message);
-            alert('清理过程中发生错误：\n' + e.message);
+            await customAlert('清理过程中发生错误：\n' + e.message, '清理失败');
         } finally {
             loadingBtn = false;
             cleanRedundantDataBtn.disabled = false;
@@ -1329,10 +1457,12 @@ function renderTutorialContent() {
     const clearDataBtn = createActionItem('button', '清除所有数据', 'btn btn-danger', true);
     clearDataBtn.disabled = loadingBtn;
 
-    clearDataBtn.addEventListener('click', () => {
+    clearDataBtn.addEventListener('click', async () => {
         const msg = '确定要清除本项目的所有本地数据吗？\n\n将清除：聊天记录、角色、设置等（仅限本小手机项目）。\n不会影响浏览器中其他网站的数据。\n\n此操作不可恢复，请确认已备份重要数据。';
-        if (!confirm(msg)) return;
-        if (!confirm('再次确认：即将清除本项目全部数据并刷新页面，确定继续？')) return;
+        let confirmed = await customConfirm(msg, '清除所有数据');
+        if (!confirmed) return;
+        confirmed = await customConfirm('再次确认：即将清除本项目全部数据并刷新页面，确定继续？', '严重警告');
+        if (!confirmed) return;
 
         try {
             // 仅清除本项目的 localStorage 键（不影响其他网站）
@@ -1392,7 +1522,8 @@ function renderTutorialContent() {
                     event.target.value = null;
                     return;
                 }
-                if (!confirm('将把该文件中选中的分类数据合并到当前数据中（同名会覆盖）。是否继续？')) {
+                const confirmed = await customConfirm('将把该文件中选中的分类数据合并到当前数据中（同名会覆盖）。是否继续？', '分类导入');
+                if (!confirmed) {
                     event.target.value = null;
                     return;
                 }
@@ -1623,12 +1754,78 @@ function renderTutorialContent() {
         </div>
     `;
     
+    // 触感反馈开关
+    const hapticSection = document.createElement('div');
+    
+    if (isRabbit) {
+        hapticSection.innerHTML = `
+            <div style="font-size:16px; font-weight:500; color:#555; margin:20px 0 12px; text-align:center; letter-spacing:1px;">移动端触感</div>
+            <div class="tutorial-rabbit-card">
+                <div style="padding:16px 20px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1;">
+                        <div style="color:#444; font-weight:500; font-size:15px; margin-bottom:4px;">触感反馈</div>
+                        <div style="font-size:13px; color:#aaa;">开启后，点击、长按等操作会有震动反馈</div>
+                    </div>
+                    <label class="haptic-switch" style="position:relative; display:inline-block; width:44px; height:26px; margin-left:16px;">
+                        <input type="checkbox" id="haptic-feedback-switch" style="opacity:0; width:0; height:0;">
+                        <span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#e8e8e8; transition:.3s; border-radius:26px;" id="haptic-switch-slider"></span>
+                        <style>
+                            #haptic-feedback-switch:checked + #haptic-switch-slider { background-color: #e8dfe1; }
+                            #haptic-switch-slider:before { position:absolute; content:""; height:20px; width:20px; left:3px; bottom:3px; background-color:white; transition:.3s; border-radius:50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                            #haptic-feedback-switch:checked + #haptic-switch-slider:before { transform: translateX(18px); }
+                        </style>
+                    </label>
+                </div>
+            </div>
+        `;
+    } else if (isModern) {
+        hapticSection.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:#fff; border-bottom:1px solid #e5e5ea;">
+                <div style="flex:1;">
+                    <div style="color:#000; font-size:16px; margin-bottom:2px;">触感反馈</div>
+                    <div style="font-size:13px; color:#8e8e93;">开启后，点击、长按等操作会有震动反馈</div>
+                </div>
+                <label class="haptic-switch" style="position:relative; display:inline-block; width:40px; height:24px; margin-left:12px;">
+                    <input type="checkbox" id="haptic-feedback-switch" style="opacity:0; width:0; height:0;">
+                    <span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#ccc; transition:.4s; border-radius:24px;" id="haptic-switch-slider"></span>
+                    <style>
+                        #haptic-feedback-switch:checked + #haptic-switch-slider { background-color: #34c759; }
+                        #haptic-switch-slider:before { position:absolute; content:""; height:16px; width:16px; left:4px; bottom:4px; background-color:white; transition:.4s; border-radius:50%; }
+                        #haptic-feedback-switch:checked + #haptic-switch-slider:before { transform: translateX(16px); }
+                    </style>
+                </label>
+            </div>
+        `;
+    } else {
+        hapticSection.innerHTML = `
+            <div style="margin-top:12px; display:block; background:#fff; border:1px solid #e0e0e0; border-radius:8px; padding:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1;">
+                        <div style="color:#333; font-weight:500; font-size:0.89rem; margin-bottom:3px;">触感反馈</div>
+                        <div style="font-size:0.81rem; color:#888;">开启后，点击、长按等操作会有震动反馈</div>
+                    </div>
+                    <label class="haptic-switch" style="position:relative; display:inline-block; width:40px; height:24px; margin-left:12px;">
+                        <input type="checkbox" id="haptic-feedback-switch" style="opacity:0; width:0; height:0;">
+                        <span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#ccc; transition:.4s; border-radius:24px;" id="haptic-switch-slider"></span>
+                        <style>
+                            #haptic-feedback-switch:checked + #haptic-switch-slider { background-color: #333; }
+                            #haptic-switch-slider:before { position:absolute; content:""; height:16px; width:16px; left:4px; bottom:4px; background-color:white; transition:.4s; border-radius:50%; }
+                            #haptic-feedback-switch:checked + #haptic-switch-slider:before { transform: translateX(16px); }
+                        </style>
+                    </label>
+                </div>
+            </div>
+        `;
+    }
+    
     if (isModern) {
         modernGroups.github.appendChild(githubSection);
+        modernGroups.github.appendChild(hapticSection);
         modernGroups.github.appendChild(feedbackSection);
         modernGroups.github.appendChild(publicWishSection);
     } else {
         tutorialContentArea.appendChild(githubSection);
+        tutorialContentArea.appendChild(hapticSection);
         tutorialContentArea.appendChild(feedbackSection);
         tutorialContentArea.appendChild(publicWishSection);
     }
@@ -1718,6 +1915,25 @@ function renderTutorialContent() {
     document.getElementById('gh-backup-btn').addEventListener('click', () => window.GitHubMgr.testUpload());
     document.getElementById('gh-restore-btn').addEventListener('click', () => window.GitHubMgr.restoreLatest());
     document.getElementById('gh-check-btn').addEventListener('click', () => window.GitHubMgr.checkStatus());
+
+    // 触感反馈开关事件监听
+    const hapticSwitch = document.getElementById('haptic-feedback-switch');
+    if (hapticSwitch) {
+        // 初始化开关状态
+        hapticSwitch.checked = db.hapticEnabled !== false; // 默认开启
+        
+        hapticSwitch.addEventListener('change', (e) => {
+            db.hapticEnabled = e.target.checked;
+            saveData();
+            
+            // 触发一次触感反馈让用户感受效果
+            if (e.target.checked && typeof triggerHapticFeedback === 'function') {
+                triggerHapticFeedback('medium');
+            }
+            
+            showToast(e.target.checked ? '触感反馈已开启' : '触感反馈已关闭');
+        });
+    }
 
     if(window.GitHubMgr) {
         window.GitHubMgr.init();

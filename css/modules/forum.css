@@ -923,6 +923,160 @@
     opacity: 0.7;
 }
 
+/* ==========================================================================
+   论坛设置界面美化 (Forum Settings)
+   ========================================================================== */
+
+/* 设置界面容器优化 */
+#forum-settings-screen .kkt-settings-container {
+    padding: 15px 12px;
+    gap: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 卡片化设计 */
+.forum-setting-group {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+    margin: 0;
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.forum-setting-group:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06), 0 2px 5px rgba(0, 0, 0, 0.03);
+}
+
+/* 标题美化 */
+.forum-setting-group .kkt-group-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    letter-spacing: 0.5px;
+}
+
+/* 设置项微调 */
+.forum-setting-group .kkt-item {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    min-height: auto;
+}
+
+.forum-setting-group .kkt-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.forum-setting-group .kkt-item-label {
+    font-size: 14.5px;
+    color: #34495e;
+    font-weight: 500;
+}
+
+/* 输入框和控件优化 */
+.forum-setting-group input[type="number"],
+.forum-setting-group input[type="text"],
+.forum-setting-group input[type="password"],
+.forum-setting-group select {
+    background-color: #f8f9fa !important;
+    border: 1px solid #e9ecef !important;
+    border-radius: 8px !important;
+    padding: 8px 12px !important;
+    font-size: 14px;
+    color: #2c3e50;
+    transition: all 0.2s ease;
+}
+
+.forum-setting-group input:focus,
+.forum-setting-group select:focus {
+    background-color: #fff !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 255, 128, 171), 0.15) !important;
+    outline: none;
+}
+
+/* 按钮优化 */
+.forum-setting-group .btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover, #ff6b9d));
+    border: none;
+    box-shadow: 0 4px 12px rgba(var(--primary-rgb, 255, 128, 171), 0.3);
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+.forum-setting-group .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(var(--primary-rgb, 255, 128, 171), 0.4);
+}
+
+.forum-setting-group .btn-primary:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 6px rgba(var(--primary-rgb, 255, 128, 171), 0.3);
+}
+
+/* 辅助说明文字 */
+.forum-setting-group p {
+    line-height: 1.5;
+    color: #7f8c8d !important;
+    padding: 0 4px;
+}
+
+/* 范围选择器（Slider）轨道美化 */
+.forum-setting-group input[type="range"] {
+    -webkit-appearance: none;
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    outline: none;
+    margin: 10px 0;
+}
+
+.forum-setting-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.forum-setting-group input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+}
+
+/* 小号列表样式优化 */
+.forum-char-alt-list {
+    background: #f8f9fa !important;
+    border: 1px solid #e9ecef !important;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.forum-char-alt-list li {
+    padding: 8px 12px !important;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+}
+.forum-char-alt-list li:last-child {
+    border-bottom: none;
+}
+.forum-char-alt-list li:hover {
+    background-color: #fff;
+}
+
+
 /* 帖子批量删除模式 */
 .forum-post-delete-toolbar {
     display: flex;

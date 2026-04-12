@@ -183,7 +183,6 @@ label.btn-primary {
 .btn-secondary {
     background-color: var(--accent-color);
     color: var(--white-color);
-    margin-bottom: 15px;
 }
 
 .btn-secondary:hover {
@@ -235,7 +234,7 @@ label.btn-primary {
     transform: translateX(-50%);
     width: 90%;
     max-width: 380px;
-    background-color: rgba(255, 255, 255, 0.88);
+    background-color: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     color: #333;
@@ -244,17 +243,17 @@ label.btn-primary {
     font-size: 14px;
     opacity: 0;
     visibility: hidden;
-    transition: top 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-    z-index: 1000;
+    transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;
+    z-index: 10000;
     display: flex;
     align-items: center;
     gap: 12px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
     border: 1px solid rgba(0,0,0,0.05);
 }
 
 .toast.show {
-    top: 20px;
+    top: 40px;
     opacity: 1;
     visibility: visible;
 }

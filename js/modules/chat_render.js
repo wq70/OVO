@@ -1,5 +1,31 @@
 // --- 消息渲染模块 ---
 
+// Markdown 配置和解析函数
+if (typeof marked !== 'undefined') {
+    marked.setOptions({
+        breaks: true,        // 支持 GFM 换行（单个回车就换行）
+        gfm: true,          // GitHub Flavored Markdown
+        headerIds: false,   // 不生成标题 ID
+        mangle: false       // 不混淆邮箱地址
+    });
+}
+
+// Markdown 解析函数
+function parseMarkdown(text) {
+    if (typeof marked === 'undefined') {
+        return text; // 如果 marked 未加载，返回原文
+    }
+    try {
+        let html = marked.parse(text);
+        // 移除外层 <p> 标签（聊天气泡不需要）
+        html = html.replace(/^<p>/, '').replace(/<\/p>\s*$/, '');
+        return html.trim();
+    } catch (e) {
+        console.error('[Markdown] 解析失败:', e);
+        return text; // 解析失败时返回原文
+    }
+}
+
 // NovelAI 自动生图队列（避免同时发出大量请求）
 const _naiAutoGenQueue = [];
 let _naiAutoGenRunning = false;
@@ -1174,7 +1200,13 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
         bubbleElement.innerHTML = `<svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg><svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg><span class="duration">${calculateVoiceDuration(voiceMatch[1].trim())}"</span>`;
         const transcriptDiv = document.createElement('div');
         transcriptDiv.className = 'voice-transcript';
-        transcriptDiv.textContent = voiceMatch[1].trim();
+        // 支持 Markdown 渲染
+        const transcriptText = voiceMatch[1].trim();
+        const transcriptHtml = parseMarkdown(transcriptText);
+        transcriptDiv.innerHTML = DOMPurify.sanitize(transcriptHtml, {
+            ALLOWED_TAGS: ['strong', 'em', 'code', 'pre', 'a', 'ul', 'ol', 'li', 'br', 'del', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+            ALLOWED_ATTR: ['href', 'class', 'target', 'rel']
+        });
         wrapper.appendChild(transcriptDiv);
     } else if (photoVideoMatch) {
         const pvContent = photoVideoMatch[1].trim();
@@ -1366,7 +1398,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
         }
         // 在群聊中，如果是待处理的转账且是发给用户的，应该可以点击
         if (currentChatType === 'group') {
-            if (transferStatus === 'pending' && groupTransferMatch) {
+            if ((!transferStatus || transferStatus === 'pending') && groupTransferMatch) {
                 const to = groupTransferMatch[2];
                 const myName = chat.me.nickname;
                 const isToMe = (to === myName);
@@ -1379,8 +1411,10 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
             } else {
                 bubbleElement.style.cursor = 'default';
             }
-        } else if (transferStatus !== 'pending' && currentChatType === 'private') {
+        } else if (transferStatus !== 'pending' && transferStatus && currentChatType === 'private') {
             bubbleElement.style.cursor = 'default';
+        } else if ((!transferStatus || transferStatus === 'pending') && !isSent) {
+            bubbleElement.style.cursor = 'pointer';
         }
         const remarkHTML = remarkText ? `<p class="transfer-remark">${remarkText}</p>` : '';
         bubbleElement.innerHTML = `<div class="overlay"></div><div class="transfer-content"><p class="transfer-title">${titleText}</p><p class="transfer-amount">¥${amount}</p>${remarkHTML}<p class="transfer-status">${statusText}</p></div>`;
@@ -1405,7 +1439,12 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
         bubbleElement = document.createElement('div');
         bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
         let userText = textMatch[1].trim().replace(/$$发送时间:.*?$$/g, '').trim();
-        bubbleElement.innerHTML = `<span class="bubble-content">${DOMPurify.sanitize(userText)}</span>`;
+        // 支持 Markdown 渲染
+        const markdownHtml = parseMarkdown(userText);
+        bubbleElement.innerHTML = `<span class="bubble-content">${DOMPurify.sanitize(markdownHtml, {
+            ALLOWED_TAGS: ['strong', 'em', 'code', 'pre', 'a', 'ul', 'ol', 'li', 'br', 'del', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+            ALLOWED_ATTR: ['href', 'class', 'target', 'rel']
+        })}</span>`;
         if (!chat.useCustomBubbleCss) {
             bubbleElement.style.backgroundColor = bubbleTheme.bg;
             bubbleElement.style.color = bubbleTheme.text;
@@ -1479,7 +1518,10 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
             }
         }
 
-        bubbleElement.innerHTML = `<span class="bubble-content">${DOMPurify.sanitize(displayedContent)}</span>`;
+        bubbleElement.innerHTML = `<span class="bubble-content">${DOMPurify.sanitize(parseMarkdown(displayedContent), {
+            ALLOWED_TAGS: ['strong', 'em', 'code', 'pre', 'a', 'ul', 'ol', 'li', 'br', 'del', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+            ALLOWED_ATTR: ['href', 'class', 'target', 'rel']
+        })}</span>`;
         if (!chat.useCustomBubbleCss) {
             bubbleElement.style.backgroundColor = bubbleTheme.bg;
             bubbleElement.style.color = bubbleTheme.text;
@@ -1726,8 +1768,10 @@ function addMessageBubble(message, targetChatId, targetChatType) {
                 else if (message.parts && message.parts.some(p => p.type === 'html')) previewText = '[互动]';
             }
             
-            // === 后台消息弹窗通知开关检查 ===
-            if (senderChat.bgToastEnabled !== false) {
+            // === 全局与单人消息弹窗通知开关检查 ===
+            // 单人设置优先级最高，未设置时遵循全局设置
+            const shouldToast = senderChat.bgToastEnabled !== undefined ? senderChat.bgToastEnabled : (db.globalToastEnabled !== false);
+            if (shouldToast) {
                 showToast({
                     avatar: senderAvatar,
                     name: senderName,
@@ -2011,7 +2055,7 @@ function addMessageBubble(message, targetChatId, targetChatType) {
                 const statusToSet = action === '接收' ? 'received' : 'returned';
                 
                 // 查找最近的待处理转账消息（用户向角色转账）
-                const groupTransferRegex = /\[(.*?)\s*向\s*(.*?)\s*转账：([\d.,]+)元；备注：(.*?)\]/;
+                const groupTransferRegex = /\[(.*?)\s*向\s*(.*?)\s*转账[：:]([\d.,]+)元[；;]备注[：:](.*?)\]/;
                 const lastPendingTransferIndex = group.history.slice().reverse().findIndex(m => {
                     if (m.id === message.id) return false; // 排除当前消息
                     const mTransferMatch = m.content.match(groupTransferRegex);
@@ -2040,7 +2084,7 @@ function addMessageBubble(message, targetChatId, targetChatType) {
                         return toMatchesChar && receiverMatchesChar;
                     });
                     
-                    const isPending = m.transferStatus === 'pending';
+                    const isPending = !m.transferStatus || m.transferStatus === 'pending';
                     
                     return isUserMessage && isFromUser && isToReceiver && isPending;
                 });

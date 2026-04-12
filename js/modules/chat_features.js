@@ -375,7 +375,7 @@ async function respondToTransfer(action) {
             }
             
             // 解析转账信息（只处理用户接收角色转账的情况）
-            const groupTransferRegex = /\[(.*?)\s*向\s*(.*?)\s*转账：([\d.,]+)元；备注：(.*?)\]/;
+            const groupTransferRegex = /\[(.*?)\s*向\s*(.*?)\s*转账[：:]([\d.,]+)元[；;]备注[：:](.*?)\]/;
             const transferMatch = message.content.match(groupTransferRegex);
             if (transferMatch) {
                 const from = transferMatch[1];

@@ -2023,34 +2023,68 @@
     height: auto !important;
 }
 
-/* 上下文菜单与ActionSheet */
+/* 上下文菜单与ActionSheet（紧凑横向胶囊/流式布局） */
 .context-menu {
     position: fixed;
     z-index: 10000;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 12px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-    overflow: hidden;
-    padding: 6px 0;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+    padding: 12px;
     animation: fadeIn 0.15s cubic-bezier(0.25, 0.8, 0.25, 1);
-    min-width: 140px;
-    border: 1px solid rgba(0,0,0,0.05);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 280px; /* 限制最大宽度，让它不要占满整个屏幕 */
+    transform-origin: top left;
+    box-sizing: border-box;
+}
+
+.context-menu.few-items {
+    max-width: 220px; /* 如果项少，可以稍微窄一点 */
 }
 
 .context-menu-item {
-    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 14px;
     cursor: pointer;
-    font-size: 15px;
+    font-size: 13px;
+    font-weight: 500;
     color: #333;
     user-select: none;
-    transition: background-color 0.1s;
+    transition: all 0.15s ease;
+    background-color: rgba(0, 0, 0, 0.04); /* 极淡的灰色背景作为胶囊底色 */
+    border-radius: 8px; /* 稍带圆角的矩形，看起来更规整 */
+    border: 1px solid rgba(0, 0, 0, 0.02);
+    flex: 1 1 auto; /* 允许根据内容自动伸缩，但会尽量填满一行 */
+    text-align: center;
+    white-space: nowrap; /* 保持文字在一行内 */
 }
 
-.context-menu-item:hover { background-color: rgba(0, 0, 0, 0.05); }
-.context-menu-item:active { background-color: rgba(0, 0, 0, 0.1); }
-.context-menu-item.danger { color: #e53935; }
+.context-menu-item:hover { 
+    background-color: rgba(0, 0, 0, 0.08); 
+    transform: translateY(-1px);
+}
+.context-menu-item:active { 
+    background-color: rgba(0, 0, 0, 0.12); 
+    transform: translateY(1px);
+}
+.context-menu-item.danger { 
+    color: #ff3b30; 
+    background-color: rgba(255, 59, 48, 0.08); /* 危险操作给个极淡的红底 */
+    border-color: rgba(255, 59, 48, 0.1);
+}
+.context-menu-item.danger:hover {
+    background-color: rgba(255, 59, 48, 0.15);
+}
+.context-menu-item.danger:active {
+    background-color: rgba(255, 59, 48, 0.2);
+}
 
 .action-sheet-overlay {
     position: absolute;
@@ -2611,4 +2645,207 @@
 .message-wrapper.is-first-greeting .message-bubble {
     font-size: 0.92em;
     line-height: 1.5;
+}
+
+
+/* ========================================
+   Markdown 样式支持
+   ======================================== */
+
+/* 消息气泡内的 Markdown 元素基础样式 */
+.bubble-content strong,
+.voice-transcript strong {
+    font-weight: 700;
+    color: inherit;
+}
+
+.bubble-content em,
+.voice-transcript em {
+    font-style: italic;
+    color: inherit;
+}
+
+.bubble-content code,
+.voice-transcript code {
+    background-color: rgba(0, 0, 0, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #d63384;
+}
+
+.bubble-content pre,
+.voice-transcript pre {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 8px 0;
+    border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.bubble-content pre code,
+.voice-transcript pre code {
+    background-color: transparent;
+    padding: 0;
+    color: inherit;
+    font-size: 0.85em;
+    line-height: 1.5;
+}
+
+.bubble-content blockquote,
+.voice-transcript blockquote {
+    border-left: 4px solid rgba(0, 0, 0, 0.2);
+    padding-left: 12px;
+    margin: 8px 0;
+    color: rgba(0, 0, 0, 0.7);
+    font-style: italic;
+}
+
+.bubble-content a,
+.voice-transcript a {
+    color: #007aff;
+    text-decoration: underline;
+    word-break: break-all;
+}
+
+.bubble-content a:hover,
+.voice-transcript a:hover {
+    color: #0051d5;
+}
+
+.bubble-content ul,
+.bubble-content ol,
+.voice-transcript ul,
+.voice-transcript ol {
+    margin: 8px 0;
+    padding-left: 24px;
+}
+
+.bubble-content li,
+.voice-transcript li {
+    margin: 4px 0;
+    line-height: 1.5;
+}
+
+.bubble-content hr,
+.voice-transcript hr {
+    border: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    margin: 12px 0;
+}
+
+.bubble-content h1,
+.bubble-content h2,
+.bubble-content h3,
+.bubble-content h4,
+.bubble-content h5,
+.bubble-content h6,
+.voice-transcript h1,
+.voice-transcript h2,
+.voice-transcript h3,
+.voice-transcript h4,
+.voice-transcript h5,
+.voice-transcript h6 {
+    margin: 12px 0 8px 0;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.bubble-content h1,
+.voice-transcript h1 {
+    font-size: 1.5em;
+}
+
+.bubble-content h2,
+.voice-transcript h2 {
+    font-size: 1.3em;
+}
+
+.bubble-content h3,
+.voice-transcript h3 {
+    font-size: 1.15em;
+}
+
+.bubble-content h4,
+.voice-transcript h4 {
+    font-size: 1.05em;
+}
+
+.bubble-content del,
+.voice-transcript del {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.bubble-content table,
+.voice-transcript table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 8px 0;
+    font-size: 0.9em;
+}
+
+.bubble-content th,
+.bubble-content td,
+.voice-transcript th,
+.voice-transcript td {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 6px 10px;
+    text-align: left;
+}
+
+.bubble-content th,
+.voice-transcript th {
+    background-color: rgba(0, 0, 0, 0.05);
+    font-weight: 600;
+}
+
+/* 发送方气泡的 Markdown 样式调整 */
+.message-wrapper.sent .bubble-content code,
+.message-wrapper.sent .voice-transcript code {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: inherit;
+}
+
+.message-wrapper.sent .bubble-content pre,
+.message-wrapper.sent .voice-transcript pre {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-left-color: rgba(255, 255, 255, 0.3);
+}
+
+.message-wrapper.sent .bubble-content blockquote,
+.message-wrapper.sent .voice-transcript blockquote {
+    border-left-color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.message-wrapper.sent .bubble-content a,
+.message-wrapper.sent .voice-transcript a {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+.message-wrapper.sent .bubble-content th,
+.message-wrapper.sent .voice-transcript th {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.message-wrapper.sent .bubble-content th,
+.message-wrapper.sent .bubble-content td,
+.message-wrapper.sent .voice-transcript th,
+.message-wrapper.sent .voice-transcript td {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 确保 Markdown 元素不会破坏气泡布局 */
+.bubble-content > *:first-child,
+.voice-transcript > *:first-child {
+    margin-top: 0;
+}
+
+.bubble-content > *:last-child,
+.voice-transcript > *:last-child {
+    margin-bottom: 0;
 }

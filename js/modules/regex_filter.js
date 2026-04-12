@@ -353,22 +353,55 @@ function applyRegexFilter(content, charId) {
     const char = db.characters.find(c => c.id === charId);
     if (!char) return content;
 
+    // 为了保护系统标签（如 [xxx的消息：...] 或其他特殊指令），
+    // 如果内容是以 [ 开头并以 ] 结尾的标准消息格式，我们剥离前缀和后缀，仅对内部纯文本应用正则过滤。
     let result = content;
+    
+    // 正则提取 [前缀：内容]
+    // 注意：这里需要涵盖常见的普通消息包裹格式
+    const messageMatch = result.match(/^(\[.*?的消息[：:])([\s\S]+?)(\])$/);
+    
+    let prefix = '';
+    let suffix = '';
+    let textToFilter = result;
+
+    if (messageMatch) {
+        prefix = messageMatch[1];
+        textToFilter = messageMatch[2];
+        suffix = messageMatch[3];
+    } else {
+        // 如果没有匹配到标准普通消息格式，也可以尝试匹配双语模式
+        const bilingualMatch = result.match(/^(\[.*?的消息[：:])([\s\S]+?)(「[\s\S]*?」)(\])$/);
+        if (bilingualMatch) {
+            prefix = bilingualMatch[1];
+            textToFilter = bilingualMatch[2]; // 只对外语部分过滤？或者全过滤，这里选择对外语部分
+            suffix = bilingualMatch[3] + bilingualMatch[4];
+        }
+    }
+
+    let filteredText = textToFilter;
 
     // 1. 应用全局绑定的正则方案
     const presets = db.regexFilterPresets || [];
     for (const preset of presets) {
         if (preset.boundCharIds && preset.boundCharIds.includes(charId)) {
-            result = applyRules(result, preset.rules);
+            filteredText = applyRules(filteredText, preset.rules);
         }
     }
 
     // 2. 应用角色自身的正则过滤规则
     if (char.regexFilter && char.regexFilter.enabled && char.regexFilter.rules) {
-        result = applyRules(result, char.regexFilter.rules);
+        filteredText = applyRules(filteredText, char.regexFilter.rules);
     }
 
-    return result.replace(/\n{3,}/g, '\n\n').trim();
+    filteredText = filteredText.replace(/\n{3,}/g, '\n\n').trim();
+
+    // 如果文本在过滤后完全为空，直接返回空字符串，而不是只返回前后缀外壳
+    if (!filteredText) {
+        return '';
+    }
+
+    return prefix + filteredText + suffix;
 }
 
 // 应用规则列表

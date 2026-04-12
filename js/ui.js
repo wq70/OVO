@@ -222,6 +222,9 @@ function createContextMenu(items, x, y) {
     removeContextMenu();
     const menu = document.createElement('div');
     menu.className = 'context-menu';
+    if (items.length <= 5) {
+        menu.classList.add('few-items');
+    }
     
     menu.style.visibility = 'hidden';
     document.body.appendChild(menu);
@@ -229,8 +232,13 @@ function createContextMenu(items, x, y) {
     items.forEach(item => {
         const menuItem = document.createElement('div');
         menuItem.className = 'context-menu-item';
-        if (item.danger) menuItem.classList.add('danger');
-        menuItem.textContent = item.label;
+        if (item.danger || item.label === '删除') menuItem.classList.add('danger');
+        
+        const labelDiv = document.createElement('span');
+        labelDiv.textContent = item.label;
+
+        menuItem.appendChild(labelDiv);
+
         menuItem.onclick = () => {
             item.action();
             removeContextMenu();
@@ -241,7 +249,7 @@ function createContextMenu(items, x, y) {
     const rect = menu.getBoundingClientRect();
     const winWidth = window.innerWidth;
     const winHeight = window.innerHeight;
-    const padding = 10; // 屏幕边缘间距
+    const padding = 15; // 屏幕边缘间距
 
     // 水平方向调整
     if (x + rect.width > winWidth - padding) {
@@ -463,6 +471,7 @@ function setupHomeScreen() {
         <a href="#" class="app-icon" id="day-mode-btn"><img src="${getIcon('day-mode-btn')}" alt="日间" class="icon-img"></a>
         <a href="#" class="app-icon" id="night-mode-btn"><img src="${getIcon('night-mode-btn')}" alt="夜间" class="icon-img"></a>
         <a href="#" class="app-icon" data-target="storage-analysis-screen"><img src="${getIcon('storage-analysis-screen')}" alt="存储" class="icon-img"></a>
+        <a href="#" class="app-icon" data-target="app-settings-screen"><img src="${getIcon('api-settings-screen')}" alt="应用设置" class="icon-img"></a>
     </div>`;
     homeScreen.innerHTML = homeScreenHTML;
 

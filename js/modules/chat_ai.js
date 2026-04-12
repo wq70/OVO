@@ -643,27 +643,26 @@ async function processStream(response, chat, apiType, targetChatId, targetChatTy
     await handleAiReplyContent(fullResponse, chat, targetChatId, targetChatType, isBackground, isCharBlockedMonologue);
 }
 
-/** 返回该角色在手机掌控下可见的角色与群聊（未开启分组过滤则返回全部，开启则只返回指定文件夹内） */
+/** 返回该角色在手机掌控下可见的角色与群聊（未开启角色过滤则返回全部，开启则只返回指定的角色及所在群聊） */
 function getPhoneControlVisibleChats(controllingChar) {
-    if (!controllingChar.phoneControlFolderFilterEnabled || !controllingChar.phoneControlVisibleFolderIds || controllingChar.phoneControlVisibleFolderIds.length === 0) {
+    if (!controllingChar.phoneControlCharFilterEnabled || !controllingChar.phoneControlVisibleCharIds || controllingChar.phoneControlVisibleCharIds.length === 0) {
         return {
             characters: (db.characters || []).filter(c => c.id !== controllingChar.id),
             groups: db.groups || []
         };
     }
-    const visibleIds = controllingChar.phoneControlVisibleFolderIds;
-    const includeNoFolder = visibleIds.includes('__no_folder__');
-    const folderIds = visibleIds.filter(id => id !== '__no_folder__');
+    const visibleIds = controllingChar.phoneControlVisibleCharIds;
     const characters = (db.characters || []).filter(c => {
         if (c.id === controllingChar.id) return false;
-        if (!c.folderId && includeNoFolder) return true;
-        if (c.folderId && folderIds.includes(c.folderId)) return true;
+        if (visibleIds.includes(c.id)) return true;
         return false;
     });
+    
+    // 群聊如果包含任意一个可见角色，则也视为可见
     const groups = (db.groups || []).filter(g => {
-        if (!g.folderId && includeNoFolder) return true;
-        if (g.folderId && folderIds.includes(g.folderId)) return true;
-        return false;
+        if (!g.members || g.members.length === 0) return false;
+        // 群聊成员里有没有在可见角色列表中的
+        return g.members.some(m => visibleIds.includes(m.originalCharId));
     });
     return { characters, groups };
 }
@@ -1154,7 +1153,11 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
 
                     if (originalMessage) {
                         let filteredReplyText = replyText;
-                        if (typeof applyRegexFilter === 'function') filteredReplyText = applyRegexFilter(replyText, targetChatId);
+                        if (typeof applyRegexFilter === 'function') {
+                            filteredReplyText = applyRegexFilter(replyText, targetChatId);
+                        }
+                        if (filteredReplyText === '') continue; // 如果过滤后内容为空，直接丢弃该条消息
+
                         const message = {
                             id: `msg_${Date.now()}_${Math.random()}`,
                             role: 'assistant',
@@ -1174,7 +1177,11 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
                         addMessageBubble(message, targetChatId, targetChatType);
                     } else {
                         let filteredReplyText2 = replyText;
-                        if (typeof applyRegexFilter === 'function') filteredReplyText2 = applyRegexFilter(replyText, targetChatId);
+                        if (typeof applyRegexFilter === 'function') {
+                            filteredReplyText2 = applyRegexFilter(replyText, targetChatId);
+                        }
+                        if (filteredReplyText2 === '') continue; // 如果过滤后内容为空，直接丢弃该条消息
+
                         const message = {
                             id: `msg_${Date.now()}_${Math.random()}`,
                             role: 'assistant',
@@ -1199,6 +1206,7 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
                     if (typeof applyRegexFilter === 'function') {
                         finalContent = applyRegexFilter(finalContent, targetChatId);
                     }
+                    if (finalContent === '') continue; // 如果过滤后内容为空，直接丢弃该条消息
 
                     const message = {
                         id: `msg_${Date.now()}_${Math.random()}`,
@@ -1307,7 +1315,7 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
                     continue;
                 }
 
-                const groupTransferRegex = /\[(.*?)\s*向\s*(.*?)\s*转账：([\d.,]+)元；备注：(.*?)\]/;
+                const groupTransferRegex = /\[(.*?)\s*向\s*(.*?)\s*转账[：:]([\d.,]+)元[；;]备注[：:](.*?)\]/;
                 const transferMatch = item.content.match(groupTransferRegex);
 
                 const r = /\[(.*?)((?:的消息|的语音|发送的表情包|发来的照片\/视频))：/;
@@ -1999,8 +2007,14 @@ function generatePrivateSystemPrompt(character, opts) {
     prompt += `<char_settings>\n`;
     prompt += `1. 你的角色名是：${character.realName}。我的称呼是：${character.myName}。你的当前状态是：${character.status || '在线'}。\n`;
     if (linkedChar) {
-        prompt += `【小号身份】你实际上是以论坛小号在与用户聊天。你的真实身份是：${linkedChar.realName}。请用真实身份的人设和性格来回复（可偶尔露出与本人相似的蛛丝马迹），但不要主动暴露身份。\n`;
-        prompt += `2. 你的角色设定是：${getEffectivePersona(linkedChar)}\n`;
+        prompt += `2. 【双重身份与伪装规则】\n`;
+        prompt += `你当前正在使用论坛小号（网名：${character.realName}）与我聊天。但你的【真实身份】其实是：${linkedChar.realName}。\n`;
+        prompt += `表面上，你的小号伪装设定是：${getEffectivePersona(character)}\n`;
+        prompt += `实际上，你骨子里的真实性格和设定是：${getEffectivePersona(linkedChar)}\n`;
+        prompt += `请遵循以下伪装原则：\n`;
+        prompt += `- 保持马甲：在未被识破前，你要尽量扮演这个小号的表面身份，像一个普通网友或陌生人一样和我交流。\n`;
+        prompt += `- 潜意识与习惯：尽管在伪装，但你骨子里的真实性格（${linkedChar.realName}的性格）、对我的深层态度和一些小习惯会不自觉地流露出来（这就是所谓的“披着小号的皮”）。\n`;
+        prompt += `- 掉马甲机制：如果在聊天中，我明确揭穿了你的真实身份，或者发现了破绽并指认你是${linkedChar.realName}，请根据你【真实身份】的性格决定是爽快承认、傲娇狡辩还是默认。一旦身份被识破或你自己主动摊牌，你的说话语气、态度就应当立刻恢复为${linkedChar.realName}面对我时的真实模样，不再强行装陌生人。\n`;
     } else {
         prompt += `2. 你的角色设定是：${getEffectivePersona(character)}\n`;
     }

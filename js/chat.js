@@ -439,15 +439,15 @@ function setupChatRoom() {
                 if (currentChatType === 'private') {
                     const character = db.characters.find(c => c.id === currentChatId);
                     const message = character.history.find(m => m.id === messageId);
-                    if (message && message.transferStatus === 'pending') {
+                    if (message && (!message.transferStatus || message.transferStatus === 'pending')) {
                         handleReceivedTransferClick(messageId);
                     }
                 } else if (currentChatType === 'group') {
                     const group = db.groups.find(g => g.id === currentChatId);
                     const message = group.history.find(m => m.id === messageId);
-                    if (message && message.transferStatus === 'pending') {
+                    if (message && (!message.transferStatus || message.transferStatus === 'pending')) {
                         // 检查是否是发给用户的转账（角色向用户转账）
-                        const groupTransferRegex = /\[(.*?)\s*向\s*(.*?)\s*转账：([\d.,]+)元；备注：(.*?)\]/;
+                        const groupTransferRegex = /\[(.*?)\s*向\s*(.*?)\s*转账[：:]([\d.,]+)元[；;]备注[：:](.*?)\]/;
                         const transferMatch = message.content.match(groupTransferRegex);
                         if (transferMatch) {
                             const to = transferMatch[2];
@@ -581,6 +581,8 @@ function setupChatRoom() {
     if (favoriteSelectedBtn) favoriteSelectedBtn.addEventListener('click', () => { if (typeof addFavoritesFromSelection === 'function') addFavoritesFromSelection(); });
     const favoriteMergeBtn = document.getElementById('favorite-merge-btn');
     if (favoriteMergeBtn) favoriteMergeBtn.addEventListener('click', () => { if (typeof addFavoritesFromSelectionMerged === 'function') addFavoritesFromSelectionMerged(); });
+    const forwardSelectedBtn = document.getElementById('forward-selected-btn');
+    if (forwardSelectedBtn) forwardSelectedBtn.addEventListener('click', () => { if (typeof openForwardModal === 'function') openForwardModal(); });
     document.getElementById('generate-capture-btn').addEventListener('click', generateCapture);
     document.getElementById('close-capture-modal-btn').addEventListener('click', () => {
         document.getElementById('capture-result-modal').classList.remove('visible');

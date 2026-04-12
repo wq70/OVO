@@ -105,6 +105,189 @@ async function compressImage(file, options = {}) {
 // 数字补零
 const pad = (num) => num.toString().padStart(2, '0');
 
+// PNG tEXt Chunk 编辑工具
+function writeOvoPngMetadata(base64ImageOrUrl, jsonData) {
+    return new Promise((resolve, reject) => {
+        // 先确保图片是 PNG Base64 格式
+        const img = new Image();
+        img.crossOrigin = 'Anonymous'; // 尝试跨域加载
+
+        img.onload = () => {
+            try {
+                // 将图片绘制到 Canvas 以转换为干净的 PNG Base64
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || 800;
+                canvas.height = img.naturalHeight || 800;
+                const ctx = canvas.getContext('2d');
+                // 绘制背景为透明（如果原图有透明的话）或白色
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+
+                const cleanPngBase64 = canvas.toDataURL('image/png');
+                
+                // 移除 base64 前缀
+                const base64Data = cleanPngBase64.replace(/^data:image\/png;base64,/, '');
+                const rawData = atob(base64Data);
+                const uint8Array = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; i++) {
+                    uint8Array[i] = rawData.charCodeAt(i);
+                }
+
+                // 检查 PNG 签名
+                const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+                for (let i = 0; i < signature.length; i++) {
+                    if (uint8Array[i] !== signature[i]) {
+                        return reject(new Error('Invalid PNG signature after canvas conversion'));
+                    }
+                }
+
+                // 编码 tEXt 块数据
+                const keyword = 'ovo_chara';
+                const textData = btoa(unescape(encodeURIComponent(JSON.stringify(jsonData)))); // Base64 编码的 JSON
+                
+                const keywordBytes = new TextEncoder().encode(keyword);
+                const nullSeparator = new Uint8Array([0]);
+                const textBytes = new TextEncoder().encode(textData);
+                
+                const chunkData = new Uint8Array(keywordBytes.length + 1 + textBytes.length);
+                chunkData.set(keywordBytes, 0);
+                chunkData.set(nullSeparator, keywordBytes.length);
+                chunkData.set(textBytes, keywordBytes.length + 1);
+
+                // 计算 CRC
+                const crcTable = [];
+                for (let i = 0; i < 256; i++) {
+                    let c = i;
+                    for (let j = 0; j < 8; j++) {
+                        c = ((c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1));
+                    }
+                    crcTable[i] = c;
+                }
+                function crc32(data) {
+                    let crc = 0xffffffff;
+                    for (let i = 0; i < data.length; i++) {
+                        crc = crcTable[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
+                    }
+                    return crc ^ 0xffffffff;
+                }
+
+                const chunkType = new TextEncoder().encode('tEXt');
+                const crcData = new Uint8Array(chunkType.length + chunkData.length);
+                crcData.set(chunkType, 0);
+                crcData.set(chunkData, chunkType.length);
+                
+                const crcValue = crc32(crcData);
+
+                // 组装 Chunk
+                const lengthBytes = new Uint8Array(4);
+                new DataView(lengthBytes.buffer).setUint32(0, chunkData.length);
+                
+                const crcBytes = new Uint8Array(4);
+                new DataView(crcBytes.buffer).setUint32(0, crcValue);
+
+                const newChunk = new Uint8Array(lengthBytes.length + chunkType.length + chunkData.length + crcBytes.length);
+                let offset = 0;
+                newChunk.set(lengthBytes, offset); offset += lengthBytes.length;
+                newChunk.set(chunkType, offset); offset += chunkType.length;
+                newChunk.set(chunkData, offset); offset += chunkData.length;
+                newChunk.set(crcBytes, offset);
+
+                // 寻找 IHDR 块，在它之后插入我们的 tEXt 块
+                let insertPos = 8;
+                const view = new DataView(uint8Array.buffer);
+                const length = view.getUint32(insertPos);
+                insertPos += 8 + length + 4; // Skip IHDR
+
+                const newUint8Array = new Uint8Array(uint8Array.length + newChunk.length);
+                newUint8Array.set(uint8Array.slice(0, insertPos), 0);
+                newUint8Array.set(newChunk, insertPos);
+                newUint8Array.set(uint8Array.slice(insertPos), insertPos + newChunk.length);
+
+                // 转换回 Base64 Data URL
+                let binary = '';
+                for (let i = 0; i < newUint8Array.length; i++) {
+                    binary += String.fromCharCode(newUint8Array[i]);
+                }
+                resolve('data:image/png;base64,' + btoa(binary));
+
+            } catch (error) {
+                reject(error);
+            }
+        };
+        img.onerror = () => reject(new Error('Failed to load image for PNG conversion'));
+        img.src = base64ImageOrUrl;
+    });
+}
+
+function readOvoPngMetadata(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsArrayBuffer(file);
+        reader.onload = (e) => {
+            try {
+                const buffer = e.target.result;
+                const view = new DataView(buffer);
+                const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+                for (let i = 0; i < signature.length; i++) {
+                    if (view.getUint8(i) !== signature[i]) {
+                        return reject(new Error('文件不是一个有效的PNG。'));
+                    }
+                }
+
+                let offset = 8;
+                let charaData = null;
+
+                while (offset < view.byteLength) {
+                    const length = view.getUint32(offset);
+                    const type = String.fromCharCode(view.getUint8(offset + 4), view.getUint8(offset + 5), view.getUint8(offset + 6), view.getUint8(offset + 7));
+
+                    if (type === 'tEXt') {
+                        const textChunk = new Uint8Array(buffer, offset + 8, length);
+                        let separatorIndex = -1;
+                        for (let i = 0; i < textChunk.length; i++) {
+                            if (textChunk[i] === 0) {
+                                separatorIndex = i;
+                                break;
+                            }
+                        }
+
+                        if (separatorIndex !== -1) {
+                            const keyword = new TextDecoder('utf-8').decode(textChunk.slice(0, separatorIndex));
+                            if (keyword === 'ovo_chara') {
+                                const base64Data = new TextDecoder('utf-8').decode(textChunk.slice(separatorIndex + 1));
+                                try {
+                                    const decodedString = decodeURIComponent(escape(atob(base64Data)));
+                                    charaData = JSON.parse(decodedString);
+                                    break;
+                                } catch (decodeError) {
+                                    return reject(new Error(`解析专属角色数据失败: ${decodeError.message}`));
+                                }
+                            }
+                        }
+                    }
+                    offset += 12 + length;
+                }
+
+                if (charaData) {
+                    const imageReader = new FileReader();
+                    imageReader.readAsDataURL(file);
+                    imageReader.onload = (imgEvent) => {
+                        resolve({ data: charaData, avatar: imgEvent.target.result });
+                    };
+                    imageReader.onerror = () => {
+                        resolve({ data: charaData, avatar: 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg' });
+                    };
+                } else {
+                    reject(new Error('在PNG中未找到专属角色数据 (tEXt chunk not found)。'));
+                }
+            } catch (error) {
+                reject(new Error(`解析PNG失败: ${error.message}`));
+            }
+        };
+        reader.onerror = () => reject(new Error('读取PNG文件失败。'));
+    });
+}
+
 // UUID 生成器
 function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -174,6 +357,8 @@ const showToast = (notification) => {
 
 // 触感反馈工具
 function triggerHapticFeedback(type = 'light') {
+    // 检查全局开关
+    if (!db.hapticEnabled) return;
     if (!navigator.vibrate) return;
 
     try {
@@ -1166,3 +1351,5 @@ window.showToast = showToast;
 window.playSound = (typeof playSound !== 'undefined') ? playSound : null; // 防止循环依赖
 window.generateNovelAiImage = generateNovelAiImage;
 window.novelAiGenerate = novelAiGenerate;
+window.writeOvoPngMetadata = writeOvoPngMetadata;
+window.readOvoPngMetadata = readOvoPngMetadata;

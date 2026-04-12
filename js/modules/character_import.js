@@ -265,6 +265,7 @@ async function createCharacterFromData(data, avatar, options) {
             newChar.history = [{
                 id: `msg_${Date.now()}_greeting`,
                 role: 'assistant',
+                senderId: newChar.id,
                 content: firstContent,
                 timestamp: Date.now()
             }];
@@ -493,6 +494,12 @@ function setupCreateCharMethodSheet() {
     // 取消
     document.getElementById('method-cancel-btn').addEventListener('click', () => {
         sheet.classList.remove('visible');
+    });
+
+    // 导入专属角色卡（非酒馆）
+    document.getElementById('method-import-ovo-card-btn').addEventListener('click', () => {
+        sheet.classList.remove('visible');
+        document.getElementById('ovo-character-card-input').click();
     });
 
     // 点击遮罩关闭

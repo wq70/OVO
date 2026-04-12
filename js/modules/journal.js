@@ -23,6 +23,7 @@ function setupMemoryJournalScreen() {
     const batchDeleteBtn = document.getElementById('journal-batch-delete-btn');
     const mergeBtn = document.getElementById('journal-merge-btn');
     const selectCountSpan = document.getElementById('journal-select-count');
+    const selectAllBtn = document.getElementById('journal-select-all-btn');
 
     let isMultiSelectMode = false;
     let selectedJournalIds = new Set();
@@ -66,6 +67,12 @@ function setupMemoryJournalScreen() {
         });
     }
 
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', () => {
+            toggleSelectAll();
+        });
+    }
+
     function toggleMultiSelectMode(active) {
         isMultiSelectMode = active;
         selectedJournalIds.clear();
@@ -96,6 +103,9 @@ function setupMemoryJournalScreen() {
                 const checkbox = card.querySelector('.journal-checkbox');
                 if (checkbox) checkbox.classList.remove('checked');
             });
+            
+            // 退出多选模式时重置全选按钮
+            if (selectAllBtn) selectAllBtn.textContent = '全选';
         }
     }
 
@@ -103,6 +113,46 @@ function setupMemoryJournalScreen() {
         if (selectCountSpan) {
             selectCountSpan.textContent = `已选 ${selectedJournalIds.size} 篇`;
         }
+        
+        // 更新全选按钮文字
+        if (selectAllBtn) {
+            const chat = (currentChatType === 'private') 
+                ? db.characters.find(c => c.id === currentChatId) 
+                : db.groups.find(g => g.id === currentChatId);
+            
+            if (chat && chat.memoryJournals) {
+                const totalCount = chat.memoryJournals.length;
+                const isAllSelected = selectedJournalIds.size === totalCount && totalCount > 0;
+                selectAllBtn.textContent = isAllSelected ? '取消全选' : '全选';
+            }
+        }
+    }
+
+    function toggleSelectAll() {
+        const chat = (currentChatType === 'private') 
+            ? db.characters.find(c => c.id === currentChatId) 
+            : db.groups.find(g => g.id === currentChatId);
+        
+        if (!chat || !chat.memoryJournals) return;
+        
+        const allJournalIds = chat.memoryJournals.map(j => j.id);
+        const isAllSelected = allJournalIds.every(id => selectedJournalIds.has(id));
+        
+        if (isAllSelected) {
+            // 取消全选
+            selectedJournalIds.clear();
+            document.querySelectorAll('.journal-checkbox').forEach(checkbox => {
+                checkbox.classList.remove('checked');
+            });
+        } else {
+            // 全选
+            allJournalIds.forEach(id => selectedJournalIds.add(id));
+            document.querySelectorAll('.journal-checkbox').forEach(checkbox => {
+                checkbox.classList.add('checked');
+            });
+        }
+        
+        updateSelectCount();
     }
 
     async function mergeJournals(journalIds) {

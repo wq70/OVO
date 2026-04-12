@@ -35,6 +35,7 @@ function setupChatListScreen() {
 
     const importBtnKkt = document.getElementById('import-btn-kkt');
     const cardInput = document.getElementById('character-card-input');
+    const ovoCardInput = document.getElementById('ovo-character-card-input');
     if (importBtnKkt) {
         importBtnKkt.addEventListener('click', () => {
             cardInput.click();
@@ -45,6 +46,43 @@ function setupChatListScreen() {
         const file = e.target.files[0];
         if (file) {
             handleCharacterImport(file);
+        }
+        e.target.value = null;
+    });
+
+    ovoCardInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            showToast('正在解析专属角色卡...');
+            try {
+                let result;
+                if (file.name.endsWith('.png')) {
+                    result = await readOvoPngMetadata(file);
+                } else if (file.name.endsWith('.json')) {
+                    result = await parseCharJson(file); // JSON can be parsed exactly the same
+                } else {
+                    throw new Error('不支持的文件格式。请选择 .png 或 .json 文件。');
+                }
+
+                if (result && result.data) {
+                    const importedChar = result.data.data || result.data;
+                    importedChar.id = `char_${Date.now()}`; // 重新生成 ID 防止冲突
+                    
+                    // 如果没有头像但导出了 PNG 头像，则合并回去
+                    if (result.avatar && !importedChar.avatar) {
+                        importedChar.avatar = result.avatar;
+                    }
+                    
+                    db.characters.push(importedChar);
+                    await saveData();
+                    renderChatList();
+                    if (typeof renderContactList === 'function') renderContactList();
+                    showToast(`专属角色卡“${importedChar.remarkName || importedChar.realName || '未命名'}”导入成功！`);
+                }
+            } catch (error) {
+                console.error('专属角色卡导入失败:', error);
+                showToast(`导入失败: ${error.message}`);
+            }
         }
         e.target.value = null;
     });
