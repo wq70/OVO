@@ -100,12 +100,13 @@
                 generationConfig: { temperature: (db.apiSettings && db.apiSettings.temperature != null) ? db.apiSettings.temperature : 0.9 }
             };
         } else {
+            var rawMessages = [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userContent }
+            ];
             body = {
                 model: model,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userContent }
-                ],
+                messages: normalizeMessagesForProvider(rawMessages, provider),
                 stream: false,
                 temperature: (db.apiSettings && db.apiSettings.temperature != null) ? db.apiSettings.temperature : 0.9
             };

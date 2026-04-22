@@ -109,9 +109,10 @@ async function callChatCompletion(apiPayload, overrideSettings) {
             contents: [{ role: 'user', parts: [{ text: prompt }] }]
         };
     } else {
+        const rawMessages = apiPayload?.messages || [];
         requestBody = {
             model: model,
-            messages: apiPayload?.messages || [],
+            messages: normalizeMessagesForProvider(rawMessages, provider),
             stream: false,
             temperature: settings.temperature !== undefined ? settings.temperature : 1.0
         };

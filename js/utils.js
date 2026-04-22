@@ -883,10 +883,83 @@ function filterHistoryForAI(chat, historySlice, ignoreContextDisabled = false) {
     return filteredHistory;
 }
 
+function aiMessageContentToText(content) {
+    if (typeof content === 'string') return content;
+    if (Array.isArray(content)) {
+        return content.map(part => {
+            if (!part) return '';
+            if (part.type === 'text' || part.type === 'html') return part.text || part.content || '';
+            if (part.type === 'image_url' || part.type === 'image') return '[图片]';
+            return '';
+        }).filter(Boolean).join('\n');
+    }
+    if (content == null) return '';
+    return String(content);
+}
+
+function wrapSystemMessageForCompat(content) {
+    const text = aiMessageContentToText(content).trim();
+    return text ? `[System Instruction]\n${text}` : '[System Instruction]';
+}
+
+function mergeAdjacentCompatMessages(messages) {
+    const merged = [];
+    messages.forEach(msg => {
+        if (!msg) return;
+        const prev = merged[merged.length - 1];
+        const canMerge = prev &&
+            prev.role === msg.role &&
+            typeof prev.content === 'string' &&
+            typeof msg.content === 'string';
+        if (canMerge) {
+            prev.content += `\n\n${msg.content}`;
+        } else {
+            merged.push({ ...msg });
+        }
+    });
+    return merged;
+}
+
+function normalizeMessagesForProvider(messages, provider) {
+    const list = Array.isArray(messages) ? messages : [];
+    const mapped = list.map(msg => {
+        if (!msg) return null;
+        const originalRole = msg.role === 'char' ? 'assistant' : msg.role;
+        let nextRole = originalRole;
+        let nextContent = msg.content;
+
+        if (provider === 'claude') {
+            if (originalRole === 'assistant' || originalRole === 'user') {
+                nextRole = originalRole;
+            } else if (originalRole === 'system') {
+                nextRole = 'user';
+                nextContent = wrapSystemMessageForCompat(msg.content);
+            } else {
+                nextRole = 'user';
+            }
+        }
+
+        return {
+            ...msg,
+            role: nextRole,
+            content: nextContent
+        };
+    }).filter(Boolean);
+
+    return provider === 'claude' ? mergeAdjacentCompatMessages(mapped) : mapped;
+}
+
 // 通用 AI 响应获取函数 (支持流式和非流式自动切换)
 async function fetchAiResponse(settings, requestBody, headers, endpoint, forceStream = false) {
     const { provider } = settings;
     const streamEnabled = forceStream || settings.streamEnabled;
+
+    if (requestBody && Array.isArray(requestBody.messages)) {
+        requestBody = {
+            ...requestBody,
+            messages: normalizeMessagesForProvider(requestBody.messages, provider)
+        };
+    }
 
     // 1. 针对流式传输调整 Request Body 和 Endpoint
     if (streamEnabled) {

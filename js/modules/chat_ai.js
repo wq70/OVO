@@ -492,9 +492,10 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                 }
             }
 
+            const outgoingMessages = normalizeMessagesForProvider(messages, provider);
             requestBody = {
                 model: model, 
-                messages: messages, 
+                messages: outgoingMessages, 
                 stream: streamEnabled,
                 temperature: db.apiSettings.temperature !== undefined ? db.apiSettings.temperature : 1.0
             };
@@ -2847,9 +2848,10 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate) {
     // ===============================
 
     // 3. 发起请求
+    const outgoingMessages = normalizeMessagesForProvider(messages, provider);
     const requestBody = {
         model: model,
-        messages: messages,
+        messages: outgoingMessages,
         stream: streamEnabled,
         temperature: 0.7 // 通话稍微低一点，保持稳定
     };
