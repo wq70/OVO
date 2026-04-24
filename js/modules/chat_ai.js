@@ -104,21 +104,7 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
     }
 
     try {
-        let systemPrompt, requestBody;
-        if (chatType === 'private') {
-            systemPrompt = generatePrivateSystemPrompt(chat, { isPhoneControlRevokeAttempt });
-        } else {
-            // generateGroupSystemPrompt 应该在 group_chat.js 中定义
-            if (typeof generateGroupSystemPrompt === 'function') {
-                systemPrompt = generateGroupSystemPrompt(chat);
-            } else {
-                systemPrompt = "Group chat system prompt not available.";
-            }
-        }
-
-        // 添加聊天记录提示
-        systemPrompt += "\n\n以下为当前聊天记录：\n";
-        
+        let requestBody;
         let historySlice = chat.history.slice(-chat.maxMemory);
         
         // 节点系统：上下文截断与记忆隔离
@@ -210,11 +196,63 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
             return true;
         });
 
+        // === 【新增】提取触发消息与格式化历史记录 ===
+        let lastAiIndex = -1;
+        for (let i = historySlice.length - 1; i >= 0; i--) {
+            if (historySlice[i].role === 'assistant' || historySlice[i].role === 'char') {
+                lastAiIndex = i;
+                break;
+            }
+        }
+        
+        let historyForText = [];
+        let triggerMessages = [];
+        
+        if (lastAiIndex === -1) {
+            triggerMessages = historySlice;
+        } else {
+            historyForText = historySlice.slice(0, lastAiIndex + 1);
+            triggerMessages = historySlice.slice(lastAiIndex + 1);
+        }
+        
+        if (triggerMessages.length === 0) {
+            triggerMessages = [{
+                role: 'user',
+                content: '[{{user}}没回你，请继续对话。]',
+                timestamp: Date.now()
+            }];
+        }
+
+        let historyText = '';
+        if (historyForText.length > 0) {
+            const historyLines = historyForText.map(m => {
+                let content = m.content || '';
+                if (m.parts && m.parts.length > 0) {
+                    content = m.parts.map(p => p.text || '[图片]').join('');
+                }
+                const senderName = m.role === 'user' ? chat.myName : (m.senderId ? (chat.members?.find(mem => mem.id === m.senderId)?.groupNickname || '未知') : chat.realName);
+                return `${senderName}: ${content}`;
+            });
+            historyText = `<chat_history>\n【近期聊天记录】\n以下是我们刚刚的聊天记录，作为背景查看：\n${historyLines.join('\n')}\n</chat_history>\n\n`;
+        }
+        // ==========================================
+
+        let systemPrompt;
+        if (chatType === 'private') {
+            systemPrompt = generatePrivateSystemPrompt(chat, { isPhoneControlRevokeAttempt, historyText });
+        } else {
+            if (typeof generateGroupSystemPrompt === 'function') {
+                systemPrompt = generateGroupSystemPrompt(chat, { historyText });
+            } else {
+                systemPrompt = "Group chat system prompt not available.";
+            }
+        }
+
         if (provider === 'gemini') {
             let lastMsgTimeForAI = 0;
-            const contents = historySlice.map(msg => {
-                const role = (msg.role === 'assistant' || msg.role === 'char') ? 'model' : 'user';
-                
+            let mergedParts = [];
+            
+            triggerMessages.forEach((msg, index) => {
                 let prefix = '';
                 const currentMsgTime = msg.timestamp;
                 const timeDiff = currentMsgTime - lastMsgTimeForAI;
@@ -297,8 +335,21 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                     parts[0].text = '[id:' + msg.id + ']\n' + parts[0].text;
                 }
 
-                return {role, parts};
+                if (index > 0 && mergedParts.length > 0 && mergedParts[mergedParts.length - 1].text && parts.length > 0 && parts[0].text) {
+                    mergedParts[mergedParts.length - 1].text += '\n\n' + parts[0].text;
+                    mergedParts.push(...parts.slice(1));
+                } else if (index > 0 && mergedParts.length > 0 && parts.length > 0 && parts[0].text) {
+                    parts[0].text = '\n\n' + parts[0].text;
+                    mergedParts.push(...parts);
+                } else {
+                    mergedParts.push(...parts);
+                }
             });
+
+            const contents = [];
+            if (mergedParts.length > 0) {
+                contents.push({ role: 'user', parts: mergedParts });
+            }
 
             if (isBackground) {
                 contents.push({
@@ -324,8 +375,10 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
             const messages = [{role: 'system', content: systemPrompt}];
             
             let lastMsgTimeForAI = 0;
+            let mergedContent = [];
+            let hasImage = false;
             
-            historySlice.forEach(msg => {
+            triggerMessages.forEach((msg, index) => {
                let content;
                let prefix = '';
                
@@ -407,14 +460,31 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                            content[0].text = '[id:' + msg.id + ']\n' + content[0].text;
                        }
                    }
-                   const apiRole = msg.role === 'char' ? 'assistant' : msg.role;
+                   
                    if (typeof content === 'string') {
-                       messages.push({role: apiRole, content: content});
-                   } else {
-                       messages.push({role: apiRole, content: content});
+                       content = [{type: 'text', text: content}];
                    }
                }
+               
+               if (index > 0 && mergedContent.length > 0 && mergedContent[mergedContent.length - 1].type === 'text' && content.length > 0 && content[0].type === 'text') {
+                   mergedContent[mergedContent.length - 1].text += '\n\n' + content[0].text;
+                   mergedContent.push(...content.slice(1));
+               } else if (index > 0 && mergedContent.length > 0 && content.length > 0 && content[0].type === 'text') {
+                   content[0].text = '\n\n' + content[0].text;
+                   mergedContent.push(...content);
+               } else {
+                   mergedContent.push(...content);
+               }
             });
+
+            if (mergedContent.length > 0) {
+                if (hasImage) {
+                    messages.push({ role: 'user', content: mergedContent });
+                } else {
+                    const textContent = mergedContent.map(c => c.text).join('');
+                    messages.push({ role: 'user', content: textContent });
+                }
+            }
 
             // === 【第三步：处理后台通知与 CoT 序列】 ===
             
@@ -1781,8 +1851,26 @@ function generatePrivateSystemPrompt(character, opts) {
     const linkedChar = (character.source === 'forum' && character.linkedCharId && db.characters)
         ? db.characters.find(c => c.id === character.linkedCharId) : null;
     const effectiveChar = linkedChar || character;
+
+    // 节点系统：拦截并返回专属提示词
+    let activeNode = null;
+    let isOfflineNode = false;
+    if (character.activeNodeId && character.nodes) {
+        activeNode = character.nodes.find(n => n.id === character.activeNodeId);
+        if (activeNode) {
+            let baseMode = (activeNode.customConfig && activeNode.customConfig.baseMode) ? activeNode.customConfig.baseMode : 
+                           (activeNode.type === 'offline' || (activeNode.type === 'spinoff' && activeNode.spinoffMode === 'offline') ? 'offline' : 'online');
+            if (baseMode === 'offline') {
+                isOfflineNode = true;
+            }
+        }
+    }
+
     // 收集世界书：关联的 + 全局的（去重）；小号用主角色世界书
-    const associatedIds = effectiveChar.worldBookIds || [];
+    let associatedIds = effectiveChar.worldBookIds || [];
+    if (isOfflineNode) {
+        associatedIds = (effectiveChar.offlineWorldBookIds && effectiveChar.offlineWorldBookIds.length > 0) ? effectiveChar.offlineWorldBookIds : (effectiveChar.worldBookIds || []);
+    }
     const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
     const globalIds = globalBooks.map(wb => wb.id);
     const allBookIds = [...new Set([...associatedIds, ...globalIds])]; // 合并去重
@@ -1793,12 +1881,6 @@ function generatePrivateSystemPrompt(character, opts) {
     const worldBooksAfter = allBookIds.map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(wb => wb && !wb.disabled).map(wb => wb.content).join('\n');
     const now = new Date();
     const currentTime = `${now.getFullYear()}年${pad(now.getMonth() + 1)}月${pad(now.getDate())}日 ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-
-    // 节点系统：拦截并返回专属提示词
-    let activeNode = null;
-    if (character.activeNodeId && character.nodes) {
-        activeNode = character.nodes.find(n => n.id === character.activeNodeId);
-    }
 
     if (activeNode) {
         let nodePrompt = `当前为剧情节点「${activeNode.name}」，你正在扮演一个角色。请严格遵守以下规则：\n`;
@@ -2331,6 +2413,10 @@ function generatePrivateSystemPrompt(character, opts) {
     }
     prompt += `</memoir>\n\n`
 
+    if (opts.historyText) {
+        prompt += opts.historyText;
+    }
+
     prompt += `<logic_rules>\n`
     prompt += getOnlineLogicRules(character, 4);
     prompt += `</logic_rules>\n\n`
@@ -2349,16 +2435,17 @@ function generatePrivateSystemPrompt(character, opts) {
     const maxReply = character.replyCountMax || 8;
     if (character.replyCountEnabled) {
         prompt += `<Chatting Guidelines>\n`
-        prompt += `17. **对话节奏**: 你需要模拟真人的聊天习惯，你可以一次性生成多条短消息。每次回复消息条数**必须**严格限定在**${minReply}-${maxReply}条以内**，**关键规则**：请保持回复长度的**随机性和多样性**。**除非**你的设定偏向活跃或情绪波动大或是特殊情况下，否则**不要**触碰 ${maxReply} 条的上限。\n`;
+        prompt += `17. **对话节奏**: 你需要模拟真人的聊天习惯，你可以一次性生成多条短消息。每次回复消息条数**必须**严格限定在**${minReply}-${maxReply}条以内**，**关键规则**：请保持回复消息数量的**随机性和多样性**。**除非**你的设定偏向活跃或情绪波动大或是特殊情况下，否则**不要**触碰 ${maxReply} 条的上限。\n`;
     } else {
         prompt += `<Chatting Guidelines>\n`
         prompt += `17. **对话节奏**: 你需要模拟真人的聊天习惯，你可以一次性生成多条短消息。每次回复3-8条消息之内，**关键规则**：请保持回复消息数量的**随机性和多样性**。\n`;
     }
     
-    prompt += `18. **特殊消息格式的使用原则**：请把语音、撤回、转账、商城互动、更新状态、引用、定位等特殊格式视为增强互动的“调味剂”，请遵循**自然、主动触发逻辑**，不要每轮都发，也不要用户不提就一直不发。\n`;
+    prompt += `18. **特殊消息格式的使用原则**：(1)请把语音、撤回、转账、商城互动、更新状态、引用、定位等特殊格式视为增强互动的“调味剂”，遵循**自然、主动、多样化触发逻辑。同种格式不要重复频繁发送，不同格式不要用户不提就一直不发**。\n(2)注意在本回合消息列里，特殊消息插入位置的随机性，每轮必须和上一回合插入位置不同。\n`;
+    prompt += `19. 🌟**防复读对话**🌟：请仔细阅读上方的 <chat_history> 并对用户的最新消息作出回应。你**必须**变换句式和词汇，**绝对不要**重复或模仿历史记录中的文本结构，保持自然、随机和多样性。\n`;
     prompt += `</Chatting Guidelines>\n`
 
-    prompt += `19. 不要主动终止聊天进程，除非我明确提出。保持你的人设，自然地进行对话。`;
+    prompt += `20. 不要主动终止聊天进程，除非我明确提出。保持你的人设，自然地进行对话。`;
 
     // 角色自主收藏：仅当该角色开启时注入
     if (character.characterAutoFavoriteEnabled) {
@@ -2411,8 +2498,24 @@ function getChatTokenBreakdown(chatId, chatType = 'private') {
         ? db.characters.find(c => c.id === character.linkedCharId) : null;
     const effectiveChar = linkedChar || character;
 
+    let activeNode = null;
+    let isOfflineNode = false;
+    if (character.activeNodeId && character.nodes) {
+        activeNode = character.nodes.find(n => n.id === character.activeNodeId);
+        if (activeNode) {
+            let baseMode = (activeNode.customConfig && activeNode.customConfig.baseMode) ? activeNode.customConfig.baseMode : 
+                           (activeNode.type === 'offline' || (activeNode.type === 'spinoff' && activeNode.spinoffMode === 'offline') ? 'offline' : 'online');
+            if (baseMode === 'offline') {
+                isOfflineNode = true;
+            }
+        }
+    }
+
     // 1) 世界书
-    const associatedIds = effectiveChar.worldBookIds || [];
+    let associatedIds = effectiveChar.worldBookIds || [];
+    if (isOfflineNode) {
+        associatedIds = (effectiveChar.offlineWorldBookIds && effectiveChar.offlineWorldBookIds.length > 0) ? effectiveChar.offlineWorldBookIds : (effectiveChar.worldBookIds || []);
+    }
     const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
     const globalIds = globalBooks.map(wb => wb.id);
     const allBookIds = [...new Set([...associatedIds, ...globalIds])];
@@ -2555,8 +2658,39 @@ function getChatTokenBreakdown(chatId, chatType = 'private') {
     // 12) 短期记忆（对话历史）
     let historySlice = (chat.history || []).slice(-(chat.maxMemory || 20));
     historySlice = historySlice.filter(m => !m.isContextDisabled);
+    
+    let lastAiIndex = -1;
+    for (let i = historySlice.length - 1; i >= 0; i--) {
+        if (historySlice[i].role === 'assistant' || historySlice[i].role === 'char') {
+            lastAiIndex = i;
+            break;
+        }
+    }
+    
+    let historyForText = [];
+    let triggerMessages = [];
+    
+    if (lastAiIndex === -1) {
+        triggerMessages = historySlice;
+    } else {
+        historyForText = historySlice.slice(0, lastAiIndex + 1);
+        triggerMessages = historySlice.slice(lastAiIndex + 1);
+    }
+    
     let shortTermText = '';
-    historySlice.forEach(msg => {
+    if (historyForText.length > 0) {
+        const historyLines = historyForText.map(m => {
+            let content = m.content || '';
+            if (m.parts && m.parts.length > 0) {
+                content = m.parts.map(p => p.text || '[图片]').join('');
+            }
+            const senderName = m.role === 'user' ? chat.myName : chat.realName;
+            return `${senderName}: ${content}`;
+        });
+        shortTermText += `<chat_history>\n【近期聊天记录】\n这是我们刚刚的聊天记录，请作为背景参考：\n${historyLines.join('\n')}\n</chat_history>\n\n`;
+    }
+    
+    triggerMessages.forEach(msg => {
         shortTermText += msg.content || '';
         if (msg.parts) {
             msg.parts.forEach(p => {
@@ -2643,7 +2777,21 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate) {
     const currentTime = `${now.getFullYear()}年${pad(now.getMonth() + 1)}月${pad(now.getDate())}日 ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     
     // 获取世界书（包含全局）
-    const associatedIds = chat.worldBookIds || [];
+    let isOfflineNode = false;
+    if (chat.activeNodeId && chat.nodes) {
+        const activeNode = chat.nodes.find(n => n.id === chat.activeNodeId);
+        if (activeNode) {
+            let baseMode = (activeNode.customConfig && activeNode.customConfig.baseMode) ? activeNode.customConfig.baseMode : 
+                           (activeNode.type === 'offline' || (activeNode.type === 'spinoff' && activeNode.spinoffMode === 'offline') ? 'offline' : 'online');
+            if (baseMode === 'offline') {
+                isOfflineNode = true;
+            }
+        }
+    }
+    let associatedIds = chat.worldBookIds || [];
+    if (isOfflineNode) {
+        associatedIds = (chat.offlineWorldBookIds && chat.offlineWorldBookIds.length > 0) ? chat.offlineWorldBookIds : (chat.worldBookIds || []);
+    }
     const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
     const globalIds = globalBooks.map(wb => wb.id);
     const allBookIds = [...new Set([...associatedIds, ...globalIds])];
@@ -3042,7 +3190,21 @@ async function generateCallSummary(chat, callContext) {
     if (url.endsWith('/')) url = url.slice(0, -1);
 
     // 获取世界书（包含全局）
-    const associatedIds = chat.worldBookIds || [];
+    let isOfflineNode = false;
+    if (chat.activeNodeId && chat.nodes) {
+        const activeNode = chat.nodes.find(n => n.id === chat.activeNodeId);
+        if (activeNode) {
+            let baseMode = (activeNode.customConfig && activeNode.customConfig.baseMode) ? activeNode.customConfig.baseMode : 
+                           (activeNode.type === 'offline' || (activeNode.type === 'spinoff' && activeNode.spinoffMode === 'offline') ? 'offline' : 'online');
+            if (baseMode === 'offline') {
+                isOfflineNode = true;
+            }
+        }
+    }
+    let associatedIds = chat.worldBookIds || [];
+    if (isOfflineNode) {
+        associatedIds = (chat.offlineWorldBookIds && chat.offlineWorldBookIds.length > 0) ? chat.offlineWorldBookIds : (chat.worldBookIds || []);
+    }
     const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
     const globalIds = globalBooks.map(wb => wb.id);
     const allBookIds = [...new Set([...associatedIds, ...globalIds])];

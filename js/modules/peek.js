@@ -1,5 +1,78 @@
 // --- 偷看手机功能 (js/modules/peek.js) ---
 
+function parseXmlToJson(xmlString) {
+    const match = xmlString.match(/<result>([\s\S]*?)<\/result>/i);
+    const xmlContent = match ? match[0] : xmlString;
+
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
+    
+    const parseError = xmlDoc.getElementsByTagName("parsererror");
+    if (parseError.length > 0) {
+        throw new Error("XML 解析错误: " + parseError[0].textContent);
+    }
+
+    function parseNode(node) {
+        if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.CDATA_SECTION_NODE) {
+            let text = node.textContent.trim();
+            if (text === 'true') return true;
+            if (text === 'false') return false;
+            if (!isNaN(text) && text !== '') return Number(text);
+            return text;
+        }
+
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            const children = Array.from(node.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE || ((n.nodeType === Node.TEXT_NODE || n.nodeType === Node.CDATA_SECTION_NODE) && n.textContent.trim() !== ''));
+            
+            if (children.length === 0) return "";
+            
+            if (children.length === 1 && (children[0].nodeType === Node.TEXT_NODE || children[0].nodeType === Node.CDATA_SECTION_NODE)) {
+                return parseNode(children[0]);
+            }
+
+            const obj = {};
+            const isArrayMap = {};
+
+            children.forEach(child => {
+                if (child.nodeType === Node.ELEMENT_NODE) {
+                    const name = child.nodeName;
+                    if (obj[name] !== undefined) {
+                        if (!isArrayMap[name]) {
+                            obj[name] = [obj[name]];
+                            isArrayMap[name] = true;
+                        }
+                        obj[name].push(parseNode(child));
+                    } else {
+                        obj[name] = parseNode(child);
+                    }
+                }
+            });
+
+            for (const key in obj) {
+                if (typeof obj[key] === 'object' && !Array.isArray(obj[key]) && obj[key] !== null) {
+                    const subKeys = Object.keys(obj[key]);
+                    if (subKeys.length === 1) {
+                        const subKey = subKeys[0];
+                        const listKeys = ['item', 'entry', 'photo', 'memo', 'thought', 'post', 'conversation', 'reply', 'message', 'comment'];
+                        if (key.endsWith('s') || listKeys.includes(subKey) || key === 'history' || key === 'trajectory') {
+                            if (Array.isArray(obj[key][subKey])) {
+                                obj[key] = obj[key][subKey];
+                            } else {
+                                obj[key] = [obj[key][subKey]];
+                            }
+                        }
+                    }
+                }
+            }
+            return obj;
+        }
+        return null;
+    }
+
+    const result = parseNode(xmlDoc.documentElement);
+    return xmlDoc.documentElement.nodeName === 'result' ? result : { [xmlDoc.documentElement.nodeName]: result };
+}
+
 /** 当前打开的偷看对话（代发消息时用于发送/API回复） */
 let currentPeekConversation = null;
 /** NPC 主动发来的好友申请（弹窗用） */
@@ -960,8 +1033,16 @@ ${recentLines}
 ---
 
 请根据人设和怀疑度，生成你的回复。可以自然聊天，也可以若有所察地试探。若对话氛围合适且尚未是好友，可表达想加对方为好友的意愿，并设置 "suggestFriend": true。
-只输出一个JSON，不要其他文字：
-{"replies": ["回复1", "回复2"], "newSuspicion": 数字0-100, "suspicionReason": "可选", "suggestFriend": false或true}`;
+只输出XML标签格式，不要其他文字：
+<result>
+  <replies>
+    <reply>回复1</reply>
+    <reply>回复2</reply>
+  </replies>
+  <newSuspicion>数字0-100</newSuspicion>
+  <suspicionReason>可选</suspicionReason>
+  <suggestFriend>false或true</suggestFriend>
+</result>`;
 
     showToast('正在生成回复…');
     try {
@@ -969,9 +1050,7 @@ ${recentLines}
         const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` };
         const requestBody = { model: model, messages: [{ role: 'user', content: systemPrompt }], temperature: 0.8 };
         const contentStr = await fetchAiResponse(apiConfig, requestBody, headers, endpoint);
-        const jsonMatch = contentStr.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('未解析到有效JSON');
-        const data = JSON.parse(jsonMatch[0]);
+        const data = parseXmlToJson(contentStr);
         const replies = Array.isArray(data.replies) ? data.replies : (data.reply ? [data.reply] : []);
         const newSuspicion = typeof data.newSuspicion === 'number' ? Math.max(0, Math.min(100, data.newSuspicion)) : suspicion;
         if (replies.length > 0) {
@@ -1082,7 +1161,7 @@ async function peekSupplementPersonaFromConversation() {
     }).join('\n');
     const basePersona = (currentPeekConversation.partnerPersona || '').slice(0, 500);
     const existingSupplement = (currentPeekConversation.supplementPersona || '').slice(0, 800);
-    const systemPrompt = '你是一个人设补充助手。请根据「最近对话」**只提取【该 NPC 在对话中透露的、关于自己的信息】**，整理成简短的人设条目。\n\n要求：只输出「关于这个 NPC 我们新知道了什么」，例如：提到喜好、经历、习惯、身份等，按「条目：内容」格式补充。不要总结对话过程。若没有新信息则返回空。\n\n只返回 JSON：{"supplement": "条目1：xxx\\n条目2：xxx"} 或 {"supplement": ""}。\n\n已有基础人设（节选）:\n' + basePersona + '\n\n已补充人设（节选）:\n' + existingSupplement + '\n\n最近对话:\n' + convText;
+    const systemPrompt = '你是一个人设补充助手。请根据「最近对话」**只提取【该 NPC 在对话中透露的、关于自己的信息】**，整理成简短的人设条目。\n\n要求：只输出「关于这个 NPC 我们新知道了什么」，例如：提到喜好、经历、习惯、身份等，按「条目：内容」格式补充。不要总结对话过程。若没有新信息则返回空。\n\n只返回 XML 标签格式：\n<result>\n  <supplement>条目1：xxx\n条目2：xxx</supplement>\n</result>\n或 <result><supplement></supplement></result>。\n\n已有基础人设（节选）:\n' + basePersona + '\n\n已补充人设（节选）:\n' + existingSupplement + '\n\n最近对话:\n' + convText;
     showToast('正在提取人设…');
     try {
         const url = apiConfig.url.endsWith('/') ? apiConfig.url.slice(0, -1) : apiConfig.url;
@@ -1090,9 +1169,7 @@ async function peekSupplementPersonaFromConversation() {
         const headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiConfig.key };
         const requestBody = { model: apiConfig.model, messages: [{ role: 'user', content: systemPrompt }], temperature: 0.3 };
         const contentStr = await fetchAiResponse(apiConfig, requestBody, headers, endpoint);
-        const jsonMatch = contentStr.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('未解析到有效JSON');
-        const json = JSON.parse(jsonMatch[0]);
+        const json = parseXmlToJson(contentStr);
         const supplement = (json && json.supplement && String(json.supplement).trim()) ? String(json.supplement).trim() : '';
         if (supplement) {
             currentPeekConversation.supplementPersona = ((currentPeekConversation.supplementPersona || '').trim() ? (currentPeekConversation.supplementPersona || '').trim() + '\n\n' : '') + supplement;
@@ -1710,7 +1787,21 @@ function generatePeekContentPrompt(char, appType, mainChatContext) {
     prompt += `该角色的核心人设是：${char.persona}。\n`;
 
     // 收集关联的 + 全局的世界书（去重）
-    const associatedIds = char.worldBookIds || [];
+    let isOfflineNode = false;
+    if (char.activeNodeId && char.nodes) {
+        const activeNode = char.nodes.find(n => n.id === char.activeNodeId);
+        if (activeNode) {
+            let baseMode = (activeNode.customConfig && activeNode.customConfig.baseMode) ? activeNode.customConfig.baseMode : 
+                           (activeNode.type === 'offline' || (activeNode.type === 'spinoff' && activeNode.spinoffMode === 'offline') ? 'offline' : 'online');
+            if (baseMode === 'offline') {
+                isOfflineNode = true;
+            }
+        }
+    }
+    let associatedIds = char.worldBookIds || [];
+    if (isOfflineNode) {
+        associatedIds = (char.offlineWorldBookIds && char.offlineWorldBookIds.length > 0) ? char.offlineWorldBookIds : (char.worldBookIds || []);
+    }
     const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
     const globalIds = globalBooks.map(wb => wb.id);
     const allBookIds = [...new Set([...associatedIds, ...globalIds])];
@@ -1725,7 +1816,7 @@ function generatePeekContentPrompt(char, appType, mainChatContext) {
 
     prompt += `最近，我（称呼为 ${char.myName}）和 ${char.realName} 的对话如下（这是你们关系和当前状态的核心参考）：\n---\n${mainChatContext}\n---\n`;
     prompt += `现在，我正在偷看Ta手机上的“${appName}”。请你基于Ta的人设和我们最近的聊天内容，生成符合该应用场景的、高度相关且富有沉浸感的内容。\n`;
-    prompt += `你的输出必须是一个JSON对象，且只包含JSON内容，不要有任何额外的解释或标记。根据应用类型，JSON结构如下：\n`;
+    prompt += `你的输出必须是 XML 标签格式，且只包含 XML 内容，不要有任何额外的解释或标记。根据应用类型，XML 结构如下：\n`;
 
     const defaultRefreshCounts = { messages: { min: 3, max: 5 }, timeThoughts: { min: 3, max: 5 }, memos: { min: 3, max: 4 } };
     const getRefreshRange = (type) => {
@@ -1740,81 +1831,110 @@ function generatePeekContentPrompt(char, appType, mainChatContext) {
             const impersonateEnabled = char.peekScreenSettings?.impersonateEnabled;
             if (impersonateEnabled) {
                 prompt += `
-            {
-              "conversations": [
-                {
-                  "partnerName": "与Ta对话的人的称呼（如：小明、闺蜜阿琳）",
-                  "partnerPersona": "此人的基础人设，30-80字：性格、身份、与${char.realName}的关系等",
-                  "partnerRelation": "与${char.realName}的关系（如：同事、同学、闺蜜、前任、网友等）",
-                  "history": [
-                    { "sender": "char", "content": "${char.realName}发送的消息内容" },
-                    { "sender": "partner", "content": "对方发送的消息内容" }
-                  ]
-                }
-              ]
-            }
+            <result>
+              <conversations>
+                <conversation>
+                  <partnerName>与Ta对话的人的称呼（如：小明、闺蜜阿琳）</partnerName>
+                  <partnerPersona>此人的基础人设，30-80字：性格、身份、与${char.realName}的关系等</partnerPersona>
+                  <partnerRelation>与${char.realName}的关系（如：同事、同学、闺蜜、前任、网友等）</partnerRelation>
+                  <history>
+                    <message>
+                      <sender>char</sender>
+                      <content>${char.realName}发送的消息内容</content>
+                    </message>
+                    <message>
+                      <sender>partner</sender>
+                      <content>对方发送的消息内容</content>
+                    </message>
+                  </history>
+                </conversation>
+              </conversations>
+            </result>
             请为 ${char.realName} 编造${msgMin}-${msgMax}个最近的对话。每个对话必须包含 partnerName、partnerPersona、partnerRelation 和 history。对话内容需要强烈反映Ta的人设以及和我的聊天上下文。`;
             } else {
                 prompt += `
-            {
-              "conversations": [
-                {
-                  "partnerName": "与Ta对话的人的称呼",
-                  "history": [
-                    { "sender": "char", "content": "${char.realName}发送的消息内容" },
-                    { "sender": "partner", "content": "对方发送的消息内容" }
-                  ]
-                }
-              ]
-           }
+            <result>
+              <conversations>
+                <conversation>
+                  <partnerName>与Ta对话的人的称呼</partnerName>
+                  <history>
+                    <message>
+                      <sender>char</sender>
+                      <content>${char.realName}发送的消息内容</content>
+                    </message>
+                    <message>
+                      <sender>partner</sender>
+                      <content>对方发送的消息内容</content>
+                    </message>
+                  </history>
+                </conversation>
+              </conversations>
+            </result>
            请为 ${char.realName} 编造${msgMin}-${msgMax}个最近的对话。对话内容需要强烈反映Ta的人设以及和我的聊天上下文。`;
             }
             break;
         }
         case 'steps':
             prompt += `
-            {
-              "currentSteps": 8102,
-              "trajectory": [
-                "08:30 AM - 公司楼下咖啡馆",
-                "10:00 AM - 宠物用品店",
-                "12:00 PM - 附近日料店",
-                "03:00 PM - 回家路上的甜品店",
-                "04:00 PM - 楼下的便利店",
-                "06:30 PM - 健身房"
-              ],
-              "annotation": "角色对自己今天运动情况的批注"
-            }
+            <result>
+              <currentSteps>8102</currentSteps>
+              <trajectory>
+                <entry>08:30 AM - 公司楼下咖啡馆</entry>
+                <entry>10:00 AM - 宠物用品店</entry>
+                <entry>12:00 PM - 附近日料店</entry>
+                <entry>03:00 PM - 回家路上的甜品店</entry>
+                <entry>04:00 PM - 楼下的便利店</entry>
+                <entry>06:30 PM - 健身房</entry>
+              </trajectory>
+              <annotation>角色对自己今天运动情况的批注</annotation>
+            </result>
             请为 ${char.realName} 生成今天的步数信息。你只需要生成Ta的当前步数(currentSteps)，Ta的6条运动轨迹(trajectory)（禁止照搬示例）以及批注(annotation)。内容需要与Ta的人设和我们的聊天上下文高度相关。`;
             break;
         case 'album':
             prompt += `
-            {
-              "photos": [
-                { "type": "photo", "imageDescription": "对一张照片的详细文字描述，例如：一张傍晚在海边的自拍，背景是橙色的晚霞和归来的渔船。", "description": "角色对这张照片的一句话批注，例如：那天的风很舒服。" },
-                { "type": "video", "imageDescription": "对一段视频的详细文字描述，例如：一段在猫咖撸猫的视频，视频里有一只橘猫在打哈欠。", "description": "角色对这段视频的一句话批注，例如：下次还来这里！" }
-              ]
-            }
+            <result>
+              <photos>
+                <photo>
+                  <type>photo</type>
+                  <imageDescription>对一张照片的详细文字描述，例如：一张傍晚在海边的自拍，背景是橙色的晚霞和归来的渔船。</imageDescription>
+                  <description>角色对这张照片的一句话批注，例如：那天的风很舒服。</description>
+                </photo>
+                <photo>
+                  <type>video</type>
+                  <imageDescription>对一段视频的详细文字描述，例如：一段在猫咖撸猫的视频，视频里有一只橘猫在打哈欠。</imageDescription>
+                  <description>角色对这段视频的一句话批注，例如：下次还来这里！</description>
+                </photo>
+              </photos>
+            </result>
             请为 ${char.realName} 的相册生成5-8个条目（照片或视频）。内容需要与Ta的人设和我们的聊天上下文高度相关。'imageDescription' 是对这张照片/视频的详细文字描述，它将代替真实的图片展示给用户。'description' 是 ${char.realName} 自己对这张照片/视频的一句话批注，会显示在描述下方。`;
             break;
         case 'memos': {
             const { min: memoMin, max: memoMax } = getRefreshRange('memos');
             prompt += `
-            {
-              "memos": [
-                { "id": "memo_1", "title": "备忘录标题", "content": "备忘录内容，可以包含换行符\\n" }
-              ]
-            }
+            <result>
+              <memos>
+                <memo>
+                  <id>memo_1</id>
+                  <title>备忘录标题</title>
+                  <content>备忘录内容，可以包含换行符</content>
+                </memo>
+              </memos>
+            </result>
             请生成${memoMin}-${memoMax}条备忘录，内容要与Ta的人设和我们的聊天上下文相关。`;
             break;
         }
         case 'cart':
             prompt += `
-            {
-              "items": [
-                { "id": "cart_1", "title": "商品标题", "spec": "商品规格", "price": "25.00" }
-              ]
-            }
+            <result>
+              <items>
+                <item>
+                  <id>cart_1</id>
+                  <title>商品标题</title>
+                  <spec>商品规格</spec>
+                  <price>25.00</price>
+                </item>
+              </items>
+            </result>
             请生成3-4件商品，这些商品应该反映Ta的兴趣、需求或我们最近聊到的话题。`;
             break;
         case 'browser': {
@@ -1823,30 +1943,37 @@ function generatePeekContentPrompt(char, appType, mainChatContext) {
             const wordMin = bWords.min || 200;
             const wordMax = bWords.max || 500;
             prompt += `
-            {
-              "history": [
-                { "title": "网页标题", "url": "example.com/path", "annotation": "角色对于这条浏览记录的想法或批注"${browserDetailEnabled ? `, "detail": "帖子/网页正文详情，${wordMin}-${wordMax}字"` : ''} }
-              ]
-            }
-            请生成3-5条浏览记录。记录本身要符合Ta的人设和我们的聊天上下文，'annotation'字段则要站在角色自己的视角，记录Ta对这条浏览记录的想法或批注。${browserDetailEnabled ? `每条记录必须包含'detail'字段，是该网页/帖子的正文详情内容，每条详情${wordMin}到${wordMax}字，可使用HTML标签排版。` : ''}`;
+            <result>
+              <history>
+                <item>
+                  <title>网页标题</title>
+                  <url>example.com/path</url>
+                  <annotation>角色对于这条浏览记录的想法或批注</annotation>${browserDetailEnabled ? `\n                  <detail><![CDATA[帖子/网页正文详情，${wordMin}-${wordMax}字]]></detail>` : ''}
+                </item>
+              </history>
+            </result>
+            请生成3-5条浏览记录。记录本身要符合Ta的人设和我们的聊天上下文，'annotation'字段则要站在角色自己的视角，记录Ta对这条浏览记录的想法或批注。${browserDetailEnabled ? `每条记录必须包含'detail'字段，是该网页/帖子的正文详情内容，每条详情${wordMin}到${wordMax}字，可使用HTML标签排版，并用 <![CDATA[ ]]> 包裹。` : ''}`;
             break;
         }
         case 'drafts':
             prompt += `
-            {
-              "draft": { "to": "${char.myName}", "content": "一封写给我但未发送的草稿内容，可以使用HTML的<span class='strikethrough'></span>标签来表示划掉的文字。" }
-            }
-            请生成一份Ta写给我但犹豫未决、未发送的草稿。内容要深刻、细腻，反映Ta的内心挣扎和与我的关系。`;
+            <result>
+              <draft>
+                <to>${char.myName}</to>
+                <content><![CDATA[一封写给我但未发送的草稿内容，可以使用HTML的<span class='strikethrough'></span>标签来表示划掉的文字。]]></content>
+              </draft>
+            </result>
+            请生成一份Ta写给我但犹豫未决、未发送的草稿。内容要深刻、细腻，反映Ta的内心挣扎和与我的关系。草稿内容请用 <![CDATA[ ]]> 包裹。`;
             break;
        case 'transfer':
            prompt += `
-           {
-             "entries": [
-               "要记得买牛奶。",
-               "https://example.com/interesting-article",
-               "刚刚那个想法不错，可以深入一下..."
-             ]
-           }
+           <result>
+             <entries>
+               <entry>要记得买牛奶。</entry>
+               <entry>https://example.com/interesting-article</entry>
+               <entry>刚刚那个想法不错，可以深入一下...</entry>
+             </entries>
+           </result>
            请为 ${char.realName} 生成4-7条Ta发送给自己的、简短零碎的消息。这些内容应该像是Ta的临时备忘、灵感闪现或随手保存的链接，要与Ta的人设和我们的聊天上下文相关，但比“备忘录”应用的内容更随意、更口语化。`;
            break;
         case 'timeThoughts': {
@@ -1891,24 +2018,38 @@ ${diaryContext ? `- 长期记忆（日记总结）：\n${diaryContext}` : ''}
 - 可以有：羡慕、心疼、保护欲、想陪伴、想分享等
 - 语气要自然，像是角色的真心话
 
-返回JSON格式：
-{
-  "thoughts": [
-    {
-      "userAge": "5岁的你",
-      "characterAge": "6岁的我",
-      "title": "如果遇见5岁的你",
-      "characterSelfDescription": "那时候的我...[详细描述角色自己那个年龄段的状态、性格、处境等，100-150字]",
-      "whatToSay": "想对你说...[角色想对小时候用户说的话，50-100字]",
-      "whatToDo": "想和你...[想陪小时候用户做的事，50-80字]",
-      "emotion": "温柔"
-    }
-  ]
-}`;
+返回 XML 标签格式：
+<result>
+  <thoughts>
+    <thought>
+      <userAge>5岁的你</userAge>
+      <characterAge>6岁的我</characterAge>
+      <title>如果遇见5岁的你</title>
+      <characterSelfDescription>那时候的我...[详细描述角色自己那个年龄段的状态、性格、处境等，100-150字]</characterSelfDescription>
+      <whatToSay>想对你说...[角色想对小时候用户说的话，50-100字]</whatToSay>
+      <whatToDo>想和你...[想陪小时候用户做的事，50-80字]</whatToDo>
+      <emotion>温柔</emotion>
+    </thought>
+  </thoughts>
+</result>`;
            break;
        }
         case 'wallet': {
-            const associatedIds = char.worldBookIds || [];
+            let isOfflineNode = false;
+            if (char.activeNodeId && char.nodes) {
+                const activeNode = char.nodes.find(n => n.id === char.activeNodeId);
+                if (activeNode) {
+                    let baseMode = (activeNode.customConfig && activeNode.customConfig.baseMode) ? activeNode.customConfig.baseMode : 
+                                   (activeNode.type === 'offline' || (activeNode.type === 'spinoff' && activeNode.spinoffMode === 'offline') ? 'offline' : 'online');
+                    if (baseMode === 'offline') {
+                        isOfflineNode = true;
+                    }
+                }
+            }
+            let associatedIds = char.worldBookIds || [];
+            if (isOfflineNode) {
+                associatedIds = (char.offlineWorldBookIds && char.offlineWorldBookIds.length > 0) ? char.offlineWorldBookIds : (char.worldBookIds || []);
+            }
             const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
             const globalIds = globalBooks.map(wb => wb.id);
             const allBookIds = [...new Set([...associatedIds, ...globalIds])];
@@ -1944,47 +2085,91 @@ ${diaryContext ? `- 长期记忆（日记总结）：\n${diaryContext}` : ''}
 【近期对话】\n${mainChatContext}\n
 【必须纳入账单的真实转账与商城/代付收支】\n${transferContext}\n
 
-要求：1）上方真实转账与商城/代付收支必须全部出现在 income 或 expense 中，且 amount、remark 一致；2）可再根据人设与记忆补充其他收支项（如工资、购物、红包等）；3）只输出一个 JSON，不要 markdown 或解释。格式如下，每条记录含 amount、remark、time、source（填"聊天记录"或"人设生成"）：
-{"summary":{"balance":"当前余额说明或数字","monthIncome":"本月收入合计","monthExpense":"本月支出合计"},"income":[{"amount":"","remark":"","time":"","source":""}],"expense":[{"amount":"","remark":"","time":"","source":""}]}`;
+要求：1）上方真实转账与商城/代付收支必须全部出现在 income 或 expense 中，且 amount、remark 一致；2）可再根据人设与记忆补充其他收支项（如工资、购物、红包等）；3）只输出 XML 标签格式，不要 markdown 或解释。格式如下，每条记录含 amount、remark、time、source（填"聊天记录"或"人设生成"）：
+<result>
+  <summary>
+    <balance>当前余额说明或数字</balance>
+    <monthIncome>本月收入合计</monthIncome>
+    <monthExpense>本月支出合计</monthExpense>
+  </summary>
+  <income>
+    <item>
+      <amount>...</amount>
+      <remark>...</remark>
+      <time>...</time>
+      <source>...</source>
+    </item>
+  </income>
+  <expense>
+    <item>
+      <amount>...</amount>
+      <remark>...</remark>
+      <time>...</time>
+      <source>...</source>
+    </item>
+  </expense>
+</result>`;
             break;
         }
         default:
-            prompt += `{"error": "Unknown app type"}`;
+            prompt += `<result><error>Unknown app type</error></result>`;
             break;
         case 'unlock': {
             const unlockCommentsEnabled = !!char.peekScreenSettings?.unlockCommentsEnabled;
             if (unlockCommentsEnabled) {
                 prompt += `
-            {
-              "nickname": "角色的微博昵称",
-              "handle": "@角色的微博ID",
-              "bio": "角色的个性签名，可以包含换行符\\n",
-              "posts": [
-                {
-                  "id": "post_1",
-                  "timestamp": "2小时前",
-                  "content": "第一条微博正文内容，140字以内。",
-                  "comments": [
-                    { "author": "评论者昵称", "content": "评论内容", "timestamp": "1小时前" },
-                    { "author": "角色昵称（与上方nickname一致）", "content": "角色本人回复上一条的内容", "timestamp": "50分钟前", "replyTo": "评论者昵称" },
-                    { "author": "路人或陌生人", "content": "可有1条陌生网友/路人评论", "timestamp": "30分钟前" }
-                  ]
-                }
-              ]
-            }
-            请为 ${char.realName} 生成一个符合其人设的微博小号。你需要生成：1）昵称、ID、个性签名；2）3-4条最近的微博。每条微博需要包含：微博正文（生活化、碎片化，符合小号的私密风格），以及3-5条评论。评论者构成：大部分（2-3条）是Ta的朋友、同事或熟人；可以有1-2条来自陌生网友/路人/粉丝的评论（语气更客气或疏远）。当角色本人（author 填与 nickname 相同的昵称）回复某条评论时，必须加上 "replyTo": "被回复者的昵称"，这样界面会显示为「回复 @xxx」的引用样式。评论时间戳晚于帖子发布时间。所有内容与Ta的人设和我们的聊天上下文高度相关。`;
+            <result>
+              <nickname>角色的微博昵称</nickname>
+              <handle>@角色的微博ID</handle>
+              <bio>角色的个性签名，可以包含换行符</bio>
+              <posts>
+                <post>
+                  <id>post_1</id>
+                  <timestamp>2小时前</timestamp>
+                  <content>第一条微博正文内容，140字以内。</content>
+                  <comments>
+                    <comment>
+                      <author>评论者昵称</author>
+                      <content>评论内容</content>
+                      <timestamp>1小时前</timestamp>
+                    </comment>
+                    <comment>
+                      <author>角色昵称（与上方nickname一致）</author>
+                      <content>角色本人回复上一条的内容</content>
+                      <timestamp>50分钟前</timestamp>
+                      <replyTo>评论者昵称</replyTo>
+                    </comment>
+                    <comment>
+                      <author>路人或陌生人</author>
+                      <content>可有1条陌生网友/路人评论</content>
+                      <timestamp>30分钟前</timestamp>
+                    </comment>
+                  </comments>
+                </post>
+              </posts>
+            </result>
+            请为 ${char.realName} 生成一个符合其人设的微博小号。你需要生成：1）昵称、ID、个性签名；2）3-4条最近的微博。每条微博需要包含：微博正文（生活化、碎片化，符合小号的私密风格），以及3-5条评论。评论者构成：大部分（2-3条）是Ta的朋友、同事或熟人；可以有1-2条来自陌生网友/路人/粉丝的评论（语气更客气或疏远）。当角色本人（author 填与 nickname 相同的昵称）回复某条评论时，必须加上 "replyTo" 标签，这样界面会显示为「回复 @xxx」的引用样式。评论时间戳晚于帖子发布时间。所有内容与Ta的人设和我们的聊天上下文高度相关。`;
             } else {
                 prompt += `
-            {
-              "nickname": "角色的微博昵称",
-              "handle": "@角色的微博ID",
-              "bio": "角色的个性签名，可以包含换行符\\n",
-              "posts": [
-                { "timestamp": "2小时前", "content": "第一条微博正文内容，140字以内。" },
-                { "timestamp": "昨天", "content": "第二条微博正文内容。" },
-                { "timestamp": "3天前", "content": "第三条微博正文内容。" }
-              ]
-            }
+            <result>
+              <nickname>角色的微博昵称</nickname>
+              <handle>@角色的微博ID</handle>
+              <bio>角色的个性签名，可以包含换行符</bio>
+              <posts>
+                <post>
+                  <timestamp>2小时前</timestamp>
+                  <content>第一条微博正文内容，140字以内。</content>
+                </post>
+                <post>
+                  <timestamp>昨天</timestamp>
+                  <content>第二条微博正文内容。</content>
+                </post>
+                <post>
+                  <timestamp>3天前</timestamp>
+                  <content>第三条微博正文内容。</content>
+                </post>
+              </posts>
+            </result>
             请为 ${char.realName} 生成一个符合其人设的微博小号。你需要生成昵称、ID、个性签名，以及3-4条最近的微博。微博内容要生活化、碎片化，符合小号的风格，并与Ta的人设和我们的聊天上下文高度相关。`;
             }
             break;
@@ -2139,7 +2324,6 @@ async function generateAndRenderPeekContent(appType, options = {}) {
             model: model,
             messages: [{ role: 'user', content: systemPrompt }],
             temperature: 0.8,
-            top_p: 0.9,
         };
 
         const endpoint = `${url}/v1/chat/completions`;
@@ -2147,10 +2331,7 @@ async function generateAndRenderPeekContent(appType, options = {}) {
 
         const contentStr = await fetchAiResponse(apiConfig, requestBody, headers, endpoint);
         
-        const jsonMatch = contentStr.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("AI响应中未找到有效的JSON对象。");
-        
-        const generatedData = JSON.parse(jsonMatch[0]);
+        const generatedData = parseXmlToJson(contentStr);
 
         let isValid = false;
         switch (appType) {

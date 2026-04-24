@@ -909,20 +909,44 @@ function setupChatSettings() {
         });
     })();
 
-    document.getElementById('link-world-book-btn').addEventListener('click', () => {
+    let currentWorldBookMode = 'online';
+
+    function renderWorldBookSelectionList() {
         const globalIds = (db.worldBooks || []).filter(wb => wb.isGlobal && !wb.disabled).map(wb => wb.id);
         let displayIds = [];
         if (currentChatType === 'private') {
             const character = db.characters.find(c => c.id === currentChatId);
             if (!character) return;
-            displayIds = [...new Set([...(character.worldBookIds || []), ...globalIds])];
+            const ids = currentWorldBookMode === 'offline' ? (character.offlineWorldBookIds || []) : (character.worldBookIds || []);
+            displayIds = [...new Set([...ids, ...globalIds])];
         } else if (currentChatType === 'group') {
             const group = db.groups.find(g => g.id === currentChatId);
             if (!group) return;
-            displayIds = [...new Set([...(group.worldBookIds || []), ...globalIds])];
+            const ids = currentWorldBookMode === 'offline' ? (group.offlineWorldBookIds || []) : (group.worldBookIds || []);
+            displayIds = [...new Set([...ids, ...globalIds])];
         }
         renderCategorizedWorldBookList(document.getElementById('world-book-selection-list'), db.worldBooks, displayIds, 'wb-select');
+    }
+
+    document.getElementById('link-world-book-btn').addEventListener('click', () => {
+        currentWorldBookMode = 'online';
+        const tabs = document.querySelectorAll('#world-book-mode-tabs .settings-tab-item');
+        tabs.forEach(t => t.classList.remove('active'));
+        const onlineTab = document.querySelector('#world-book-mode-tabs .settings-tab-item[data-mode="online"]');
+        if (onlineTab) onlineTab.classList.add('active');
+        
+        renderWorldBookSelectionList();
         document.getElementById('world-book-selection-modal').classList.add('visible');
+    });
+
+    const wbModeTabs = document.querySelectorAll('#world-book-mode-tabs .settings-tab-item');
+    wbModeTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            wbModeTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentWorldBookMode = tab.getAttribute('data-mode');
+            renderWorldBookSelectionList();
+        });
     });
 
     document.getElementById('save-world-book-selection-btn').addEventListener('click', async () => {
@@ -931,10 +955,22 @@ function setupChatSettings() {
         const toSave = selectedIds.filter(id => !globalIds.includes(id));
         if (currentChatType === 'private') {
             const character = db.characters.find(c => c.id === currentChatId);
-            if (character) character.worldBookIds = toSave;
+            if (character) {
+                if (currentWorldBookMode === 'offline') {
+                    character.offlineWorldBookIds = toSave;
+                } else {
+                    character.worldBookIds = toSave;
+                }
+            }
         } else if (currentChatType === 'group') {
             const group = db.groups.find(g => g.id === currentChatId);
-            if (group) group.worldBookIds = toSave;
+            if (group) {
+                if (currentWorldBookMode === 'offline') {
+                    group.offlineWorldBookIds = toSave;
+                } else {
+                    group.worldBookIds = toSave;
+                }
+            }
         }
         await saveData();
         document.getElementById('world-book-selection-modal').classList.remove('visible');

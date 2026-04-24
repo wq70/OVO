@@ -177,8 +177,24 @@ const globalSettingKeys = [
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
 
-const appVersion = "4.9";
+const appVersion = "4.24";
 const updateLog = [
+    {
+        version: "4.24",
+        date: "2026-04-24",
+        notes: [
+            "4.24更新：本次更新由1900完成制作，1900我们喜欢你！",
+            "新增： 聊天设置-关联世界书，新增线下选项，在节点系统进行线下时优先调用线下tag里绑定的世界书，若无绑定，则回退使用线上tag内绑定的世界书",
+            "————",
+            "优化： 日记、查手机、论坛的输出格式要求从【纯json格式】改为→**【xml标签格式】**，对api质量要求降低了很多，如先前绑定了强调json格式防止掉格式的世界书，请做出相应调整更改",
+            "————",
+            "提示词调整： 对于提示词做了优化，移动了聊天记录在提示词里的位置，新增了对于防句式重复的提示词",
+            "————",
+            "关于claude模型：",
+            "1.claude不要开思维链，模型不支持不要开",
+            "2.已修复：400报错、日记总结、查手机、论坛格式报错"
+        ]
+    },
     {
         version: "4.9",
         date: "2026-04-12",

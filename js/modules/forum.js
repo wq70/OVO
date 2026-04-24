@@ -902,30 +902,29 @@ ${context}
 
 你的任务是读取背景世界观生成${(db.forumSettings && db.forumSettings.postsPerGeneration) || 8}篇风格各异、内容有趣的论坛帖子，每条帖子下面生成${(db.forumSettings && db.forumSettings.commentsPerPost && db.forumSettings.commentsPerPost.min) || 4}到${(db.forumSettings && db.forumSettings.commentsPerPost && db.forumSettings.commentsPerPost.max) || 8}条评论，每个帖子评论数量应该不一样，注意区分真实姓名和网名，注意user隐私，你的角色是“世界构建者”和“社区模拟器”，你需要分析char设定和user人设所处世界的世界观而不是“角色扮演者”，发帖人应该是该角色所处世界观下的其他NPC，发帖人不能是user。ABSOLUTELY DO NOT。若角色为普通人或需保密等神秘身份就禁止提及角色真实姓名，可以用代称或者暗号，只有当user或者char是公众人物名气大时才可以提及真实姓名。char的备注或者昵称是仅供user使用的，NPC不知道也禁止提及char的备注。若user和char不在一个地区就禁止有NPC目睹二人同框。
 
-请严格按照下面的JSON格式返回，不要包含任何多余的解释和注释，仅返回JSON内容本身。禁止以user的视角进行创作。
+请严格按照下面的XML标签格式返回，不要包含任何多余的解释和注释。禁止以user的视角进行创作。
 
 返回格式示例:
-{
-"posts": [
-{
-  "title": "一个引人注目的帖子标题",
-  "summary": "对帖子内容的客观的重点摘要，大约100字左右，DO NOT use first-person “我”",
-  "content": "帖子的详细内容，150~300字。\\n可以使用换行符来分段落，注意排版。",
-  "comments": [
-    {
-      "username": "路人（随机姓名）",
-      "content": "这是第一条评论的内容，表达一个观点。",
-      "timestamp": "5分钟前"
-    },
-    {
-      "username": "（随机姓名）",
-      "content": "这是第二条评论，可能反驳楼主或楼上的观点。",
-      "timestamp": "3分钟前"
-    }
-  ]
-}
-]
-}`;
+<posts>
+  <post>
+    <title>一个引人注目的帖子标题</title>
+    <summary>对帖子内容的客观的重点摘要，大约100字左右，DO NOT use first-person “我”</summary>
+    <content>帖子的详细内容，150~300字。\n可以使用换行符来分段落，注意排版。</content>
+    <comments>
+      <comment>
+        <username>路人（随机姓名）</username>
+        <content>这是第一条评论的内容，表达一个观点。</content>
+        <timestamp>5分钟前</timestamp>
+      </comment>
+      <comment>
+        <username>（随机姓名）</username>
+        <content>这是第二条评论，可能反驳楼主或楼上的观点。</content>
+        <timestamp>3分钟前</timestamp>
+      </comment>
+    </comments>
+  </post>
+</posts>
+`;
 
         if (keywords) {
             systemPrompt += `\n\n重要指令：本次生成的所有帖子标题必须和以下关键词相关：【${keywords}】，同时也需要和之前绑定的设定相关。禁止相似帖子过多，不要特地把关键词标注出来。`;
@@ -936,8 +935,7 @@ ${context}
         const requestBody = {
             model: apiSettings.model,
             messages: [{ role: "user", content: systemPrompt }],
-            temperature: temperature,
-            response_format: { type: "json_object" },
+            temperature: temperature
         };
 
         const endpoint = `${url}/v1/chat/completions`;
@@ -945,9 +943,47 @@ ${context}
 
         const contentStr = await fetchAiResponse(apiSettings, requestBody, headers, endpoint);
 
-        const jsonData = JSON.parse(contentStr);
-        if (jsonData && Array.isArray(jsonData.posts)) {
-            const enhancedPosts = jsonData.posts.map(post => ({
+        const posts = [];
+        const postRegex = /<post>([\s\S]*?)<\/post>/g;
+        let postMatch;
+        while ((postMatch = postRegex.exec(contentStr)) !== null) {
+            const postContent = postMatch[1];
+            const titleMatch = postContent.match(/<title>([\s\S]*?)<\/title>/);
+            const summaryMatch = postContent.match(/<summary>([\s\S]*?)<\/summary>/);
+            const contentMatch = postContent.match(/<content>([\s\S]*?)<\/content>/);
+            
+            const comments = [];
+            const commentsBlockMatch = postContent.match(/<comments>([\s\S]*?)<\/comments>/);
+            if (commentsBlockMatch) {
+                const commentRegex = /<comment>([\s\S]*?)<\/comment>/g;
+                let commentMatch;
+                while ((commentMatch = commentRegex.exec(commentsBlockMatch[1])) !== null) {
+                    const cContent = commentMatch[1];
+                    const uMatch = cContent.match(/<username>([\s\S]*?)<\/username>/);
+                    const textMatch = cContent.match(/<content>([\s\S]*?)<\/content>/);
+                    const timeMatch = cContent.match(/<timestamp>([\s\S]*?)<\/timestamp>/);
+                    if (uMatch && textMatch) {
+                        comments.push({
+                            username: uMatch[1].trim(),
+                            content: textMatch[1].trim(),
+                            timestamp: timeMatch ? timeMatch[1].trim() : '刚刚'
+                        });
+                    }
+                }
+            }
+            
+            if (titleMatch && contentMatch) {
+                posts.push({
+                    title: titleMatch[1].trim(),
+                    summary: summaryMatch ? summaryMatch[1].trim() : '',
+                    content: contentMatch[1].trim(),
+                    comments: comments
+                });
+            }
+        }
+
+        if (posts.length > 0) {
+            const enhancedPosts = posts.map(post => ({
               ...post,
               id: `post_${Date.now()}_${Math.random()}`,
               authorId: 'npc',
@@ -1216,16 +1252,15 @@ ${context}
 
 请生成${replyCount}条来自不同NPC的评论。评论要有不同的观点和风格，有的支持，有的质疑，有的提供新的视角。评论者都是论坛中的NPC用户，要根据背景设定来回复。
 
-返回JSON格式:
-{
-  "comments": [
-    {
-      "username": "评论者昵称",
-      "content": "评论内容",
-      "timestamp": "刚刚"
-    }
-  ]
-}`;
+返回XML标签格式:
+<comments>
+  <comment>
+    <username>评论者昵称</username>
+    <content>评论内容</content>
+    <timestamp>刚刚</timestamp>
+  </comment>
+</comments>
+`;
         
         let url = apiSettings.url;
         if (url.endsWith('/')) url = url.slice(0, -1);
@@ -1235,20 +1270,35 @@ ${context}
         const requestBody = {
             model: apiSettings.model,
             messages: [{ role: "user", content: systemPrompt }],
-            temperature: temperature,
-            response_format: { type: "json_object" },
+            temperature: temperature
         };
         
         const endpoint = `${url}/v1/chat/completions`;
         const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiSettings.key}` };
         
         const contentStr = await fetchAiResponse(apiSettings, requestBody, headers, endpoint);
-        const jsonData = JSON.parse(contentStr);
         
-        if (jsonData && Array.isArray(jsonData.comments)) {
+        const comments = [];
+        const commentRegex = /<comment>([\s\S]*?)<\/comment>/g;
+        let commentMatch;
+        while ((commentMatch = commentRegex.exec(contentStr)) !== null) {
+            const cContent = commentMatch[1];
+            const uMatch = cContent.match(/<username>([\s\S]*?)<\/username>/);
+            const textMatch = cContent.match(/<content>([\s\S]*?)<\/content>/);
+            const timeMatch = cContent.match(/<timestamp>([\s\S]*?)<\/timestamp>/);
+            if (uMatch && textMatch) {
+                comments.push({
+                    username: uMatch[1].trim(),
+                    content: textMatch[1].trim(),
+                    timestamp: timeMatch ? timeMatch[1].trim() : '刚刚'
+                });
+            }
+        }
+        
+        if (comments.length > 0) {
             if (!post.comments) post.comments = [];
             
-            jsonData.comments.forEach(comment => {
+            comments.forEach(comment => {
                 const newComment = {
                     id: 'comment_' + Date.now() + '_' + Math.random(),
                     authorId: 'npc',
@@ -2169,19 +2219,34 @@ async function forumGenerateStrangerDMs() {
         if (normalCount > 0) {
             var systemPrompt;
             if (generateDetailed) {
-                systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景，并为每个陌生人生成一份可聊天的基础人设。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (activeAccount.username || '用户') + '\n简介: ' + (activeAccount.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n===== 用户在其他帖子下的评论/回复 =====\n' + userCommentsText + '\n请生成 ' + normalCount + ' 条陌生人私信，且为每个陌生人生成基础人设。要求：\n1. 每条私信来自不同的NPC，senderName 为符合世界观的论坛昵称。\n2. 私信内容自然口语化，1～2 句话即可。\n3. 每个 NPC 的 basicPersona 必须包含：性别、性格（如开朗/冷淡/傲娇等）、大致家世或身份（如学生/上班族/家境等）、年龄或年龄段、与世界观的关系等，便于日后加好友聊天，不要纯人机感。用一两段话描述即可。\n4. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"dms":[{"senderName":"NPC昵称","content":"该陌生人发给用户的一条私信内容","basicPersona":"性别、性格、家世/身份、年龄等基础人设描述，一两段话"}]}';
+                systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景，并为每个陌生人生成一份可聊天的基础人设。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (activeAccount.username || '用户') + '\n简介: ' + (activeAccount.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n===== 用户在其他帖子下的评论/回复 =====\n' + userCommentsText + '\n请生成 ' + normalCount + ' 条陌生人私信，且为每个陌生人生成基础人设。要求：\n1. 每条私信来自不同的NPC，senderName 为符合世界观的论坛昵称。\n2. 私信内容自然口语化，1～2 句话即可。\n3. 每个 NPC 的 basicPersona 必须包含：性别、性格（如开朗/冷淡/傲娇等）、大致家世或身份（如学生/上班族/家境等）、年龄或年龄段、与世界观的关系等，便于日后加好友聊天，不要纯人机感。用一两段话描述即可。\n4. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 XML 标签格式返回，不要包含其它说明或 markdown：\n<dms>\n  <dm>\n    <senderName>NPC昵称</senderName>\n    <content>该陌生人发给用户的一条私信内容</content>\n    <basicPersona>性别、性格、家世/身份、年龄等基础人设描述，一两段话</basicPersona>\n  </dm>\n</dms>';
             } else {
-                systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (activeAccount.username || '用户') + '\n简介: ' + (activeAccount.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n===== 用户在其他帖子下的评论/回复 =====\n' + userCommentsText + '\n请生成 ' + normalCount + ' 条陌生人私信。要求：\n1. 每条私信来自不同的NPC（陌生人），senderName 为符合世界观的论坛昵称。\n2. 若用户发过帖或发过评论：私信内容可以是看到用户某篇帖子后的搭讪、提问、共鸣，也可以是看到用户在某条帖子下的回复/评论后被吸引来打招呼，语气自然、口语化。\n3. 若用户从未发帖也从未评论：私信可以是简单打招呼、自我介绍、或与世界观/社区氛围相关的一句闲聊。\n4. 每条私信 1～2 句话即可，像真实论坛私信。\n5. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"dms":[{"senderName":"NPC昵称","content":"该陌生人发给用户的一条私信内容"}]}';
+                systemPrompt = '你是一位论坛私信模拟专家。根据以下背景信息，模拟「若干陌生人向用户发送私信」的场景。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n===== 用户（收件人）信息 =====\n昵称: ' + (activeAccount.username || '用户') + '\n简介: ' + (activeAccount.bio || '无') + '\n\n===== 用户发过的帖子 =====\n' + userPostsText + '\n===== 用户在其他帖子下的评论/回复 =====\n' + userCommentsText + '\n请生成 ' + normalCount + ' 条陌生人私信。要求：\n1. 每条私信来自不同的NPC（陌生人），senderName 为符合世界观的论坛昵称。\n2. 若用户发过帖或发过评论：私信内容可以是看到用户某篇帖子后的搭讪、提问、共鸣，也可以是看到用户在某条帖子下的回复/评论后被吸引来打招呼，语气自然、口语化。\n3. 若用户从未发帖也从未评论：私信可以是简单打招呼、自我介绍、或与世界观/社区氛围相关的一句闲聊。\n4. 每条私信 1～2 句话即可，像真实论坛私信。\n5. 不要以用户视角创作，不要出现 char 的备注名等仅用户可见信息。\n\n请严格按以下 XML 标签格式返回，不要包含其它说明或 markdown：\n<dms>\n  <dm>\n    <senderName>NPC昵称</senderName>\n    <content>该陌生人发给用户的一条私信内容</content>\n  </dm>\n</dms>';
             }
             var url = apiSettings.url;
             if (url.endsWith('/')) url = url.slice(0, -1);
             var temperature = apiSettings.temperature !== undefined ? apiSettings.temperature : 0.9;
-            var requestBody = { model: apiSettings.model, messages: [{ role: 'user', content: systemPrompt }], temperature: temperature, response_format: { type: 'json_object' } };
+            var requestBody = { model: apiSettings.model, messages: [{ role: 'user', content: systemPrompt }], temperature: temperature };
             var endpoint = url + '/v1/chat/completions';
             var headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiSettings.key };
             var contentStr = await fetchAiResponse(apiSettings, requestBody, headers, endpoint);
-            jsonData = JSON.parse(contentStr);
-            if (!jsonData || !Array.isArray(jsonData.dms)) throw new Error('AI返回的数据格式不正确');
+            
+            var dmRegex = /<dm>([\s\S]*?)<\/dm>/g;
+            var dmMatch;
+            while ((dmMatch = dmRegex.exec(contentStr)) !== null) {
+                var dmContent = dmMatch[1];
+                var sMatch = dmContent.match(/<senderName>([\s\S]*?)<\/senderName>/);
+                var cMatch = dmContent.match(/<content>([\s\S]*?)<\/content>/);
+                var pMatch = dmContent.match(/<basicPersona>([\s\S]*?)<\/basicPersona>/);
+                if (sMatch && cMatch) {
+                    jsonData.dms.push({
+                        senderName: sMatch[1].trim(),
+                        content: cMatch[1].trim(),
+                        basicPersona: pMatch ? pMatch[1].trim() : ''
+                    });
+                }
+            }
+            if (jsonData.dms.length === 0) throw new Error('AI返回的数据格式不正确');
         }
 
         if (jsonData.dms.length > 0 || altCount > 0) {
@@ -2217,15 +2282,19 @@ async function forumGenerateStrangerDMs() {
                 try {
                     var url = apiSettings.url;
                     if (url.endsWith('/')) url = url.slice(0, -1);
-                    var altPrompt = '你是一位论坛/社区模拟专家。根据以下世界观，生成 ' + altCount + ' 个「看起来像真实论坛用户」的论坛昵称。要求：\n1. 每个昵称 2～8 个字符，像普通人会起的网名（可文艺、可随意、可带符号感），符合该世界观的氛围。\n2. 不要出现「小号」「马甲」等字样，不要像内部 ID。\n3. ' + altCount + ' 个昵称彼此不重复。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n请严格按以下 JSON 格式返回，不要包含其它说明或 markdown：\n{"nicknames":["昵称1","昵称2",...]}\n其中 nicknames 数组长度必须为 ' + altCount + '。';
-                    var altRequestBody = { model: apiSettings.model, messages: [{ role: 'user', content: altPrompt }], temperature: 0.8, response_format: { type: 'json_object' } };
+                    var altPrompt = '你是一位论坛/社区模拟专家。根据以下世界观，生成 ' + altCount + ' 个「看起来像真实论坛用户」的论坛昵称。要求：\n1. 每个昵称 2～8 个字符，像普通人会起的网名（可文艺、可随意、可带符号感），符合该世界观的氛围。\n2. 不要出现「小号」「马甲」等字样，不要像内部 ID。\n3. ' + altCount + ' 个昵称彼此不重复。\n\n===== 世界观与设定 =====\n' + worldContext + '\n\n请严格按以下 XML 标签格式返回，不要包含其它说明或 markdown：\n<nicknames>\n  <nickname>昵称1</nickname>\n  <nickname>昵称2</nickname>\n</nicknames>';
+                    var altRequestBody = { model: apiSettings.model, messages: [{ role: 'user', content: altPrompt }], temperature: 0.8 };
                     var altEndpoint = url + '/v1/chat/completions';
                     var altHeaders = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiSettings.key };
                     var altContentStr = await fetchAiResponse(apiSettings, altRequestBody, altHeaders, altEndpoint);
-                    var altJson = JSON.parse(altContentStr);
-                    if (altJson && Array.isArray(altJson.nicknames)) {
-                        altNicknames = altJson.nicknames.slice(0, altCount).map(function(n) { return (n || '').toString().trim().replace(/\s+/g, '_').slice(0, 20) || null; }).filter(Boolean);
+                    
+                    var nickRegex = /<nickname>([\s\S]*?)<\/nickname>/g;
+                    var nickMatch;
+                    while ((nickMatch = nickRegex.exec(altContentStr)) !== null) {
+                        var n = nickMatch[1].trim();
+                        if (n) altNicknames.push(n.replace(/\s+/g, '_').slice(0, 20));
                     }
+                    altNicknames = altNicknames.slice(0, altCount);
                 } catch (e) { console.warn('生成角色小号昵称失败，使用备用昵称', e); }
                 while (altNicknames.length < altCount) {
                     altNicknames.push(fallbackAltNames[(altNicknames.length + altCount) % fallbackAltNames.length] + (altNicknames.length > 0 ? '_' + altNicknames.length : ''));
@@ -2377,14 +2446,15 @@ ${conversationText}
 2. 若你是伪装身份的“角色小号”，更应注重伪装和试探，把加好友当作一个比较重大的决定，不要因过于主动而暴露破绽。
 3. 只有当你的性格极度开朗自来熟，或者双方已经聊得非常投机、有明确继续深入交往的必要时，才能在回复中自然地表达加好友意愿（例如："我们要不要加个好友？"），并在JSON中设置 "suggestFriend": true；否则，请务必设置 "suggestFriend": false。
 
-返回JSON格式:
-{
-  "replies": [
-    "第一条回复内容",
-    "第二条回复内容"
-  ],
-  "suggestFriend": false
-}`;
+返回XML标签格式:
+<result>
+  <replies>
+    <reply>第一条回复内容</reply>
+    <reply>第二条回复内容</reply>
+  </replies>
+  <suggestFriend>false</suggestFriend>
+</result>
+`;
         
         let url = apiSettings.url;
         if (url.endsWith('/')) url = url.slice(0, -1);
@@ -2394,20 +2464,28 @@ ${conversationText}
         const requestBody = {
             model: apiSettings.model,
             messages: [{ role: "user", content: systemPrompt }],
-            temperature: temperature,
-            response_format: { type: "json_object" },
+            temperature: temperature
         };
         
         const endpoint = `${url}/v1/chat/completions`;
         const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiSettings.key}` };
         
         const contentStr = await fetchAiResponse(apiSettings, requestBody, headers, endpoint);
-        const jsonData = JSON.parse(contentStr);
         
-        if (jsonData && Array.isArray(jsonData.replies) && jsonData.replies.length > 0) {
+        const replies = [];
+        const replyRegex = /<reply>([\s\S]*?)<\/reply>/g;
+        let replyMatch;
+        while ((replyMatch = replyRegex.exec(contentStr)) !== null) {
+            if (replyMatch[1].trim()) replies.push(replyMatch[1].trim());
+        }
+        
+        const suggestFriendMatch = contentStr.match(/<suggestFriend>([\s\S]*?)<\/suggestFriend>/i);
+        const suggestFriend = suggestFriendMatch ? suggestFriendMatch[1].trim().toLowerCase() === 'true' : false;
+        
+        if (replies.length > 0) {
             if (!db.forumMessages) db.forumMessages = [];
             
-            jsonData.replies.forEach((replyContent, index) => {
+            replies.forEach((replyContent, index) => {
                 const newMessage = {
                     id: 'dm_' + Date.now() + '_' + Math.random(),
                     fromUserId: targetUserId,
@@ -2421,7 +2499,7 @@ ${conversationText}
             
             await saveData();
             if (forumCurrentDMUserId === targetUserId) forumRenderDMConversation(targetUserId);
-            showToast(`${npcName}发来了${jsonData.replies.length}条消息`);
+            showToast(`${npcName}发来了${replies.length}条消息`);
             
             if (forumHasPendingFriendRequestFromUser(targetUserId)) {
                 const profile = getForumStrangerProfile(targetUserId) || { name: npcName, avatar: '', basicPersona: '' };
@@ -2430,7 +2508,7 @@ ${conversationText}
                 showToast('已加为好友');
                 var addFriendBtn = document.getElementById('forum-dm-add-friend-btn');
                 if (addFriendBtn) { addFriendBtn.style.display = 'none'; }
-            } else if (jsonData.suggestFriend && !forumIsFriend(targetUserId)) {
+            } else if (suggestFriend && !forumIsFriend(targetUserId)) {
                 const profile = getForumStrangerProfile(targetUserId) || {};
                 forumShowFriendRequestModal({
                     fromUserId: targetUserId,
@@ -2504,16 +2582,15 @@ ${existingComments}
 ${repliedNpcHint}
 请生成${replyCount}条不同视角的评论。每条评论要有独特的观点，可以互相回复或讨论。评论者都是NPC，要根据背景设定来回复。
 
-返回JSON格式:
-{
-  "comments": [
-    {
-      "username": "评论者昵称",
-      "content": "评论内容",
-      "timestamp": "刚刚"
-    }
-  ]
-}`;
+返回XML标签格式:
+<comments>
+  <comment>
+    <username>评论者昵称</username>
+    <content>评论内容</content>
+    <timestamp>刚刚</timestamp>
+  </comment>
+</comments>
+`;
         
         let url = apiSettings.url;
         if (url.endsWith('/')) url = url.slice(0, -1);
@@ -2523,20 +2600,35 @@ ${repliedNpcHint}
         const requestBody = {
             model: apiSettings.model,
             messages: [{ role: "user", content: systemPrompt }],
-            temperature: temperature,
-            response_format: { type: "json_object" },
+            temperature: temperature
         };
         
         const endpoint = `${url}/v1/chat/completions`;
         const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiSettings.key}` };
         
         const contentStr = await fetchAiResponse(apiSettings, requestBody, headers, endpoint);
-        const jsonData = JSON.parse(contentStr);
         
-        if (jsonData && Array.isArray(jsonData.comments)) {
+        const comments = [];
+        const commentRegex = /<comment>([\s\S]*?)<\/comment>/g;
+        let commentMatch;
+        while ((commentMatch = commentRegex.exec(contentStr)) !== null) {
+            const cContent = commentMatch[1];
+            const uMatch = cContent.match(/<username>([\s\S]*?)<\/username>/);
+            const textMatch = cContent.match(/<content>([\s\S]*?)<\/content>/);
+            const timeMatch = cContent.match(/<timestamp>([\s\S]*?)<\/timestamp>/);
+            if (uMatch && textMatch) {
+                comments.push({
+                    username: uMatch[1].trim(),
+                    content: textMatch[1].trim(),
+                    timestamp: timeMatch ? timeMatch[1].trim() : '刚刚'
+                });
+            }
+        }
+        
+        if (comments.length > 0) {
             if (!post.comments) post.comments = [];
             
-            jsonData.comments.forEach(comment => {
+            comments.forEach(comment => {
                 const newComment = {
                     id: 'comment_' + Date.now() + '_' + Math.random(),
                     authorId: 'npc',
@@ -2549,7 +2641,7 @@ ${repliedNpcHint}
             
             await saveData();
             renderPostDetail(post);
-            showToast(`成功生成${jsonData.comments.length}条AI评论`);
+            showToast(`成功生成${comments.length}条AI评论`);
         }
         
     } catch (error) {
@@ -2577,14 +2669,15 @@ async function forumSupplementPersonaFromChat(chatId, character) {
     }).join('\n');
     var basePersona = (character.persona || '').slice(0, 500);
     var existingSupplement = (character.supplementPersonaText || '').slice(0, 800);
-    var systemPrompt = '你是一个人设补充助手。请根据「最近对话」**只提取【该角色（NPC）在对话中向用户透露的、关于自己的信息】**，整理成简短的人设条目，用于补充该角色的人设档案。\n\n要求：\n- 只输出「关于这个角色我们新知道了什么」，例如：角色在对话里告诉用户「我叫小明」→ 补充「姓名：小明」；若提到喜好、经历、习惯、身份等，也按「条目：内容」格式补充。\n- 不要总结对话过程，不要写「用户说了…角色回答了…」，只写该角色的人设信息。\n- 若本轮对话中角色没有透露任何关于自己的新信息，则返回空。\n\n只返回 JSON：{"supplement": "姓名：xxx\\n喜好：xxx\\n..."} 或 {"supplement": ""}。\n\n已有基础人设（节选）:\n' + basePersona + '\n\n已补齐人设（节选）:\n' + existingSupplement + '\n\n最近对话:\n' + convText;
+    var systemPrompt = '你是一个人设补充助手。请根据「最近对话」**只提取【该角色（NPC）在对话中向用户透露的、关于自己的信息】**，整理成简短的人设条目，用于补充该角色的人设档案。\n\n要求：\n- 只输出「关于这个角色我们新知道了什么」，例如：角色在对话里告诉用户「我叫小明」→ 补充「姓名：小明」；若提到喜好、经历、习惯、身份等，也按「条目：内容」格式补充。\n- 不要总结对话过程，不要写「用户说了…角色回答了…」，只写该角色的人设信息。\n- 若本轮对话中角色没有透露任何关于自己的新信息，则返回空。\n\n只返回 XML 标签格式：<supplement>姓名：xxx\n喜好：xxx\n...</supplement> 或 <supplement></supplement>。\n\n已有基础人设（节选）:\n' + basePersona + '\n\n已补齐人设（节选）:\n' + existingSupplement + '\n\n最近对话:\n' + convText;
     try {
         var url = apiSettings.url;
         if (url.endsWith('/')) url = url.slice(0, -1);
-        var requestBody = { model: apiSettings.model, messages: [{ role: 'user', content: systemPrompt }], temperature: 0.3, response_format: { type: 'json_object' } };
+        var requestBody = { model: apiSettings.model, messages: [{ role: 'user', content: systemPrompt }], temperature: 0.3 };
         var contentStr = await fetchAiResponse(apiSettings, requestBody, { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiSettings.key }, url + '/v1/chat/completions');
-        var json = JSON.parse(contentStr);
-        var supplement = (json && json.supplement && String(json.supplement).trim()) ? String(json.supplement).trim() : '';
+        
+        var suppMatch = contentStr.match(/<supplement>([\s\S]*?)<\/supplement>/);
+        var supplement = suppMatch ? suppMatch[1].trim() : '';
         if (supplement) {
             character.supplementPersonaText = ((character.supplementPersonaText || '').trim() ? (character.supplementPersonaText || '').trim() + '\n\n' : '') + supplement;
             saveData();

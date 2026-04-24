@@ -1282,7 +1282,21 @@ function sendRenameNotification(group, newName) {
 
 function generateGroupSystemPrompt(group) {
     // 收集关联的 + 全局的世界书（去重）
-    const associatedIds = group.worldBookIds || [];
+    let isOfflineNode = false;
+    if (group.activeNodeId && group.nodes) {
+        const activeNode = group.nodes.find(n => n.id === group.activeNodeId);
+        if (activeNode) {
+            let baseMode = (activeNode.customConfig && activeNode.customConfig.baseMode) ? activeNode.customConfig.baseMode : 
+                           (activeNode.type === 'offline' || (activeNode.type === 'spinoff' && activeNode.spinoffMode === 'offline') ? 'offline' : 'online');
+            if (baseMode === 'offline') {
+                isOfflineNode = true;
+            }
+        }
+    }
+    let associatedIds = group.worldBookIds || [];
+    if (isOfflineNode) {
+        associatedIds = (group.offlineWorldBookIds && group.offlineWorldBookIds.length > 0) ? group.offlineWorldBookIds : (group.worldBookIds || []);
+    }
     const globalBooks = db.worldBooks.filter(wb => wb.isGlobal && !wb.disabled);
     const globalIds = globalBooks.map(wb => wb.id);
     const allBookIds = [...new Set([...associatedIds, ...globalIds])];
