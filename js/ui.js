@@ -471,7 +471,6 @@ function setupHomeScreen() {
         <a href="#" class="app-icon" id="day-mode-btn"><img src="${getIcon('day-mode-btn')}" alt="日间" class="icon-img"></a>
         <a href="#" class="app-icon" id="night-mode-btn"><img src="${getIcon('night-mode-btn')}" alt="夜间" class="icon-img"></a>
         <a href="#" class="app-icon" data-target="storage-analysis-screen"><img src="${getIcon('storage-analysis-screen')}" alt="存储" class="icon-img"></a>
-        <a href="#" class="app-icon" data-target="app-settings-screen"><img src="${getIcon('api-settings-screen')}" alt="应用设置" class="icon-img"></a>
     </div>`;
     homeScreen.innerHTML = homeScreenHTML;
 
@@ -497,7 +496,22 @@ function setupHomeScreen() {
     /* 外观设置：点击进入页面，由 showScreen 时调用 renderAppearanceSettingsScreen */
     document.querySelector('[data-target="world-book-screen"]').addEventListener('click', renderWorldBookList);
     document.querySelector('[data-target="customize-screen"]').addEventListener('click', renderCustomizeForm);
-    document.querySelector('[data-target="tutorial-screen"]').addEventListener('click', renderTutorialContent);
+    document.querySelector('[data-target="tutorial-screen"]').addEventListener('click', () => {
+        renderTutorialContent();
+        
+        // 绑定全局消息弹窗开关事件
+        const bgToastEl = document.getElementById('setting-bg-toast-enabled');
+        if (bgToastEl) {
+            bgToastEl.checked = db.globalToastEnabled !== false;
+            bgToastEl.onchange = async (e) => {
+                db.globalToastEnabled = e.target.checked;
+                await saveData();
+                if (typeof showToast === 'function') {
+                    showToast(e.target.checked ? '已开启全局消息弹窗' : '已关闭全局消息弹窗');
+                }
+            };
+        }
+    });
     document.querySelector('[data-action="biekan-app"]')?.addEventListener('click', (e) => { e.preventDefault(); showToast('别看APP正在开发中…'); });
     document.querySelector('[data-action="xiaowu-app"]')?.addEventListener('click', (e) => { e.preventDefault(); showToast('小屋APP正在开发中…'); });
     if (typeof setupPiggyBankApp === 'function') setupPiggyBankApp();

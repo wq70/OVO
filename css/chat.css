@@ -454,6 +454,11 @@
     margin-bottom: 35px !important;
 }
 
+/* 防遮挡补丁：双语翻译在气泡外且有引用时，给翻译留出空间 */
+.message-wrapper:has(.quoted-message) .translation-text {
+    margin-top: 35px !important;
+}
+
 .message-wrapper.group-message {
     margin-bottom: 18px;
 }

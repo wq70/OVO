@@ -230,11 +230,31 @@ function setupWalletSystem() {
                 return;
             }
         }
-        if (typeof getPiggyBalance === 'function' && getPiggyBalance() < totalDeduct) {
-            showToast('存钱罐余额不足，无法转账');
-            return;
-        }
-        if (payMethod !== 'balance' && db.piggyBank && db.piggyBank.receivedFamilyCards) {
+        if (payMethod === 'balance') {
+            if (typeof getPiggyBalance === 'function' && getPiggyBalance() < totalDeduct) {
+                showToast('存钱罐余额不足，无法转账');
+                return;
+            }
+            if (typeof addPiggyTransaction === 'function') {
+                const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
+                let toName = '';
+                if (currentChatType === 'private') {
+                    toName = chat && chat.realName;
+                } else {
+                    // 群聊中，获取所有接收转账的角色名称
+                    if (typeof currentGroupAction !== 'undefined' && currentGroupAction.recipients && currentGroupAction.recipients.length > 0) {
+                        const recipientNames = currentGroupAction.recipients.map(recipientId => {
+                            const recipient = chat.members.find(m => m.id === recipientId);
+                            return recipient ? (recipient.realName || recipient.groupNickname || '') : '';
+                        }).filter(name => name).join('、');
+                        toName = recipientNames || '';
+                    } else {
+                        toName = chat && chat.me && chat.me.nickname;
+                    }
+                }
+                addPiggyTransaction({ type: 'expense', amount: totalDeduct, remark: remark || '转账', source: '转账', charName: toName || '' });
+            }
+        } else if (db.piggyBank && db.piggyBank.receivedFamilyCards) {
             const card = db.piggyBank.receivedFamilyCards.find(c => c.id === payMethod);
             if (card) {
                 card.usedAmount = (card.usedAmount || 0) + totalDeduct;
@@ -242,26 +262,37 @@ function setupWalletSystem() {
                 const chat = currentChatType === 'private' ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
                 const toName = currentChatType === 'private' ? (chat && chat.realName) : (currentGroupAction && currentGroupAction.recipients && currentGroupAction.recipients.length ? (chat.members || []).map(m => m.realName).filter(Boolean).join('、') : '');
                 card.transactions.unshift({ id: 'rfct_' + Date.now(), amount: totalDeduct, scene: '转账', detail: remark || '转账', targetName: toName || '', time: Date.now() });
-            }
-        }
-        if (typeof addPiggyTransaction === 'function') {
-            const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
-            let toName = '';
-            if (currentChatType === 'private') {
-                toName = chat && chat.realName;
-            } else {
-                // 群聊中，获取所有接收转账的角色名称
-                if (typeof currentGroupAction !== 'undefined' && currentGroupAction.recipients && currentGroupAction.recipients.length > 0) {
-                    const recipientNames = currentGroupAction.recipients.map(recipientId => {
-                        const recipient = chat.members.find(m => m.id === recipientId);
-                        return recipient ? (recipient.realName || recipient.groupNickname || '') : '';
-                    }).filter(name => name).join('、');
-                    toName = recipientNames || '';
-                } else {
-                    toName = chat && chat.me && chat.me.nickname;
+
+                // 触发角色通知和钱包账单
+                const fromChar = db.characters.find(c => c.id === card.fromCharId);
+                const myName = (chat && chat.myName) ? chat.myName : '你';
+                if (fromChar) {
+                    if (!fromChar.peekData) fromChar.peekData = {};
+                    if (!fromChar.peekData.wallet) fromChar.peekData.wallet = { balance: Math.floor(Math.random() * 10000), income: [], expense: [], summary: '本月支出较多' };
+                    if (!fromChar.peekData.wallet.expense) fromChar.peekData.wallet.expense = [];
+                    fromChar.peekData.wallet.expense.unshift({
+                        amount: totalDeduct,
+                        time: new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+                        remark: `亲属卡支出：转账给 ${toName}，备注：${remark || '无'}`
+                    });
+                    
+                    if (fromChar.familyCardEnabled) {
+                        const notice = `[系统情景通知：你给${myName}的亲属卡刚刚产生了一笔 ${totalDeduct.toFixed(2)} 元的消费，用途是：给“${toName}”转账，转账备注是：“${remark || '无'}”。请根据你的人设和你们现在的关系，在下一次回复中自然地对此作出反应或询问。]`;
+                        fromChar.history.push({
+                            id: 'msg_sys_' + Date.now(),
+                            role: 'system',
+                            content: notice,
+                            timestamp: Date.now()
+                        });
+                        setTimeout(() => {
+                            if (typeof currentChatId !== 'undefined' && currentChatId === fromChar.id && typeof currentChatType !== 'undefined' && currentChatType === 'private') {
+                                if (typeof renderChatList === 'function') renderChatList();
+                                if (typeof getAiReply === 'function') getAiReply(currentChatId, currentChatType, true);
+                            }
+                        }, 500);
+                    }
                 }
             }
-            addPiggyTransaction({ type: 'expense', amount: totalDeduct, remark: remark || '转账', source: '转账', charName: toName || '' });
         }
         sendMyTransfer(amountStr, remark);
     });

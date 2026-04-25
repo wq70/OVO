@@ -1080,7 +1080,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
                 stickerSrc = 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg'; 
             }
         }
-        bubbleElement.innerHTML = `<img src="${stickerSrc}" alt="表情包">`;
+        bubbleElement.innerHTML = `<img src="${stickerSrc}" alt="表情包" onclick="openImageViewer(this.src)" style="cursor: zoom-in;">`;
     } else if (privateGiftMatch || groupGiftMatch) {
         const match = privateGiftMatch || groupGiftMatch;
         bubbleElement = document.createElement('div');
@@ -1361,7 +1361,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
     } else if (imageRecogMatch || urlRegex.test(content)) {
         bubbleElement = document.createElement('div');
         bubbleElement.className = 'image-bubble';
-        bubbleElement.innerHTML = `<img src="${content}" alt="图片消息">`;
+        bubbleElement.innerHTML = `<img src="${content}" alt="图片消息" onclick="openImageViewer(this.src)" style="cursor: zoom-in;">`;
     } else if (textMatch) {
         bubbleElement = document.createElement('div');
         bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;

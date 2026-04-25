@@ -241,6 +241,18 @@ function startDebugEdit(messageId) {
         const text = textMatch[2];
         const quoteContent = message.quote.content;
         textarea.value = `[${name}引用“${quoteContent}”并回复：${text}]`;
+    } else if (message.parts && message.parts.some(p => p.type !== 'text')) {
+        // 如果是多模态消息，在调试模式下以 JSON 格式显示其结构，并保护 Base64 数据
+        const partsCopy = JSON.parse(JSON.stringify(message.parts));
+        partsCopy.forEach(p => {
+            if (p.type === 'image' && p.data) {
+                p.data = '[[BASE64_DATA_PRESERVED]]';
+                if (!p.description) {
+                    p.description = ''; // 预留空字段方便用户填写
+                }
+            }
+        });
+        textarea.value = JSON.stringify(partsCopy, null, 2);
     } else {
         textarea.value = message.content; 
     }
@@ -393,47 +405,79 @@ async function saveMessageEdit() {
     }
 
     if (isRawEditMode) {
-        const quoteRegex = /^\[(.*?)引用[“"]([\s\S]*?)[”"]并回复：([\s\S]*?)\]$/;
-        const match = newText.match(quoteRegex);
-
-        if (match) {
-            const name = match[1];
-            const quoteContent = match[2];
-            const replyText = match[3];
-
-            if (chat.history[messageIndex].quote) {
-                chat.history[messageIndex].quote.content = quoteContent;
-
-                const targetContent = quoteContent.trim();
-                const originalMessage = chat.history.slice().reverse().find(m => {
-                    if (m.id === chat.history[messageIndex].id) return false;
-                    let text = m.content;
-                    const plainTextMatch = text.match(/^\[.*?：([\s\S]*)\]$/);
-                    if (plainTextMatch && plainTextMatch[1]) {
-                        text = plainTextMatch[1].trim();
-                    }
-                    text = text.replace(/\[发送时间:.*?\]$/, '').trim();
-                    return text === targetContent;
-                });
-
-                if (originalMessage) {
-                    let newSenderId;
-                    if (originalMessage.role === 'user') {
-                        newSenderId = 'user_me';
-                    } else {
-                        newSenderId = originalMessage.senderId || (currentChatType === 'private' ? chat.id : 'unknown');
-                    }
-                    chat.history[messageIndex].quote.senderId = newSenderId;
-                    chat.history[messageIndex].quote.messageId = originalMessage.id;
+        // 尝试解析 JSON（处理多模态消息的编辑）
+        let isJsonEdit = false;
+        try {
+            if (newText.trim().startsWith('[') && newText.trim().endsWith(']')) {
+                const parsedParts = JSON.parse(newText);
+                if (Array.isArray(parsedParts) && parsedParts.some(p => p.type)) {
+                    isJsonEdit = true;
+                    // 恢复 Base64 数据
+                    const originalParts = chat.history[messageIndex].parts || [];
+                    parsedParts.forEach((p, i) => {
+                        if (p.type === 'image' && p.data === '[[BASE64_DATA_PRESERVED]]') {
+                            const originalPart = originalParts.find(op => op.type === 'image' && op.data);
+                            if (originalPart) {
+                                p.data = originalPart.data;
+                            }
+                        }
+                    });
+                    chat.history[messageIndex].parts = parsedParts;
+                    // 更新 content 为纯文本表示
+                    chat.history[messageIndex].content = parsedParts.map(p => {
+                        if (p.type === 'text' || p.type === 'html') return p.text;
+                        if (p.type === 'image') return p.description ? `[图片描述：${p.description}]` : '[图片]';
+                        return '';
+                    }).join('');
                 }
             }
-            chat.history[messageIndex].content = `[${name}的消息：${replyText}]`;
-        } else {
-            chat.history[messageIndex].content = newText;
+        } catch (e) {
+            // 不是合法的 JSON，按普通文本处理
         }
 
-        if (chat.history[messageIndex].parts) {
-            chat.history[messageIndex].parts = [{type: 'text', text: chat.history[messageIndex].content}];
+        if (!isJsonEdit) {
+            const quoteRegex = /^\[(.*?)引用[“"]([\s\S]*?)[”"]并回复：([\s\S]*?)\]$/;
+            const match = newText.match(quoteRegex);
+
+            if (match) {
+                const name = match[1];
+                const quoteContent = match[2];
+                const replyText = match[3];
+
+                if (chat.history[messageIndex].quote) {
+                    chat.history[messageIndex].quote.content = quoteContent;
+
+                    const targetContent = quoteContent.trim();
+                    const originalMessage = chat.history.slice().reverse().find(m => {
+                        if (m.id === chat.history[messageIndex].id) return false;
+                        let text = m.content;
+                        const plainTextMatch = text.match(/^\[.*?：([\s\S]*)\]$/);
+                        if (plainTextMatch && plainTextMatch[1]) {
+                            text = plainTextMatch[1].trim();
+                        }
+                        text = text.replace(/\[发送时间:.*?\]$/, '').trim();
+                        return text === targetContent;
+                    });
+
+                    if (originalMessage) {
+                        let newSenderId;
+                        if (originalMessage.role === 'user') {
+                            newSenderId = 'user_me';
+                        } else {
+                            newSenderId = originalMessage.senderId || (currentChatType === 'private' ? chat.id : 'unknown');
+                        }
+                        chat.history[messageIndex].quote.senderId = newSenderId;
+                        chat.history[messageIndex].quote.messageId = originalMessage.id;
+                    }
+                }
+                chat.history[messageIndex].content = `[${name}的消息：${replyText}]`;
+            } else {
+                chat.history[messageIndex].content = newText;
+            }
+
+            if (chat.history[messageIndex].parts) {
+                chat.history[messageIndex].parts = [{type: 'text', text: chat.history[messageIndex].content}];
+            }
         }
     } else {
         const oldContent = chat.history[messageIndex].content;

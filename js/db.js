@@ -173,23 +173,40 @@ const globalSettingKeys = [
     'theaterApiSettings', 'theaterFontSize', 'theaterFontPreset',
     'novelAiSettings', 'avatarRecognitionDetailLevel',
     'phoneControlRecycleBin', 'nodeTemplates', 'nodeSummaryText',
-    'nightModeSettings', 'homeStatusBarSettings'
+    'nightModeSettings', 'homeStatusBarSettings', 'stickerCategories'
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
 
-const appVersion = "4.24";
+const appVersion = "4.25";
 const updateLog = [
+    {
+        version: "4.25",
+        date: "2026-04-25",
+        notes: [
+            "4.25更新：",
+            "1.修复识图BUG",
+            "2.新增角色单人思维链",
+            "3.修复线下失忆的BUG",
+            "4.新增日记收藏会自动置顶的开关",
+            "5.修复亲属卡问题，现在绝对不给用户扣款了！而且角色也能感知到扣款",
+            "6.移动记忆存到到拓展，并且新增开新档",
+            "7.新增可以手动添加日记，可以导入导出日记，可以搜索日记",
+            "8.新增表情包分类菜单，可以新建/删除/重命名",
+            "9.修复失忆的BUG",
+            "10.修复双语和引用遮挡的BUG",
+            "本来还有一些内容的，但是因为失忆暂时先端上来给大家尝尝，有问题再反馈哦",
+            "主要是之前有些反馈我忘记了……我记忆力很差TUT。"
+        ]
+    },
     {
         version: "4.24",
         date: "2026-04-24",
         notes: [
-            "4.24更新：本次更新由1900完成制作，1900我们喜欢你！",
+            "4.24 更新：",
+            "这是1900老师做的更新！1900我们喜欢你！",
             "新增： 聊天设置-关联世界书，新增线下选项，在节点系统进行线下时优先调用线下tag里绑定的世界书，若无绑定，则回退使用线上tag内绑定的世界书",
-            "————",
             "优化： 日记、查手机、论坛的输出格式要求从【纯json格式】改为→**【xml标签格式】**，对api质量要求降低了很多，如先前绑定了强调json格式防止掉格式的世界书，请做出相应调整更改",
-            "————",
             "提示词调整： 对于提示词做了优化，移动了聊天记录在提示词里的位置，新增了对于防句式重复的提示词",
-            "————",
             "关于claude模型：",
             "1.claude不要开思维链，模型不支持不要开",
             "2.已修复：400报错、日记总结、查手机、论坛格式报错"
@@ -786,7 +803,8 @@ function initDatabase() {
                 homeWidgetSettings: data.homeWidgetSettings || defaultWidgetSettings,
             moreProfileCardBg: data.moreProfileCardBg || 'https://i.postimg.cc/XvFDdTKY/Smart-Select-20251013-023208.jpg',
             cotSettings: data.cotSettings || { enabled: false, activePresetId: 'default' },
-            cotPresets: data.cotPresets || JSON.parse(JSON.stringify(DEFAULT_COT_PRESETS))
+            cotPresets: data.cotPresets || JSON.parse(JSON.stringify(DEFAULT_COT_PRESETS)),
+            stickerCategories: data.stickerCategories || []
             };
 
             const settingsPromises = Object.entries(settingsToMigrate).map(([key, value]) =>
@@ -929,11 +947,13 @@ const loadData = async () => {
             theaterFontPreset: null,
             avatarRecognitionDetailLevel: 'detailed',
             nodeTemplates: [],
-            nodeSummaryText: '摘要'
+            nodeSummaryText: '摘要',
+            stickerCategories: []
         };
         db[key] = settings[key] !== undefined ? settings[key] : (defaultValue[key] !== undefined ? JSON.parse(JSON.stringify(defaultValue[key])) : undefined);
     });
 
+    if (!Array.isArray(db.stickerCategories)) db.stickerCategories = [];
     if (!db.piggyBank) db.piggyBank = { balance: 520, transactions: [], familyCards: [], receivedFamilyCards: [] };
     if (typeof db.piggyBank.balance !== 'number') db.piggyBank.balance = 520;
     if (!Array.isArray(db.piggyBank.transactions)) db.piggyBank.transactions = [];

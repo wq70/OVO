@@ -46,7 +46,30 @@ async function setupStickerSystem() {
     const menuMultiSelectBtn = document.getElementById('menu-multi-select-btn');
     const menuBatchImportBtn = document.getElementById('menu-batch-import-btn');
     const menuAddNewBtn = document.getElementById('menu-add-new-btn');
+    const menuCategoryManageBtn = document.getElementById('menu-category-manage-btn');
     const menuCancelBtn = document.getElementById('menu-cancel-btn');
+
+    const stickerCategoryManageModal = document.getElementById('sticker-category-manage-modal');
+    const newStickerCategoryInput = document.getElementById('new-sticker-category-input');
+    const addStickerCategoryBtn = document.getElementById('add-sticker-category-btn');
+    const stickerCategoryManageList = document.getElementById('sticker-category-manage-list');
+    const closeStickerCategoryManageBtn = document.getElementById('close-sticker-category-manage-btn');
+
+    const stickerCategoryActionSheet = document.getElementById('sticker-category-actionsheet');
+    const scRenameBtn = document.getElementById('sc-rename-btn');
+    const scDissolveBtn = document.getElementById('sc-dissolve-btn');
+    const scDeleteBtn = document.getElementById('sc-delete-btn');
+    const scCancelBtn = document.getElementById('sc-cancel-btn');
+    const stickerCategoryActionTitle = document.getElementById('sticker-category-action-title');
+
+    const stickerCategoryRenameModal = document.getElementById('sticker-category-rename-modal');
+    const scRenameOldName = document.getElementById('sc-rename-old-name');
+    const scRenameNewName = document.getElementById('sc-rename-new-name');
+    const scRenameConfirmBtn = document.getElementById('sc-rename-confirm-btn');
+    const scRenameCancelBtn = document.getElementById('sc-rename-cancel-btn');
+
+    let currentLongPressCategory = null;
+    let categoryLongPressTimer = null;
 
     const deleteSelectedStickersBtn = document.getElementById('delete-selected-stickers-btn');
     const moveStickerGroupBtn = document.getElementById('move-sticker-group-btn');
@@ -138,6 +161,278 @@ async function setupStickerSystem() {
         stickerUrlInput.disabled = false;
         addStickerModal.classList.add('visible');
     });
+
+    // 分类管理功能
+    menuCategoryManageBtn.addEventListener('click', () => {
+        stickerMenuActionSheet.classList.remove('visible');
+        renderStickerCategoryManageList();
+        stickerCategoryManageModal.classList.add('visible');
+    });
+
+    closeStickerCategoryManageBtn.addEventListener('click', () => {
+        stickerCategoryManageModal.classList.remove('visible');
+        renderStickerCategories();
+    });
+
+    addStickerCategoryBtn.addEventListener('click', async () => {
+        const catName = newStickerCategoryInput.value.trim();
+        if (!catName) {
+            showToast('请输入分类名称');
+            return;
+        }
+        if (catName === 'recent' || catName === 'all' || catName === 'ungrouped' || catName === '最近使用' || catName === '全部' || catName === '未分类') {
+            showToast('该名称为系统保留字，请换一个');
+            return;
+        }
+        
+        if (!db.stickerCategories) db.stickerCategories = [];
+        
+        if (db.stickerCategories.includes(catName)) {
+            showToast('该分类已存在');
+            return;
+        }
+        
+        db.stickerCategories.push(catName);
+        await saveData();
+        newStickerCategoryInput.value = '';
+        showToast('分类创建成功');
+        renderStickerCategoryManageList();
+        renderStickerCategories();
+    });
+
+    function renderStickerCategoryManageList() {
+        stickerCategoryManageList.innerHTML = '';
+        
+        // 收集所有分类：保存的空分类 + 已有表情的分组
+        let allCategories = new Set(db.stickerCategories || []);
+        db.myStickers.forEach(s => {
+            if (s.group) allCategories.add(s.group);
+        });
+
+        // 同步更新保存的列表
+        db.stickerCategories = Array.from(allCategories);
+        saveData(); // 静默保存一下同步状态
+
+        if (allCategories.size === 0) {
+            stickerCategoryManageList.innerHTML = '<div style="padding:15px; text-align:center; color:#999; font-size:13px;">暂无自定义分类</div>';
+            return;
+        }
+
+        Array.from(allCategories).forEach(cat => {
+            const item = document.createElement('div');
+            item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #f0f0f0;';
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = cat;
+            nameSpan.style.fontSize = '14px';
+            
+            const actionsDiv = document.createElement('div');
+            actionsDiv.style.cssText = 'display:flex; gap:8px;';
+            
+            const renameBtn = document.createElement('button');
+            renameBtn.textContent = '重命名';
+            renameBtn.className = 'btn btn-small btn-neutral';
+            renameBtn.style.padding = '4px 8px';
+            renameBtn.onclick = () => openRenameCategoryModal(cat);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '删除';
+            deleteBtn.className = 'btn btn-small btn-danger';
+            deleteBtn.style.padding = '4px 8px';
+            deleteBtn.onclick = () => deleteCategory(cat);
+            
+            actionsDiv.appendChild(renameBtn);
+            actionsDiv.appendChild(deleteBtn);
+            
+            item.appendChild(nameSpan);
+            item.appendChild(actionsDiv);
+            
+            stickerCategoryManageList.appendChild(item);
+        });
+    }
+
+    // 长按分类操作
+    scCancelBtn.addEventListener('click', () => {
+        stickerCategoryActionSheet.classList.remove('visible');
+    });
+
+    scRenameBtn.addEventListener('click', () => {
+        stickerCategoryActionSheet.classList.remove('visible');
+        if (currentLongPressCategory) {
+            openRenameCategoryModal(currentLongPressCategory);
+        }
+    });
+
+    scDissolveBtn.addEventListener('click', async () => {
+        stickerCategoryActionSheet.classList.remove('visible');
+        if (!currentLongPressCategory) return;
+        
+        if (confirm(`确定要解散分类【${currentLongPressCategory === 'ungrouped' ? '未分类' : currentLongPressCategory}】吗？\n解散后，该分类下的表情将变为"未分类"状态。`)) {
+            let count = 0;
+            if (currentLongPressCategory === 'ungrouped') {
+                showToast('未分类无法被解散，只能重命名或删除');
+                return;
+            } else {
+                db.myStickers.forEach(s => {
+                    if (s.group === currentLongPressCategory) {
+                        s.group = '';
+                        count++;
+                    }
+                });
+                if (db.stickerCategories) {
+                    db.stickerCategories = db.stickerCategories.filter(c => c !== currentLongPressCategory);
+                }
+            }
+            
+            await saveData();
+            showToast(`已解散分类，${count}个表情移至未分类`);
+            if (currentStickerCategory === currentLongPressCategory) {
+                currentStickerCategory = 'all';
+            }
+            renderStickerCategories();
+            renderStickerGrid();
+            if (stickerCategoryManageModal.classList.contains('visible')) {
+                renderStickerCategoryManageList();
+            }
+        }
+    });
+
+    scDeleteBtn.addEventListener('click', async () => {
+        stickerCategoryActionSheet.classList.remove('visible');
+        if (!currentLongPressCategory) return;
+        
+        const catNameDisplay = currentLongPressCategory === 'ungrouped' ? '未分类' : currentLongPressCategory;
+        
+        if (confirm(`🚨 警告：确定彻底删除分类【${catNameDisplay}】吗？\n这将同时删除该分类下的【所有表情包】，此操作不可恢复！`)) {
+            let idsToDelete = [];
+            
+            if (currentLongPressCategory === 'ungrouped') {
+                idsToDelete = db.myStickers.filter(s => !s.group).map(s => s.id);
+            } else {
+                idsToDelete = db.myStickers.filter(s => s.group === currentLongPressCategory).map(s => s.id);
+                if (db.stickerCategories) {
+                    db.stickerCategories = db.stickerCategories.filter(c => c !== currentLongPressCategory);
+                }
+            }
+            
+            if (idsToDelete.length > 0) {
+                await dexieDB.myStickers.bulkDelete(idsToDelete);
+                db.myStickers = db.myStickers.filter(s => !idsToDelete.includes(s.id));
+            }
+            
+            await saveData();
+            showToast(`已彻底删除分类及包含的 ${idsToDelete.length} 个表情`);
+            if (currentStickerCategory === currentLongPressCategory) {
+                currentStickerCategory = 'all';
+            }
+            renderStickerCategories();
+            renderStickerGrid();
+            if (stickerCategoryManageModal.classList.contains('visible')) {
+                renderStickerCategoryManageList();
+            }
+        }
+    });
+
+    function openRenameCategoryModal(oldName) {
+        scRenameOldName.value = oldName;
+        scRenameNewName.value = oldName === 'ungrouped' ? '' : oldName;
+        scRenameNewName.placeholder = oldName === 'ungrouped' ? '为所有未分类表情设置新分组名' : '新分类名称';
+        stickerCategoryRenameModal.classList.add('visible');
+        setTimeout(() => scRenameNewName.focus(), 50);
+    }
+
+    scRenameCancelBtn.addEventListener('click', () => {
+        stickerCategoryRenameModal.classList.remove('visible');
+    });
+
+    scRenameConfirmBtn.addEventListener('click', async () => {
+        const oldName = scRenameOldName.value;
+        const newName = scRenameNewName.value.trim();
+        
+        if (!newName) {
+            showToast('名称不能为空');
+            return;
+        }
+        
+        if (newName === oldName || newName === 'recent' || newName === 'all' || newName === 'ungrouped') {
+            stickerCategoryRenameModal.classList.remove('visible');
+            return;
+        }
+        
+        let count = 0;
+        if (oldName === 'ungrouped') {
+            db.myStickers.forEach(s => {
+                if (!s.group) {
+                    s.group = newName;
+                    count++;
+                }
+            });
+        } else {
+            db.myStickers.forEach(s => {
+                if (s.group === oldName) {
+                    s.group = newName;
+                    count++;
+                }
+            });
+            
+            // 更新分类列表
+            if (db.stickerCategories) {
+                const idx = db.stickerCategories.indexOf(oldName);
+                if (idx !== -1) {
+                    db.stickerCategories[idx] = newName;
+                } else if (!db.stickerCategories.includes(newName)) {
+                    db.stickerCategories.push(newName);
+                }
+            }
+        }
+        
+        // 如果新名字不在分类列表中，添加进去
+        if (!db.stickerCategories) db.stickerCategories = [];
+        if (!db.stickerCategories.includes(newName)) {
+            db.stickerCategories.push(newName);
+        }
+        
+        await saveData();
+        showToast(`成功将 ${count} 个表情移至新分类`);
+        
+        if (currentStickerCategory === oldName) {
+            currentStickerCategory = newName;
+        }
+        
+        stickerCategoryRenameModal.classList.remove('visible');
+        renderStickerCategories();
+        renderStickerGrid();
+        if (stickerCategoryManageModal.classList.contains('visible')) {
+            renderStickerCategoryManageList();
+        }
+    });
+
+    async function deleteCategory(cat) {
+        if (confirm(`确定要彻底删除分类【${cat}】吗？\n如果你只想删除分类名称而保留表情，请选择取消，然后长按分类使用"解散"功能。`)) {
+            const idsToDelete = db.myStickers.filter(s => s.group === cat).map(s => s.id);
+            
+            if (idsToDelete.length > 0) {
+                await dexieDB.myStickers.bulkDelete(idsToDelete);
+                db.myStickers = db.myStickers.filter(s => !idsToDelete.includes(s.id));
+            }
+            
+            if (db.stickerCategories) {
+                db.stickerCategories = db.stickerCategories.filter(c => c !== cat);
+            }
+            
+            await saveData();
+            showToast(`已删除分类及 ${idsToDelete.length} 个表情`);
+            
+            if (currentStickerCategory === cat) {
+                currentStickerCategory = 'all';
+            }
+            
+            renderStickerCategoryManageList();
+            renderStickerCategories();
+            renderStickerGrid();
+        }
+    }
+
 
     selectAllStickersBtn.addEventListener('click', () => {
         let stickersToSelect = [];
@@ -377,7 +672,12 @@ function renderStickerCategories() {
 
     bar.innerHTML = '';
 
-    const groups = [...new Set(db.myStickers.map(s => s.group).filter(g => g))];
+    // 合并已有表情的 group 和 db.stickerCategories 中保存的空分类
+    const activeGroups = new Set(db.myStickers.map(s => s.group).filter(g => g));
+    if (db.stickerCategories) {
+        db.stickerCategories.forEach(g => activeGroups.add(g));
+    }
+    const groups = [...activeGroups];
     
     // 1. 最近使用
     createCategoryItem(bar, { id: 'recent', name: '最近使用' });
@@ -449,6 +749,59 @@ function createCategoryItem(container, cat) {
     item.className = `sticker-category-item ${currentStickerCategory === cat.id ? 'active' : ''}`;
     item.textContent = cat.name;
     item.dataset.category = cat.id;
+    
+    // 绑定长按事件 (仅对非固定分类和未分类生效)
+    if (cat.id !== 'recent' && cat.id !== 'all') {
+        item.addEventListener('touchstart', (e) => {
+            currentLongPressCategory = cat.id;
+            categoryLongPressTimer = setTimeout(() => {
+                document.getElementById('sticker-category-action-title').textContent = `操作分类：${cat.name}`;
+                
+                // 根据分类类型调整菜单选项
+                const scDissolveBtn = document.getElementById('sc-dissolve-btn');
+                if (cat.id === 'ungrouped') {
+                    scDissolveBtn.style.display = 'none'; // 未分类无法解散
+                } else {
+                    scDissolveBtn.style.display = 'block';
+                }
+                
+                document.getElementById('sticker-category-actionsheet').classList.add('visible');
+            }, 600); // 600ms 长按
+        }, {passive: true});
+
+        item.addEventListener('touchend', () => {
+            clearTimeout(categoryLongPressTimer);
+        });
+        item.addEventListener('touchmove', () => {
+            clearTimeout(categoryLongPressTimer);
+        });
+
+        // 兼容鼠标长按
+        item.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return; // 仅左键
+            currentLongPressCategory = cat.id;
+            categoryLongPressTimer = setTimeout(() => {
+                document.getElementById('sticker-category-action-title').textContent = `操作分类：${cat.name}`;
+                
+                const scDissolveBtn = document.getElementById('sc-dissolve-btn');
+                if (cat.id === 'ungrouped') {
+                    scDissolveBtn.style.display = 'none';
+                } else {
+                    scDissolveBtn.style.display = 'block';
+                }
+                
+                document.getElementById('sticker-category-actionsheet').classList.add('visible');
+            }, 600);
+        });
+
+        item.addEventListener('mouseup', () => {
+            clearTimeout(categoryLongPressTimer);
+        });
+        item.addEventListener('mouseleave', () => {
+            clearTimeout(categoryLongPressTimer);
+        });
+    }
+    
     container.appendChild(item);
 }
 

@@ -1010,7 +1010,7 @@ function renderTutorialContent() {
 
         try {
             showToast('正在执行角色高级清理...');
-            const report = [];
+            const reportMap = new Map();
             for (const { type, id } of selectedEntities) {
                 if (type === 'char') {
                     const char = (db.characters || []).find(c => c.id === id);
@@ -1078,7 +1078,11 @@ function renderTutorialContent() {
                         }
                         if (piggyCleared) cleared.push('钱包转账/亲属卡记录');
                     }
-                    if (cleared.length) report.push(`${name}：${cleared.join('、')}`);
+                    if (cleared.length) {
+                        const key = cleared.join('、');
+                        if (!reportMap.has(key)) reportMap.set(key, []);
+                        reportMap.get(key).push(name);
+                    }
                 } else if (type === 'group') {
                     const group = (db.groups || []).find(g => g.id === id);
                     if (!group) continue;
@@ -1109,13 +1113,27 @@ function renderTutorialContent() {
                         }
                         if (piggyCleared) cleared.push('钱包转账记录');
                     }
-                    if (cleared.length) report.push(`[群] ${name}：${cleared.join('、')}`);
+                    if (cleared.length) {
+                        const key = cleared.join('、');
+                        if (!reportMap.has(key)) reportMap.set(key, []);
+                        reportMap.get(key).push(`[群] ${name}`);
+                    }
                 }
             }
             await saveData(db);
             showToast('角色高级清理完成');
-            if (report.length > 0) {
-                await customAlert('角色高级清理完成！\n\n' + report.slice(0, 15).join('\n') + (report.length > 15 ? '\n… 等 ' + report.length + ' 项' : ''), '清理完成');
+            
+            if (reportMap.size > 0) {
+                const reportLines = [];
+                for (const [clearedItems, names] of reportMap.entries()) {
+                    let namesStr = names.slice(0, 3).join('、');
+                    if (names.length > 3) {
+                        namesStr += ` 等 ${names.length} 个对象`;
+                    }
+                    reportLines.push(`【${namesStr}】\n${clearedItems}`);
+                }
+                
+                await customAlert('角色高级清理完成！\n\n' + reportLines.slice(0, 5).join('\n\n') + (reportLines.length > 5 ? '\n\n… 等其他清理项' : ''), '清理完成');
             } else {
                 await customAlert('角色高级清理完成（所选对象中无匹配数据）', '清理完成');
             }
@@ -1753,6 +1771,53 @@ function renderTutorialContent() {
             <div id="gh-status-msg" style="margin-top:10px; padding:0 ${isRabbit ? '20px' : '0'} 16px; font-size:0.74rem; color:#999;"></div>
         </div>
     `;
+
+    // 全局消息弹窗开关
+    const bgToastSection = document.createElement('div');
+    if (isRabbit) {
+        bgToastSection.innerHTML = `
+            <div class="tutorial-rabbit-card">
+                <div style="padding:16px 20px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1;">
+                        <div style="color:#444; font-weight:500; font-size:15px; margin-bottom:4px;">全局消息弹窗通知</div>
+                        <div style="font-size:13px; color:#aaa;">开启后，允许接收消息的弹窗通知</div>
+                    </div>
+                    <label class="kkt-switch" style="margin-left:16px;">
+                        <input type="checkbox" id="setting-bg-toast-enabled" ${db.globalToastEnabled !== false ? 'checked' : ''}>
+                        <span class="kkt-slider"></span>
+                    </label>
+                </div>
+            </div>
+        `;
+    } else if (isModern) {
+        bgToastSection.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:#fff; border-bottom:1px solid #e5e5ea;">
+                <div style="flex:1;">
+                    <div style="color:#000; font-size:16px; margin-bottom:2px;">全局消息弹窗通知</div>
+                    <div style="font-size:13px; color:#8e8e93;">开启后，允许接收消息的弹窗通知</div>
+                </div>
+                <label class="kkt-switch" style="margin-left:12px;">
+                    <input type="checkbox" id="setting-bg-toast-enabled" ${db.globalToastEnabled !== false ? 'checked' : ''}>
+                    <span class="kkt-slider"></span>
+                </label>
+            </div>
+        `;
+    } else {
+        bgToastSection.innerHTML = `
+            <div style="margin-top:12px; display:block; background:#fff; border:1px solid #e0e0e0; border-radius:8px; padding:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1;">
+                        <div style="color:#333; font-weight:500; font-size:0.89rem; margin-bottom:3px;">全局消息弹窗通知</div>
+                        <div style="font-size:0.81rem; color:#888;">开启后，允许接收消息的弹窗通知</div>
+                    </div>
+                    <label class="kkt-switch" style="margin-left:12px;">
+                        <input type="checkbox" id="setting-bg-toast-enabled" ${db.globalToastEnabled !== false ? 'checked' : ''}>
+                        <span class="kkt-slider"></span>
+                    </label>
+                </div>
+            </div>
+        `;
+    }
     
     // 触感反馈开关
     const hapticSection = document.createElement('div');
@@ -1820,11 +1885,13 @@ function renderTutorialContent() {
     
     if (isModern) {
         modernGroups.github.appendChild(githubSection);
+        modernGroups.github.appendChild(bgToastSection);
         modernGroups.github.appendChild(hapticSection);
         modernGroups.github.appendChild(feedbackSection);
         modernGroups.github.appendChild(publicWishSection);
     } else {
         tutorialContentArea.appendChild(githubSection);
+        tutorialContentArea.appendChild(bgToastSection);
         tutorialContentArea.appendChild(hapticSection);
         tutorialContentArea.appendChild(feedbackSection);
         tutorialContentArea.appendChild(publicWishSection);

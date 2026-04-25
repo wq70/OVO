@@ -2324,6 +2324,7 @@ async function generateAndRenderPeekContent(appType, options = {}) {
             model: model,
             messages: [{ role: 'user', content: systemPrompt }],
             temperature: 0.8,
+            top_p: 0.9,
         };
 
         const endpoint = `${url}/v1/chat/completions`;

@@ -293,3 +293,42 @@
     width: 22px;
     height: 22px;
 }
+
+/* 日记搜索框美化 */
+#journal-search-bar {
+    padding: 12px 15px !important;
+    background-color: #f9f9f9 !important; 
+    border-bottom: none;
+}
+
+#journal-search-bar .search-input-wrapper {
+    background-color: #ffffff;
+    border-radius: 20px;
+    padding: 8px 16px;
+    border: 1px solid #eaeaea; 
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03); 
+    transition: all 0.3s ease;
+}
+
+#journal-search-bar .search-input-wrapper:focus-within {
+    border-color: var(--primary-color, #a5c1d6);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+}
+
+#journal-search-bar .search-input-wrapper svg {
+    color: #aaa;
+    transition: color 0.3s ease;
+}
+
+#journal-search-bar .search-input-wrapper:focus-within svg {
+    color: var(--primary-color, #a5c1d6);
+}
+
+#journal-search-input {
+    font-size: 14px;
+    color: #333;
+}
+
+#journal-search-input::placeholder {
+    color: #bbb;
+}

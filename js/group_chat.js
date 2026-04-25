@@ -1280,7 +1280,8 @@ function sendRenameNotification(group, newName) {
     group.history.push(message);
 }
 
-function generateGroupSystemPrompt(group) {
+function generateGroupSystemPrompt(group, opts) {
+    opts = opts || {};
     // 收集关联的 + 全局的世界书（去重）
     let isOfflineNode = false;
     if (group.activeNodeId && group.nodes) {
@@ -1407,7 +1408,25 @@ function generateGroupSystemPrompt(group) {
     prompt += `   - **我 (用户)**: \n     - 群内昵称: ${group.me.nickname}\n     - 我的人设: ${group.me.persona || '无特定人设'}\n`;
     group.members.forEach(member => {
         prompt += `   - **角色: ${member.realName} (AI)**\n`;
-        prompt += `     - 群内昵称: ${member.groupNickname}\n`;
+        
+        let ageInfo = "";
+        const c = db.characters.find(char => char.id === member.originalCharId);
+        if (c && c.enableDynamicAge && c.birthday) {
+            const today = new Date();
+            const birthDate = new Date(c.birthday);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            if (m === 0 && today.getDate() === birthDate.getDate()) {
+                ageInfo = `\n     - 年龄状态: [System Notice] 他的出生日期是${birthDate.getFullYear()}年${birthDate.getMonth() + 1}月${birthDate.getDate()}日，今天是他${age}岁的生日！`;
+            } else {
+                ageInfo = `\n     - 年龄状态: [System Notice] 他的出生日期是${birthDate.getFullYear()}年${birthDate.getMonth() + 1}月${birthDate.getDate()}日，现在的年龄是${age}岁`;
+            }
+        }
+        
+        prompt += `     - 群内昵称: ${member.groupNickname}${ageInfo}\n`;
         prompt += `     - 人设: ${member.persona || '无特定人设'}\n`;
     });
 
@@ -1507,6 +1526,10 @@ function generateGroupSystemPrompt(group) {
     prompt += `现在，请根据以上设定，开始扮演群聊中的所有角色。`;
     if (group.me && group.me.nickname) {
         prompt = prompt.replace(/\{\{user\}\}/gi, group.me.nickname);
+    }
+
+    if (opts && opts.historyText) {
+        prompt += '\n' + opts.historyText;
     }
 
     return prompt;

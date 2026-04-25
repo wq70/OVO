@@ -933,25 +933,55 @@ function confirmPurchase() {
                 }
             }
         }
-        if (typeof getPiggyBalance === 'function' && getPiggyBalance() < totalPrice) {
-            if (typeof showToast === 'function') showToast('存钱罐余额不足，无法下单');
-            return;
-        }
-        if (typeof addPiggyTransaction === 'function') {
-            addPiggyTransaction({
-                type: 'expense',
-                amount: totalPrice,
-                remark: '商城订单：' + itemsStr,
-                source: '商城',
-                charName: realName || ''
-            });
-        }
-        if (shopPayMethod !== 'balance' && db.piggyBank && db.piggyBank.receivedFamilyCards) {
+        if (shopPayMethod === 'balance') {
+            if (typeof getPiggyBalance === 'function' && getPiggyBalance() < totalPrice) {
+                if (typeof showToast === 'function') showToast('存钱罐余额不足，无法下单');
+                return;
+            }
+            if (typeof addPiggyTransaction === 'function') {
+                addPiggyTransaction({
+                    type: 'expense',
+                    amount: totalPrice,
+                    remark: '商城订单：' + itemsStr,
+                    source: '商城',
+                    charName: realName || ''
+                });
+            }
+        } else if (db.piggyBank && db.piggyBank.receivedFamilyCards) {
             const card = db.piggyBank.receivedFamilyCards.find(c => c.id === shopPayMethod);
             if (card) {
                 card.usedAmount = (card.usedAmount || 0) + totalPrice;
                 if (!card.transactions) card.transactions = [];
                 card.transactions.unshift({ id: 'rfct_' + Date.now(), amount: totalPrice, scene: '商城', detail: itemsStr, targetName: realName || '', time: Date.now() });
+
+                // 触发角色通知和钱包账单
+                const fromChar = db.characters.find(c => c.id === card.fromCharId);
+                if (fromChar) {
+                    if (!fromChar.peekData) fromChar.peekData = {};
+                    if (!fromChar.peekData.wallet) fromChar.peekData.wallet = { balance: Math.floor(Math.random() * 10000), income: [], expense: [], summary: '本月支出较多' };
+                    if (!fromChar.peekData.wallet.expense) fromChar.peekData.wallet.expense = [];
+                    fromChar.peekData.wallet.expense.unshift({
+                        amount: totalPrice,
+                        time: new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+                        remark: `亲属卡消费：购买了 ${itemsStr}`
+                    });
+                    
+                    if (fromChar.familyCardEnabled) {
+                        const notice = `[系统情景通知：你给${myName}的亲属卡刚刚产生了一笔 ${totalPrice.toFixed(2)} 元的消费，用途是：在商城购买了“${itemsStr}”。请根据你的人设和你们现在的关系，在下一次回复中自然地对此作出反应或询问。]`;
+                        fromChar.history.push({
+                            id: 'msg_sys_' + Date.now(),
+                            role: 'system',
+                            content: notice,
+                            timestamp: Date.now()
+                        });
+                        setTimeout(() => {
+                            if (typeof currentChatId !== 'undefined' && currentChatId === fromChar.id && typeof currentChatType !== 'undefined' && currentChatType === 'private') {
+                                if (typeof renderChatList === 'function') renderChatList();
+                                if (typeof getAiReply === 'function') getAiReply(currentChatId, currentChatType, true);
+                            }
+                        }, 500);
+                    }
+                }
             }
         }
     }

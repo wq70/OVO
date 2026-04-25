@@ -10,7 +10,7 @@ function setupChatSettings() {
         themeSelect.appendChild(option);
     });
     
-    document.getElementById('chat-settings-btn').addEventListener('click', () => {
+    document.getElementById('chat-settings-btn')?.addEventListener('click', () => {
         if (currentChatType === 'private') {
             loadSettingsToSidebar();
             switchScreen('chat-settings-screen');
@@ -27,26 +27,26 @@ function setupChatSettings() {
         });
     }
     
-    document.querySelector('.phone-screen').addEventListener('click', e => {
+    document.querySelector('.phone-screen')?.addEventListener('click', e => {
         const openSidebar = document.querySelector('.settings-sidebar.open');
         if (openSidebar && !openSidebar.contains(e.target) && !e.target.closest('.action-btn') && !e.target.closest('.modal-overlay') && !e.target.closest('.action-sheet-overlay')) {
             openSidebar.classList.remove('open');
         }
     });
 
-    document.getElementById('chat-settings-form').addEventListener('submit', async (e) => {
+    document.getElementById('chat-settings-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         await saveSettingsFromSidebar();
     });
 
-    document.getElementById('chat-scroll-to-top-current-btn').addEventListener('click', () => {
+    document.getElementById('chat-scroll-to-top-current-btn')?.addEventListener('click', () => {
         switchScreen('chat-room-screen');
         setTimeout(() => {
             const area = document.getElementById('message-area');
             if (area) area.scrollTop = 0;
         }, 80);
     });
-    document.getElementById('chat-scroll-to-top-all-btn').addEventListener('click', () => {
+    document.getElementById('chat-scroll-to-top-all-btn')?.addEventListener('click', () => {
         switchScreen('chat-room-screen');
         setTimeout(() => {
             const chat = (typeof currentChatType !== 'undefined' && currentChatType === 'private')
@@ -61,7 +61,7 @@ function setupChatSettings() {
             }
         }, 80);
     });
-    document.getElementById('chat-scroll-to-bottom-btn').addEventListener('click', () => {
+    document.getElementById('chat-scroll-to-bottom-btn')?.addEventListener('click', () => {
         switchScreen('chat-room-screen');
         setTimeout(() => {
             const area = document.getElementById('message-area');
@@ -106,7 +106,7 @@ function setupChatSettings() {
     const contents = document.querySelectorAll('.settings-tab-content');
 
     tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
+        tab?.addEventListener('click', () => {
             // 移除所有 active 类
             tabs.forEach(t => t.classList.remove('active'));
             contents.forEach(c => c.classList.remove('active'));
@@ -131,13 +131,13 @@ function setupChatSettings() {
     const avatarSystemPanel = document.getElementById('setting-avatar-system-panel');
     const avatarSystemBack = document.getElementById('setting-avatar-system-back');
     if (avatarSystemEntry && avatarSystemPanel) {
-        avatarSystemEntry.addEventListener('click', () => {
+        avatarSystemEntry?.addEventListener('click', () => {
             if (document.getElementById('setting-tab-ext')) document.getElementById('setting-tab-ext').style.display = 'none';
             avatarSystemPanel.style.display = 'block';
         });
     }
     if (avatarSystemBack && avatarSystemPanel) {
-        avatarSystemBack.addEventListener('click', () => {
+        avatarSystemBack?.addEventListener('click', () => {
             avatarSystemPanel.style.display = 'none';
             if (document.getElementById('setting-tab-ext')) document.getElementById('setting-tab-ext').style.display = '';
         });
@@ -148,27 +148,27 @@ function setupChatSettings() {
         resetCustomCssBtn = document.getElementById('reset-custom-bubble-css-btn'),
         privatePreviewBox = document.getElementById('private-bubble-css-preview');
         
-    useCustomCssCheckbox.addEventListener('change', (e) => {
+    useCustomCssCheckbox?.addEventListener('change', (e) => {
         triggerHapticFeedback('light');
-        customCssTextarea.disabled = !e.target.checked;
+        if (customCssTextarea) customCssTextarea.disabled = !e.target.checked;
         const char = db.characters.find(c => c.id === currentChatId);
         if (char) {
             const themeKey = char.theme || 'white_pink';
             const theme = colorThemes[themeKey];
-            updateBubbleCssPreview(privatePreviewBox, customCssTextarea.value, !e.target.checked, theme);
+            updateBubbleCssPreview(privatePreviewBox, customCssTextarea ? customCssTextarea.value : '', !e.target.checked, theme);
         }
     });
     
-    customCssTextarea.addEventListener('input', (e) => {
+    customCssTextarea?.addEventListener('input', (e) => {
         const char = db.characters.find(c => c.id === currentChatId);
-        if (char && useCustomCssCheckbox.checked) {
+        if (char && useCustomCssCheckbox && useCustomCssCheckbox.checked) {
             const themeKey = char.theme || 'white_pink';
             const theme = colorThemes[themeKey];
             updateBubbleCssPreview(privatePreviewBox, e.target.value, false, theme);
         }
     });
     
-    resetCustomCssBtn.addEventListener('click', () => {
+    resetCustomCssBtn?.addEventListener('click', () => {
         const char = db.characters.find(c => c.id === currentChatId);
         if (char) {
             customCssTextarea.value = '';
@@ -181,7 +181,7 @@ function setupChatSettings() {
         }
     });
     
-    document.getElementById('setting-char-avatar-upload').addEventListener('change', async (e) => {
+    document.getElementById('setting-char-avatar-upload')?.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
             try {
@@ -193,7 +193,7 @@ function setupChatSettings() {
         }
     });
     
-    document.getElementById('setting-my-avatar-upload').addEventListener('change', async (e) => {
+    document.getElementById('setting-my-avatar-upload')?.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const char = db.characters.find(c => c.id === currentChatId);
@@ -218,15 +218,15 @@ function setupChatSettings() {
 
     const avatarLibraryBtn = document.getElementById('setting-avatar-library-btn');
     if (avatarLibraryBtn && window.AvatarSystem) {
-        avatarLibraryBtn.addEventListener('click', () => window.AvatarSystem.openAvatarLibraryModal(currentChatId));
+        avatarLibraryBtn?.addEventListener('click', () => window.AvatarSystem.openAvatarLibraryModal(currentChatId));
     }
     const charAvatarLibraryBtn = document.getElementById('setting-char-avatar-library-btn');
     if (charAvatarLibraryBtn && window.AvatarSystem) {
-        charAvatarLibraryBtn.addEventListener('click', () => window.AvatarSystem.openCharAvatarLibraryModal(currentChatId));
+        charAvatarLibraryBtn?.addEventListener('click', () => window.AvatarSystem.openCharAvatarLibraryModal(currentChatId));
     }
     const coupleAvatarLibraryBtn = document.getElementById('setting-couple-avatar-library-btn');
     if (coupleAvatarLibraryBtn && window.AvatarSystem) {
-        coupleAvatarLibraryBtn.addEventListener('click', () => window.AvatarSystem.openCoupleAvatarLibraryModal(currentChatId));
+        coupleAvatarLibraryBtn?.addEventListener('click', () => window.AvatarSystem.openCoupleAvatarLibraryModal(currentChatId));
     }
 
     (function initAvatarRecognitionDetailModal() {
@@ -253,7 +253,7 @@ function setupChatSettings() {
         }
 
         if (row && modal) {
-            row.addEventListener('click', function () {
+            row?.addEventListener('click', function () {
                 const val = db.avatarRecognitionDetailLevel;
                 const isNum = typeof val === 'number' || (typeof val === 'string' && /^\d+$/.test(val));
                 if (isNum) {
@@ -273,13 +273,13 @@ function setupChatSettings() {
         }
 
         radios.forEach(function (r) {
-            r.addEventListener('change', function () {
+            r?.addEventListener('change', function () {
                 customContainer.style.display = this.value === 'custom' ? '' : 'none';
             });
         });
 
-        if (cancelBtn) cancelBtn.addEventListener('click', function () { modal.classList.remove('visible'); });
-        if (confirmBtn) confirmBtn.addEventListener('click', function () {
+        if (cancelBtn) cancelBtn?.addEventListener('click', function () { modal.classList.remove('visible'); });
+        if (confirmBtn) confirmBtn?.addEventListener('click', function () {
             const checked = document.querySelector('input[name="ar-detail-level"]:checked');
             if (checked && checked.value === 'custom' && customInput) {
                 const n = parseInt(customInput.value, 10);
@@ -291,12 +291,12 @@ function setupChatSettings() {
             updateDisplay();
             modal.classList.remove('visible');
         });
-        modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('visible'); });
+        modal?.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('visible'); });
 
         updateDisplay();
     })();
 
-    document.getElementById('setting-chat-bg-upload').addEventListener('change', async (e) => {
+    document.getElementById('setting-chat-bg-upload')?.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
             const char = db.characters.find(c => c.id === currentChatId);
@@ -318,7 +318,7 @@ function setupChatSettings() {
         }
     });
 
-    document.getElementById('reset-chat-bg-btn').addEventListener('click', async () => {
+    document.getElementById('reset-chat-bg-btn')?.addEventListener('click', async () => {
         const char = db.characters.find(c => c.id === currentChatId);
         if (!char) return;
         char.chatBg = '';
@@ -327,7 +327,7 @@ function setupChatSettings() {
         showToast('已恢复默认背景');
     });
     
-    document.getElementById('clear-chat-history-btn').addEventListener('click', async () => {
+    document.getElementById('clear-chat-history-btn')?.addEventListener('click', async () => {
         const character = db.characters.find(c => c.id === currentChatId);
         if (!character) return;
         if (confirm(`你确定要清空与“${character.remarkName}”的所有聊天记录吗？这个操作是不可恢复的！`)) {
@@ -436,7 +436,7 @@ function setupChatSettings() {
     });
 
     // --- 聊天记录导出 ---
-    document.getElementById('export-chat-history-btn').addEventListener('click', () => {
+    document.getElementById('export-chat-history-btn')?.addEventListener('click', () => {
         const character = db.characters.find(c => c.id === currentChatId);
         if (!character) return;
         if (!character.history || character.history.length === 0) {
@@ -469,42 +469,42 @@ function setupChatSettings() {
     const importChatFileName = document.getElementById('import-chat-file-name');
 
     // 点击触发文件选择
-    importChatDropZone.addEventListener('click', () => importChatFileInput.click());
-    importChatFileInput.addEventListener('change', () => {
+    importChatDropZone?.addEventListener('click', () => importChatFileInput?.click());
+    importChatFileInput?.addEventListener('change', () => {
         if (importChatFileInput.files[0]) {
-            importChatFileName.textContent = importChatFileInput.files[0].name;
-            importChatFileName.style.color = '#333';
-            importChatDropZone.style.borderColor = '#4a9eff';
+            if (importChatFileName) importChatFileName.textContent = importChatFileInput.files[0].name;
+            if (importChatFileName) importChatFileName.style.color = '#333';
+            if (importChatDropZone) importChatDropZone.style.borderColor = '#4a9eff';
         }
     });
     // 拖拽支持
-    importChatDropZone.addEventListener('dragover', (e) => {
+    importChatDropZone?.addEventListener('dragover', (e) => {
         e.preventDefault();
-        importChatDropZone.style.borderColor = '#4a9eff';
-        importChatDropZone.style.background = 'rgba(74,158,255,0.05)';
+        if (importChatDropZone) importChatDropZone.style.borderColor = '#4a9eff';
+        if (importChatDropZone) importChatDropZone.style.background = 'rgba(74,158,255,0.05)';
     });
-    importChatDropZone.addEventListener('dragleave', () => {
-        importChatDropZone.style.borderColor = '#ccc';
-        importChatDropZone.style.background = '';
+    importChatDropZone?.addEventListener('dragleave', () => {
+        if (importChatDropZone) importChatDropZone.style.borderColor = '#ccc';
+        if (importChatDropZone) importChatDropZone.style.background = '';
     });
-    importChatDropZone.addEventListener('drop', (e) => {
+    importChatDropZone?.addEventListener('drop', (e) => {
         e.preventDefault();
-        importChatDropZone.style.borderColor = '#ccc';
-        importChatDropZone.style.background = '';
+        if (importChatDropZone) importChatDropZone.style.borderColor = '#ccc';
+        if (importChatDropZone) importChatDropZone.style.background = '';
         const file = e.dataTransfer.files[0];
         if (file && file.name.endsWith('.json')) {
             const dt = new DataTransfer();
             dt.items.add(file);
-            importChatFileInput.files = dt.files;
-            importChatFileName.textContent = file.name;
-            importChatFileName.style.color = '#333';
-            importChatDropZone.style.borderColor = '#4a9eff';
+            if (importChatFileInput) importChatFileInput.files = dt.files;
+            if (importChatFileName) importChatFileName.textContent = file.name;
+            if (importChatFileName) importChatFileName.style.color = '#333';
+            if (importChatDropZone) importChatDropZone.style.borderColor = '#4a9eff';
         } else {
             showToast('请选择 .json 文件');
         }
     });
 
-    document.getElementById('import-chat-history-btn').addEventListener('click', () => {
+    document.getElementById('import-chat-history-btn')?.addEventListener('click', () => {
         const character = db.characters.find(c => c.id === currentChatId);
         if (!character) return;
         // 重置文件输入和单选按钮
@@ -532,16 +532,16 @@ function setupChatSettings() {
         });
     });
 
-    document.getElementById('cancel-import-chat-btn').addEventListener('click', () => {
+    document.getElementById('cancel-import-chat-btn')?.addEventListener('click', () => {
         document.getElementById('import-chat-history-modal').classList.remove('visible');
     });
-    document.getElementById('import-chat-history-modal').addEventListener('click', (e) => {
+    document.getElementById('import-chat-history-modal')?.addEventListener('click', (e) => {
         if (e.target === document.getElementById('import-chat-history-modal')) {
             document.getElementById('import-chat-history-modal').classList.remove('visible');
         }
     });
 
-    document.getElementById('confirm-import-chat-btn').addEventListener('click', async () => {
+    document.getElementById('confirm-import-chat-btn')?.addEventListener('click', async () => {
         const fileInput = document.getElementById('import-chat-history-file');
         const file = fileInput.files[0];
         if (!file) {
@@ -623,7 +623,7 @@ function setupChatSettings() {
     if (blockConfirmModal) blockConfirmModal.addEventListener('click', function (ev) {
         if (ev.target === blockConfirmModal) blockConfirmModal.classList.remove('visible');
     });
-    document.getElementById('block-confirm-ok') && document.getElementById('block-confirm-ok').addEventListener('click', () => {
+    document.getElementById('block-confirm-ok')?.addEventListener('click', () => {
         const character = db.characters.find(c => c.id === currentChatId);
         if (!character) return;
         const modeEl = document.querySelector('input[name="block-mode"]:checked');
@@ -636,11 +636,11 @@ function setupChatSettings() {
         if (blockCharacterBtn) blockCharacterBtn.style.display = 'none';
     });
     if (blockReapplyModeEl) {
-        blockReapplyModeEl.addEventListener('change', () => {
+        blockReapplyModeEl?.addEventListener('change', () => {
             if (blockFixedIntervalRow) blockFixedIntervalRow.style.display = (blockReapplyModeEl.value === 'fixed') ? '' : 'none';
         });
     }
-    document.getElementById('trigger-friend-request-btn') && document.getElementById('trigger-friend-request-btn').addEventListener('click', async () => {
+    document.getElementById('trigger-friend-request-btn')?.addEventListener('click', async () => {
         const character = db.characters.find(c => c.id === currentChatId);
         if (!character || !character.isBlocked) return;
         if (character.blockReapply && character.blockReapply.pendingRequestId) {
@@ -649,7 +649,7 @@ function setupChatSettings() {
         }
         if (typeof generateAndShowFriendRequest === 'function') await generateAndShowFriendRequest(character);
     });
-    document.getElementById('unblock-character-btn') && document.getElementById('unblock-character-btn').addEventListener('click', () => {
+    document.getElementById('unblock-character-btn')?.addEventListener('click', () => {
         const character = db.characters.find(c => c.id === currentChatId);
         if (!character) return;
         if (confirm('确定解除拉黑吗？角色将重新出现在聊天列表中。')) {
@@ -684,7 +684,7 @@ function setupChatSettings() {
             if (phoneControlCharFilterEl) phoneControlCharFilterEl.style.display = 'none';
             if (phoneControlCharSelectionEl) phoneControlCharSelectionEl.style.display = 'none';
         }
-        phoneControlEnabledEl.addEventListener('change', function () {
+        phoneControlEnabledEl?.addEventListener('change', function () {
             if (this.checked) {
                 // 开启时：计算并显示 token 消耗提醒
                 if (warningModal) {
@@ -718,27 +718,27 @@ function setupChatSettings() {
             }
         });
         if (phoneControlViewLimitEl && phoneControlViewLimitValueEl) {
-            phoneControlViewLimitEl.addEventListener('input', function () {
+            phoneControlViewLimitEl?.addEventListener('input', function () {
                 phoneControlViewLimitValueEl.textContent = this.value;
             });
         }
-        document.getElementById('phone-control-warning-cancel') && document.getElementById('phone-control-warning-cancel').addEventListener('click', () => {
+        document.getElementById('phone-control-warning-cancel')?.addEventListener('click', () => {
             if (warningModal) warningModal.style.display = 'none';
             if (phoneControlEnabledEl) phoneControlEnabledEl.checked = false;
             hidePhoneControlOptions();
         });
-        document.getElementById('phone-control-warning-confirm') && document.getElementById('phone-control-warning-confirm').addEventListener('click', () => {
+        document.getElementById('phone-control-warning-confirm')?.addEventListener('click', () => {
             if (warningModal) warningModal.style.display = 'none';
             showPhoneControlOptions();
         });
-        document.getElementById('setting-phone-control-char-filter-enabled') && document.getElementById('setting-phone-control-char-filter-enabled').addEventListener('change', function () {
+        document.getElementById('setting-phone-control-char-filter-enabled')?.addEventListener('change', function () {
             if (phoneControlCharSelectionEl) phoneControlCharSelectionEl.style.display = this.checked ? 'flex' : 'none';
         });
         
         // 绑定选择角色按钮事件
         const selectCharsBtn = document.getElementById('setting-phone-control-select-chars-btn');
         if (selectCharsBtn) {
-            selectCharsBtn.addEventListener('click', () => {
+            selectCharsBtn?.addEventListener('click', () => {
                 const char = db.characters.find(c => c.id === currentChatId);
                 if (!char) return;
                 const modal = document.getElementById('phone-control-char-select-modal');
@@ -795,7 +795,7 @@ function setupChatSettings() {
         
         const selectAllCb = document.getElementById('phone-control-char-select-all');
         if (selectAllCb) {
-            selectAllCb.addEventListener('change', function() {
+            selectAllCb?.addEventListener('change', function() {
                 const cbs = document.querySelectorAll('.phone-control-char-cb');
                 cbs.forEach(cb => cb.checked = this.checked);
             });
@@ -803,7 +803,7 @@ function setupChatSettings() {
         
         const confirmCharsBtn = document.getElementById('phone-control-char-confirm-btn');
         if (confirmCharsBtn) {
-            confirmCharsBtn.addEventListener('click', async () => {
+            confirmCharsBtn?.addEventListener('click', async () => {
                 const char = db.characters.find(c => c.id === currentChatId);
                 if (!char) return;
                 const cbs = Array.from(document.querySelectorAll('.phone-control-char-cb:checked'));
@@ -816,12 +816,13 @@ function setupChatSettings() {
         
         const cancelCharsBtn = document.getElementById('phone-control-char-cancel-btn');
         if (cancelCharsBtn) {
-            cancelCharsBtn.addEventListener('click', () => {
-                document.getElementById('phone-control-char-select-modal').style.display = 'none';
+            cancelCharsBtn?.addEventListener('click', () => {
+                const modal = document.getElementById('phone-control-char-select-modal');
+                if (modal) modal.style.display = 'none';
             });
         }
 
-        document.getElementById('setting-phone-control-force-close-btn') && document.getElementById('setting-phone-control-force-close-btn').addEventListener('click', () => {
+        document.getElementById('setting-phone-control-force-close-btn')?.addEventListener('click', () => {
             // 强制关闭前显示 token 信息
             const tokenInfoEl = document.getElementById('phone-control-close-token-info');
             if (tokenInfoEl && currentChatId) {
@@ -839,10 +840,10 @@ function setupChatSettings() {
             }
             if (forceCloseModal) forceCloseModal.style.display = 'flex';
         });
-        document.getElementById('phone-control-force-cancel') && document.getElementById('phone-control-force-cancel').addEventListener('click', () => {
+        document.getElementById('phone-control-force-cancel')?.addEventListener('click', () => {
             if (forceCloseModal) forceCloseModal.style.display = 'none';
         });
-        document.getElementById('phone-control-force-confirm') && document.getElementById('phone-control-force-confirm').addEventListener('click', async () => {
+        document.getElementById('phone-control-force-confirm')?.addEventListener('click', async () => {
             const character = db.characters.find(c => c.id === currentChatId);
             if (character) {
                 character.phoneControlEnabled = false;
@@ -853,7 +854,7 @@ function setupChatSettings() {
             }
             if (forceCloseModal) forceCloseModal.style.display = 'none';
         });
-        document.getElementById('setting-phone-control-log-btn') && document.getElementById('setting-phone-control-log-btn').addEventListener('click', () => {
+        document.getElementById('setting-phone-control-log-btn')?.addEventListener('click', () => {
             const character = db.characters.find(c => c.id === currentChatId);
             if (!character) return;
             const history = character.phoneControlHistory || [];
@@ -880,14 +881,14 @@ function setupChatSettings() {
                 }).join('');
             }
         }
-        document.getElementById('setting-phone-control-recycle-btn') && document.getElementById('setting-phone-control-recycle-btn').addEventListener('click', () => {
+        document.getElementById('setting-phone-control-recycle-btn')?.addEventListener('click', () => {
             const modal = document.getElementById('phone-control-recycle-modal');
             const listEl = document.getElementById('phone-control-recycle-list');
             if (!modal || !listEl) return;
             renderPhoneControlRecycleList();
             modal.style.display = 'flex';
         });
-        document.getElementById('phone-control-recycle-list') && document.getElementById('phone-control-recycle-list').addEventListener('click', async (e) => {
+        document.getElementById('phone-control-recycle-list')?.addEventListener('click', async (e) => {
             const btn = e.target.closest('.phone-control-restore-btn');
             if (!btn) return;
             const idx = parseInt(btn.getAttribute('data-index'), 10);
@@ -903,7 +904,7 @@ function setupChatSettings() {
             if (typeof showToast === 'function') showToast('已恢复');
             renderPhoneControlRecycleList();
         });
-        document.getElementById('phone-control-recycle-close') && document.getElementById('phone-control-recycle-close').addEventListener('click', () => {
+        document.getElementById('phone-control-recycle-close')?.addEventListener('click', () => {
             const modal = document.getElementById('phone-control-recycle-modal');
             if (modal) modal.style.display = 'none';
         });
@@ -928,7 +929,7 @@ function setupChatSettings() {
         renderCategorizedWorldBookList(document.getElementById('world-book-selection-list'), db.worldBooks, displayIds, 'wb-select');
     }
 
-    document.getElementById('link-world-book-btn').addEventListener('click', () => {
+    document.getElementById('link-world-book-btn')?.addEventListener('click', () => {
         currentWorldBookMode = 'online';
         const tabs = document.querySelectorAll('#world-book-mode-tabs .settings-tab-item');
         tabs.forEach(t => t.classList.remove('active'));
@@ -941,7 +942,7 @@ function setupChatSettings() {
 
     const wbModeTabs = document.querySelectorAll('#world-book-mode-tabs .settings-tab-item');
     wbModeTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
+        tab?.addEventListener('click', () => {
             wbModeTabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             currentWorldBookMode = tab.getAttribute('data-mode');
@@ -949,7 +950,7 @@ function setupChatSettings() {
         });
     });
 
-    document.getElementById('save-world-book-selection-btn').addEventListener('click', async () => {
+    document.getElementById('save-world-book-selection-btn')?.addEventListener('click', async () => {
         const globalIds = (db.worldBooks || []).filter(wb => wb.isGlobal && !wb.disabled).map(wb => wb.id);
         const selectedIds = Array.from(document.getElementById('world-book-selection-list').querySelectorAll('.item-checkbox:checked')).map(input => input.value);
         const toSave = selectedIds.filter(id => !globalIds.includes(id));
@@ -1220,11 +1221,21 @@ function _updateCharTheaterWbDisplay(displayEl, optionsEl) {
 function loadSettingsToSidebar() {
     const e = db.characters.find(e => e.id === currentChatId);
     if (e) {
-        document.getElementById('setting-char-avatar-preview').src = e.avatar;
+        const avatarPreviewEl = document.getElementById('setting-char-avatar-preview');
+        if (avatarPreviewEl) {
+            avatarPreviewEl.src = e.avatar;
+        }
         const nameDisplay = document.getElementById('setting-char-name-display');
         if(nameDisplay) nameDisplay.textContent = e.remarkName;
         const realNameEl = document.getElementById('setting-char-real-name');
         if (realNameEl) realNameEl.value = e.realName || '';
+        
+        const birthdayEl = document.getElementById('setting-char-birthday');
+        if (birthdayEl) birthdayEl.value = e.birthday || '';
+        
+        const enableDynamicAgeEl = document.getElementById('setting-char-enable-dynamic-age');
+        if (enableDynamicAgeEl) enableDynamicAgeEl.checked = e.enableDynamicAge || false;
+        
         document.getElementById('setting-char-remark').value = e.remarkName;
         document.getElementById('setting-char-persona').value = e.persona;
         
@@ -1298,17 +1309,26 @@ function loadSettingsToSidebar() {
         }
         
         if (e.source !== 'forum') {
-            document.getElementById('setting-my-avatar-preview').src = e.myAvatar || 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg';
-            document.getElementById('setting-my-name').value = e.myName || '';
-            document.getElementById('setting-my-persona').value = e.myPersona || '';
+            const myAvatarPreviewEl = document.getElementById('setting-my-avatar-preview');
+            if (myAvatarPreviewEl) myAvatarPreviewEl.src = e.myAvatar || 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg';
+            const myNameEl = document.getElementById('setting-my-name');
+            if (myNameEl) myNameEl.value = e.myName || '';
+            const myPersonaEl = document.getElementById('setting-my-persona');
+            if (myPersonaEl) myPersonaEl.value = e.myPersona || '';
         }
-        document.getElementById('setting-theme-color').value = e.theme || 'white_pink';
-        document.getElementById('setting-max-memory').value = e.maxMemory;
-        document.getElementById('setting-sync-group-memory').checked = e.syncGroupMemory || false;
+        const themeColorEl = document.getElementById('setting-theme-color');
+        if (themeColorEl) themeColorEl.value = e.theme || 'white_pink';
+        const maxMemoryEl = document.getElementById('setting-max-memory');
+        if (maxMemoryEl) maxMemoryEl.value = e.maxMemory;
+        const syncGroupMemoryEl = document.getElementById('setting-sync-group-memory');
+        if (syncGroupMemoryEl) syncGroupMemoryEl.checked = e.syncGroupMemory || false;
         
         // 群聊记忆互通相关设置
         const groupMemoryHistoryCount = e.groupMemoryHistoryCount !== undefined ? e.groupMemoryHistoryCount : 20;
         const groupMemorySummaryCount = e.groupMemorySummaryCount !== undefined ? e.groupMemorySummaryCount : 0;
+        
+        const groupJournalFavTopEl = document.getElementById('setting-group-journal-favorite-top');
+        if (groupJournalFavTopEl) groupJournalFavTopEl.checked = e.journalFavoriteTop !== false; // 默认开启
         document.getElementById('setting-group-memory-history-count').value = groupMemoryHistoryCount;
         document.getElementById('setting-group-memory-summary-count').value = groupMemorySummaryCount;
         
@@ -1352,6 +1372,72 @@ function loadSettingsToSidebar() {
 
         const charAutoFavEl = document.getElementById('setting-char-auto-favorite');
         if (charAutoFavEl) charAutoFavEl.checked = e.characterAutoFavoriteEnabled || false;
+        
+        const journalFavTopEl = document.getElementById('setting-journal-favorite-top');
+        if (journalFavTopEl) journalFavTopEl.checked = e.journalFavoriteTop !== false; // 默认开启
+
+        // 加载单人思维链设置
+        const charCotEnabledEl = document.getElementById('setting-char-cot-enabled');
+        const charCotOptionsEl = document.getElementById('setting-char-cot-options');
+        const charCotChatEnabledEl = document.getElementById('setting-char-cot-chat-enabled');
+        const charCotChatPresetEl = document.getElementById('setting-char-cot-chat-preset');
+        const charCotChatPresetCont = document.getElementById('setting-char-cot-chat-preset-container');
+        const charCotCallEnabledEl = document.getElementById('setting-char-cot-call-enabled');
+        const charCotCallPresetEl = document.getElementById('setting-char-cot-call-preset');
+        const charCotCallPresetCont = document.getElementById('setting-char-cot-call-preset-container');
+        const charCotOfflineEnabledEl = document.getElementById('setting-char-cot-offline-enabled');
+        const charCotOfflinePresetEl = document.getElementById('setting-char-cot-offline-preset');
+        const charCotOfflinePresetCont = document.getElementById('setting-char-cot-offline-preset-container');
+        
+        if (charCotEnabledEl) {
+            charCotEnabledEl.checked = e.cotSettings?.enabled || false;
+            if (charCotOptionsEl) {
+                charCotOptionsEl.style.display = e.cotSettings?.enabled ? 'block' : 'none';
+            }
+            charCotEnabledEl.onchange = function() {
+                if (charCotOptionsEl) charCotOptionsEl.style.display = this.checked ? 'block' : 'none';
+            };
+        }
+        
+        if (charCotChatEnabledEl) {
+            charCotChatEnabledEl.checked = e.cotSettings?.chatEnabled || false;
+            if (charCotChatPresetCont) charCotChatPresetCont.style.display = charCotChatEnabledEl.checked ? 'block' : 'none';
+            charCotChatEnabledEl.onchange = function() {
+                if (charCotChatPresetCont) charCotChatPresetCont.style.display = this.checked ? 'block' : 'none';
+            };
+        }
+        if (charCotCallEnabledEl) {
+            charCotCallEnabledEl.checked = e.cotSettings?.callEnabled || false;
+            if (charCotCallPresetCont) charCotCallPresetCont.style.display = charCotCallEnabledEl.checked ? 'block' : 'none';
+            charCotCallEnabledEl.onchange = function() {
+                if (charCotCallPresetCont) charCotCallPresetCont.style.display = this.checked ? 'block' : 'none';
+            };
+        }
+        if (charCotOfflineEnabledEl) {
+            charCotOfflineEnabledEl.checked = e.cotSettings?.offlineEnabled || false;
+            if (charCotOfflinePresetCont) charCotOfflinePresetCont.style.display = charCotOfflineEnabledEl.checked ? 'block' : 'none';
+            charCotOfflineEnabledEl.onchange = function() {
+                if (charCotOfflinePresetCont) charCotOfflinePresetCont.style.display = this.checked ? 'block' : 'none';
+            };
+        }
+        
+        // 填充预设下拉框
+        const presets = db.cotPresets || [];
+        const populateCotPreset = (selectEl, defaultText, activeId) => {
+            if (!selectEl) return;
+            selectEl.innerHTML = `<option value="">${defaultText}</option>`;
+            presets.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                selectEl.appendChild(opt);
+            });
+            if (activeId) selectEl.value = activeId;
+        };
+        
+        populateCotPreset(charCotChatPresetEl, '默认预设', e.cotSettings?.activePresetId);
+        populateCotPreset(charCotCallPresetEl, '默认通话预设', e.cotSettings?.activeCallPresetId);
+        populateCotPreset(charCotOfflinePresetEl, '默认线下预设', e.cotSettings?.activeOfflinePresetId);
 
         // 加载小剧场设置
         const charTheaterEnabledEl = document.getElementById('setting-char-theater-enabled');
@@ -1613,6 +1699,50 @@ function loadSettingsToSidebar() {
             }
         }
 
+        const newGameBtn = document.getElementById('archive-new-game-btn');
+        if (newGameBtn) {
+            // 先解绑之前的事件防止重复
+            const newBtn = newGameBtn.cloneNode(true);
+            newGameBtn.parentNode.replaceChild(newBtn, newGameBtn);
+            
+            newBtn.addEventListener('click', async () => {
+                const cid = currentChatId;
+                if (!cid) {
+                    showToast('请先进入一个角色的聊天');
+                    return;
+                }
+                const char = db.characters.find(c => c.id === cid);
+                if (!char) return;
+                
+                const confirmed = await customConfirm('确定要为该角色开启新档吗？\n当前角色的所有聊天记录、上下文和日记将被清空，但人设等基础设置会保留。\n\n建议在此操作前先保存当前进度的存档！', '提示');
+                if (!confirmed) return;
+                
+                // 清空记录与状态
+                char.history = [];
+                char.tokens = 0;
+                if (char.memory) {
+                    char.memory.journal = [];
+                    char.memory.context = '';
+                }
+                char.nodes = [];
+                char.chatHistory = [];
+                char.messages = [];
+                char.chatContext = '';
+                char.chatSummary = '';
+                
+                await saveData();
+                
+                showToast('新档开启成功！');
+                if (currentChatId === cid && typeof renderMessages === 'function') {
+                    renderMessages();
+                }
+                if (typeof renderChatList === 'function') renderChatList();
+                
+                // 自动保存一个初始存档
+                await createArchive(cid, '初始状态');
+            });
+        }
+
         // 加载角色正则过滤设置
         const rf = e.regexFilter || {};
         document.getElementById('setting-regex-filter-enabled').checked = rf.enabled || false;
@@ -1754,9 +1884,19 @@ function loadSettingsToSidebar() {
 async function saveSettingsFromSidebar() {
     const e = db.characters.find(e => e.id === currentChatId);
     if (e) {
-        e.avatar = document.getElementById('setting-char-avatar-preview').src;
+        const avatarPreviewEl = document.getElementById('setting-char-avatar-preview');
+        if (avatarPreviewEl) {
+            e.avatar = avatarPreviewEl.src;
+        }
         const realNameInput = document.getElementById('setting-char-real-name');
         if (realNameInput) e.realName = (realNameInput.value || '').trim();
+        
+        const birthdayInput = document.getElementById('setting-char-birthday');
+        if (birthdayInput) e.birthday = (birthdayInput.value || '').trim();
+        
+        const enableDynamicAgeInput = document.getElementById('setting-char-enable-dynamic-age');
+        if (enableDynamicAgeInput) e.enableDynamicAge = enableDynamicAgeInput.checked;
+        
         e.remarkName = document.getElementById('setting-char-remark').value;
         e.persona = document.getElementById('setting-char-persona').value;
         
@@ -1807,6 +1947,26 @@ async function saveSettingsFromSidebar() {
         e.autoJournalInterval = (isNaN(autoJournalIntervalInput) || autoJournalIntervalInput < 10) ? 100 : autoJournalIntervalInput;
         const charAutoFavEl = document.getElementById('setting-char-auto-favorite');
         e.characterAutoFavoriteEnabled = charAutoFavEl ? charAutoFavEl.checked : false;
+        const journalFavTopEl = document.getElementById('setting-journal-favorite-top');
+        if (journalFavTopEl) e.journalFavoriteTop = journalFavTopEl.checked;
+
+        // 保存单人思维链设置
+        const charCotEnabledSave = document.getElementById('setting-char-cot-enabled');
+        const charCotChatEnabledSave = document.getElementById('setting-char-cot-chat-enabled');
+        const charCotChatPresetSave = document.getElementById('setting-char-cot-chat-preset');
+        const charCotCallEnabledSave = document.getElementById('setting-char-cot-call-enabled');
+        const charCotCallPresetSave = document.getElementById('setting-char-cot-call-preset');
+        const charCotOfflineEnabledSave = document.getElementById('setting-char-cot-offline-enabled');
+        const charCotOfflinePresetSave = document.getElementById('setting-char-cot-offline-preset');
+        
+        if (!e.cotSettings) e.cotSettings = {};
+        e.cotSettings.enabled = charCotEnabledSave ? charCotEnabledSave.checked : false;
+        e.cotSettings.chatEnabled = charCotChatEnabledSave ? charCotChatEnabledSave.checked : false;
+        e.cotSettings.activePresetId = charCotChatPresetSave ? charCotChatPresetSave.value : '';
+        e.cotSettings.callEnabled = charCotCallEnabledSave ? charCotCallEnabledSave.checked : false;
+        e.cotSettings.activeCallPresetId = charCotCallPresetSave ? charCotCallPresetSave.value : '';
+        e.cotSettings.offlineEnabled = charCotOfflineEnabledSave ? charCotOfflineEnabledSave.checked : false;
+        e.cotSettings.activeOfflinePresetId = charCotOfflinePresetSave ? charCotOfflinePresetSave.value : '';
 
         // 保存小剧场设置
         const charTheaterEnabledSave = document.getElementById('setting-char-theater-enabled');
@@ -2022,8 +2182,8 @@ function setupApiSettingsApp() {
     }
 
     populateApiSelect();
-    n.addEventListener('change', () => {
-        r.value = c[n.value] || ''
+    n?.addEventListener('change', () => {
+        if (r) r.value = c[n.value] || ''
     });
 
     // 提取为全局函数以便复用
@@ -2112,8 +2272,8 @@ function setupApiSettingsApp() {
         }
     };
 
-    t.addEventListener('click', () => window.fetchAndPopulateModels(true));
-    e.addEventListener('submit', async (e) => {
+    t?.addEventListener('click', () => window.fetchAndPopulateModels(true));
+    e?.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!a.value) return showToast('请选择模型后保存！');
         if (BLOCKED_API_DOMAINS.some(domain => r.value.includes(domain))) {
@@ -2299,20 +2459,6 @@ function importApiPresets() {
     inp.click();
 }
 
-    // 初始化全局设置项的事件
-    const globalToastEl = document.getElementById('setting-global-toast-enabled');
-    if (globalToastEl) {
-        // 加载初始状态
-        globalToastEl.checked = db.globalToastEnabled !== false; // 默认开启
-        
-        // 绑定修改事件
-        globalToastEl.addEventListener('change', async (e) => {
-            db.globalToastEnabled = e.target.checked;
-            await saveData();
-            showToast('全局设置已保存');
-        });
-    }
-
     // === 副API通用设置函数 ===
     var subApiDisplayNames = { summary: '总结', background: '后台活动', supplementPersona: '补齐人设', peek: '偷看手机' };
 function setupSubApiSettings(prefix, dbKey, presetsKey) {
@@ -2460,20 +2606,20 @@ function setupSubApiPresets(prefix, dbKey, presetsKey) {
     // 填充预设列表
     function populatePresets() {
         const presets = db[presetsKey] || [];
-        presetSelect.innerHTML = '<option value="">— 选择 —</option>';
+        if (presetSelect) presetSelect.innerHTML = '<option value="">— 选择 —</option>';
         presets.forEach(p => {
             const opt = document.createElement('option');
             opt.value = p.name;
             opt.textContent = p.name;
-            presetSelect.appendChild(opt);
+            if (presetSelect) presetSelect.appendChild(opt);
         });
     }
     
     populatePresets();
     
     // 应用预设
-    applyBtn.addEventListener('click', async () => {
-        const name = presetSelect.value;
+    applyBtn?.addEventListener('click', async () => {
+        const name = presetSelect ? presetSelect.value : '';
         if (!name) return showToast('请选择预设');
         
         const presets = db[presetsKey] || [];
@@ -2501,7 +2647,7 @@ function setupSubApiPresets(prefix, dbKey, presetsKey) {
     });
     
     // 另存为预设
-    savePresetBtn.addEventListener('click', () => {
+    savePresetBtn?.addEventListener('click', () => {
         const providerEl = document.getElementById(`${prefix}-api-provider`);
         const urlEl = document.getElementById(`${prefix}-api-url`);
         const keyEl = document.getElementById(`${prefix}-api-key`);
@@ -2531,9 +2677,9 @@ function setupSubApiPresets(prefix, dbKey, presetsKey) {
     });
     
     // 管理预设
-    manageBtn.addEventListener('click', () => {
+    manageBtn?.addEventListener('click', () => {
         renderPresetsList();
-        modal.style.display = 'flex';
+        if (modal) modal.style.display = 'flex';
     });
     
     function renderPresetsList() {
@@ -2570,16 +2716,16 @@ function setupSubApiPresets(prefix, dbKey, presetsKey) {
             
             div.appendChild(nameSpan);
             div.appendChild(delBtn);
-            presetsList.appendChild(div);
+            if (presetsList) presetsList.appendChild(div);
         });
     }
     
-    closeModalBtn.addEventListener('click', () => {
-        modal.style.display = 'none';
+    closeModalBtn?.addEventListener('click', () => {
+        if (modal) modal.style.display = 'none';
     });
     
     // 导入预设
-    importBtn.addEventListener('click', () => {
+    importBtn?.addEventListener('click', () => {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.json';
@@ -2615,7 +2761,7 @@ function setupSubApiPresets(prefix, dbKey, presetsKey) {
     });
     
     // 导出预设
-    exportBtn.addEventListener('click', () => {
+    exportBtn?.addEventListener('click', () => {
         const presets = db[presetsKey] || [];
         if (presets.length === 0) {
             showToast('暂无预设可导出');
@@ -2692,7 +2838,7 @@ function setupNovelAiSettings() {
 
     // 保存设置
     if (saveBtn) {
-        saveBtn.addEventListener('click', async () => {
+        saveBtn?.addEventListener('click', async () => {
             db.novelAiSettings = {
                 enabled: enabledEl ? enabledEl.checked : false,
                 token: tokenEl ? tokenEl.value.trim() : '',
@@ -2712,7 +2858,7 @@ function setupNovelAiSettings() {
 
     // 测试生图
     if (testBtn) {
-        testBtn.addEventListener('click', async () => {
+        testBtn?.addEventListener('click', async () => {
             const token = tokenEl ? tokenEl.value.trim() : '';
             if (!token) {
                 showToast('请先填写 NovelAI API Token');
@@ -3297,14 +3443,16 @@ function setupPresetFeatures() {
     const groupBubbleManageBtn = document.getElementById('group-manage-presets-btn');
 
     if (bubbleApplyBtn) bubbleApplyBtn.addEventListener('click', () => {
-        const selVal = document.getElementById('bubble-preset-select').value;
+        const select = document.getElementById('bubble-preset-select');
+        const selVal = select ? select.value : '';
         if (!selVal) return showToast('请选择要应用的预设');
         applyPresetToCurrentChat(selVal);
     });
     if (bubbleSaveBtn) bubbleSaveBtn.addEventListener('click', saveCurrentTextareaAsPreset);
     if (bubbleManageBtn) bubbleManageBtn.addEventListener('click', openManagePresetsModal);
     if (bubbleModalClose) bubbleModalClose.addEventListener('click', () => {
-        document.getElementById('bubble-presets-modal').style.display = 'none';
+        const modal = document.getElementById('bubble-presets-modal');
+        if (modal) modal.style.display = 'none';
     });
 
     const allowCharSwitchCssCb = document.getElementById('setting-allow-char-switch-bubble-css');
@@ -3355,7 +3503,8 @@ function setupPresetFeatures() {
     });
 
     if (groupBubbleApplyBtn) groupBubbleApplyBtn.addEventListener('click', () => {
-        const selVal = document.getElementById('group-bubble-preset-select').value;
+        const select = document.getElementById('group-bubble-preset-select');
+        const selVal = select ? select.value : '';
         if (!selVal) return showToast('请选择要应用的预设');
         applyPresetToCurrentChat(selVal);
     });
@@ -3370,42 +3519,49 @@ function setupPresetFeatures() {
 
     if (personaSaveBtn) personaSaveBtn.addEventListener('click', saveCurrentMyPersonaAsPreset);
     if (personaManageBtn) personaManageBtn.addEventListener('click', openManageMyPersonaModal);
-    if (personaApplyBtn) personaApplyBtn.addEventListener('click', function(){ const v = personaSelect.value; if(!v) return showToast('请选择要应用的预设'); applyMyPersonaPresetToCurrentChat(v); });
-    if (personaModalClose) personaModalClose.addEventListener('click', function(){ document.getElementById('mypersona-presets-modal').style.display='none'; });
+    if (personaApplyBtn) personaApplyBtn.addEventListener('click', function(){ const v = personaSelect ? personaSelect.value : ''; if(!v) return showToast('请选择要应用的预设'); applyMyPersonaPresetToCurrentChat(v); });
+    if (personaModalClose) personaModalClose.addEventListener('click', function(){ const m = document.getElementById('mypersona-presets-modal'); if(m) m.style.display='none'; });
 
     const globalCssModalClose = document.getElementById('global-css-close-modal');
     if (globalCssModalClose) globalCssModalClose.addEventListener('click', () => {
-        document.getElementById('global-css-presets-modal').style.display = 'none';
+        const m = document.getElementById('global-css-presets-modal');
+        if(m) m.style.display = 'none';
     });
 
     const fontModalClose = document.getElementById('font-close-modal');
     if (fontModalClose) fontModalClose.addEventListener('click', () => {
-        document.getElementById('font-presets-modal').style.display = 'none';
+        const m = document.getElementById('font-presets-modal');
+        if (m) m.style.display = 'none';
     });
 
     const soundModalClose = document.getElementById('sound-close-modal');
     if (soundModalClose) soundModalClose.addEventListener('click', () => {
-        document.getElementById('sound-presets-modal').style.display = 'none';
+        const m = document.getElementById('sound-presets-modal');
+        if(m) m.style.display = 'none';
     });
 
     const iconPresetModalClose = document.getElementById('icon-presets-close-modal');
     if (iconPresetModalClose) iconPresetModalClose.addEventListener('click', () => {
-        document.getElementById('icon-presets-modal').style.display = 'none';
+        const m = document.getElementById('icon-presets-modal');
+        if (m) m.style.display = 'none';
     });
 
     const voicePresetModalClose = document.getElementById('voice-presets-close-modal');
     if (voicePresetModalClose) voicePresetModalClose.addEventListener('click', () => {
-        document.getElementById('voice-presets-modal').style.display = 'none';
+        const m = document.getElementById('voice-presets-modal');
+        if(m) m.style.display = 'none';
     });
 
     const namePresetModalClose = document.getElementById('name-presets-close-modal');
     if (namePresetModalClose) namePresetModalClose.addEventListener('click', () => {
-        document.getElementById('name-presets-modal').style.display = 'none';
+        const m = document.getElementById('name-presets-modal');
+        if (m) m.style.display = 'none';
     });
 
     const widgetWallpaperModalClose = document.getElementById('widget-wallpaper-presets-close-modal');
     if (widgetWallpaperModalClose) widgetWallpaperModalClose.addEventListener('click', () => {
-        document.getElementById('widget-wallpaper-presets-modal').style.display = 'none';
+        const m = document.getElementById('widget-wallpaper-presets-modal');
+        if (m) m.style.display = 'none';
     });
 }
 
@@ -5618,6 +5774,63 @@ margin-left: auto !important;
     
     // ---------- 夜间模式设置 ----------
     const nightSettings = db.nightModeSettings || {};
+    const DEFAULT_NIGHT_MODE_CSS = `/* 基础颜色变量 */
+body.night-mode-active {
+    --bg-color: #121212;
+    --text-color: #e0e0e0;
+    --white-color: #e0e0e0;
+    --primary-color: #1e1e1e;
+    --secondary-color: #666;
+    --accent-color: #1e1e1e;
+    --top-pinned-bg: #1a1a1a;
+    --panel-bg: #181818;
+    --chat-bottom-bar-bg: #181818;
+    --folder-pill-bg: #1e1e1e;
+    --folder-pill-text: #bbb;
+    --folder-pill-active-bg: #333;
+    --folder-pill-active-text: #fff;
+    --global-title-color: #e0e0e0;
+    --nav-icon-color: #777;
+    --nav-active-icon-color: #e0e0e0;
+    --kkt-icon-color: #e0e0e0;
+    --func-icon-color: #e0e0e0;
+}
+
+/* 背景色设置 */
+body.night-mode-active, 
+body.night-mode-active .phone-screen, 
+body.night-mode-active .screen, 
+body.night-mode-active .content,
+body.night-mode-active .chat-item {
+    background-color: #121212 !important;
+}
+
+/* 头部栏与底部栏 */
+body.night-mode-active .app-header,
+body.night-mode-active .bottom-nav {
+    background-color: #181818 !important;
+    border-color: #222 !important;
+}
+
+/* 聊天气泡 */
+body.night-mode-active .message-bubble {
+    background-color: #1e1e1e !important;
+    color: #e0e0e0 !important;
+}
+body.night-mode-active .message-wrapper.sent .message-bubble {
+    background-color: #2a2a2a !important;
+}
+
+/* 输入区域 */
+body.night-mode-active .message-input-area {
+    background-color: #181818 !important;
+    border-top-color: #222 !important;
+}
+body.night-mode-active .message-input-area textarea {
+    background-color: #1e1e1e !important;
+    color: #e0e0e0 !important;
+}`;
+
     const nightModeSectionHTML = `
     <div class="kkt-group collapsible-section" style="background-color: #fff; border: none; margin-bottom: 15px;">
         <div class="kkt-item collapsible-header" style="background-color: #fff; border-bottom: 1px solid #f5f5f5; cursor: pointer; padding: 15px;">
@@ -5652,7 +5865,7 @@ margin-left: auto !important;
                             <button type="button" id="night-css-reset-btn" class="btn btn-small" style="padding:4px 8px;">重置</button>
                         </div>
                     </div>
-                    <textarea id="night-mode-custom-css" rows="5" placeholder="例如：\nbody.night-mode-active .screen { background: #0d0d1a; }\nbody.night-mode-active .chat-item { background: #16162b; }" style="width:100%; border:1px solid #eee; border-radius:8px; padding:10px; font-size:12px; font-family:monospace;">${nightSettings.customCss || ''}</textarea>
+                    <textarea id="night-mode-custom-css" rows="12" placeholder="在此输入自定义夜间模式CSS代码..." style="width:100%; border:1px solid #eee; border-radius:8px; padding:10px; font-size:12px; font-family:monospace;">${nightSettings.customCss || DEFAULT_NIGHT_MODE_CSS}</textarea>
                 </div>
 
                 <div style="display:flex; gap:8px; justify-content:flex-end;">
@@ -5817,10 +6030,10 @@ function setupNightModeBindings() {
     document.getElementById('night-css-reset-btn')?.addEventListener('click', async () => {
         if (!db.nightModeSettings) db.nightModeSettings = {};
         db.nightModeSettings.customCss = '';
-        if (cssArea) cssArea.value = '';
+        if (cssArea) cssArea.value = DEFAULT_NIGHT_MODE_CSS;
         await saveData();
         applyNightMode();
-        showToast('夜间模式 CSS 已重置');
+        showToast('夜间模式 CSS 已重置为默认代码');
     });
 
     // 导出

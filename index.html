@@ -1335,7 +1335,51 @@
                 <button class="action-sheet-button" id="menu-multi-select-btn">多选管理</button>
                 <button class="action-sheet-button" id="menu-batch-import-btn">批量导入</button>
                 <button class="action-sheet-button" id="menu-add-new-btn">添加新表情</button>
+                <button class="action-sheet-button" id="menu-category-manage-btn">分类管理</button>
                 <button class="action-sheet-button danger" id="menu-cancel-btn">取消</button>
+            </div>
+        </div>
+
+        <!-- 表情包分类管理弹窗 -->
+        <div id="sticker-category-manage-modal" class="modal-overlay">
+            <div class="modal-window" style="max-height: 80vh; display: flex; flex-direction: column;">
+                <h3 style="margin-top: 0;">分类管理</h3>
+                <div style="display:flex; gap:10px; margin-bottom: 10px;">
+                    <input type="text" id="new-sticker-category-input" placeholder="输入新分类名称" style="flex:1; padding:8px; border:1px solid #eee; border-radius:6px;">
+                    <button type="button" class="btn btn-primary btn-small" id="add-sticker-category-btn">新建</button>
+                </div>
+                <div id="sticker-category-manage-list" style="flex: 1; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 5px;">
+                    <!-- JS 生成列表 -->
+                </div>
+                <div style="display: flex; justify-content: flex-end; margin-top: 15px;">
+                    <button type="button" class="btn btn-neutral" id="close-sticker-category-manage-btn">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 长按分类操作菜单 -->
+        <div id="sticker-category-actionsheet" class="action-sheet-overlay">
+            <div class="action-sheet">
+                <div class="action-sheet-title" id="sticker-category-action-title" style="text-align: center; color: #888; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #eee; margin-bottom: 10px;">分类操作</div>
+                <button class="action-sheet-button" id="sc-rename-btn">重命名分类</button>
+                <button class="action-sheet-button" id="sc-dissolve-btn">解散分类 (表情移至未分类)</button>
+                <button class="action-sheet-button danger" id="sc-delete-btn">彻底删除分类及表情</button>
+                <button class="action-sheet-button" id="sc-cancel-btn" style="color: #666; margin-top: 5px;">取消</button>
+            </div>
+        </div>
+
+        <!-- 重命名分类弹窗 -->
+        <div id="sticker-category-rename-modal" class="modal-overlay">
+            <div class="modal-window" style="max-width: 320px;">
+                <h3>重命名分类</h3>
+                <input type="hidden" id="sc-rename-old-name">
+                <div class="form-group">
+                    <input type="text" id="sc-rename-new-name" placeholder="新分类名称" required>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button type="button" class="btn btn-primary" id="sc-rename-confirm-btn" style="flex: 1;">确认</button>
+                    <button type="button" class="btn btn-neutral" id="sc-rename-cancel-btn" style="flex: 1;">取消</button>
+                </div>
             </div>
         </div>
 
@@ -1469,6 +1513,7 @@
                 </form>
             </main>
         </div>
+        <!-- app-settings-screen is removed -->
         <div id="api-settings-screen" class="screen">
             <header class="app-header">
                 <button class="back-btn" data-target="home-screen">‹</button>
@@ -3137,6 +3182,17 @@
                         <label for="char-real-name">角色姓名</label><input type="text" id="char-real-name"
                             placeholder="角色的真实姓名" required>
                     </div>
+                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between;">
+                        <label for="char-birthday">角色生日 (如: 2000-01-01)</label>
+                        <input type="date" id="char-birthday" style="flex: 1; margin-left: 10px;">
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between;">
+                        <label for="char-enable-dynamic-age" style="margin-bottom: 0;">开启动态年龄提示词注入</label>
+                        <label class="kkt-switch" style="margin-bottom: 0;">
+                            <input type="checkbox" id="char-enable-dynamic-age">
+                            <span class="kkt-slider"></span>
+                        </label>
+                    </div>
                     <div class="form-group">
                         <label for="char-remark-name">角色备注 (昵称)</label><input type="text" id="char-remark-name"
                             placeholder="你对Ta的称呼" required>
@@ -3591,14 +3647,32 @@
                             <!-- 我的信息分组 -->
                             <div class="kkt-group" style="margin-top:15px;">
                                 <div class="kkt-item">
-                                    <div class="kkt-item-label">我的头像</div>
-                                    <div class="kkt-item-control"
-                                        onclick="document.getElementById('setting-my-avatar-upload').click()">
-                                        <img src="" id="setting-my-avatar-preview" class="kkt-small-avatar">
-                                        <span class="kkt-arrow">›</span>
+                                    <div class="kkt-item-label">
+                                        <div class="kkt-item-title">真名</div>
                                     </div>
-                                    <input type="file" id="setting-my-avatar-upload" accept="image/*"
-                                        style="display:none;">
+                                    <div class="kkt-item-control">
+                                        <input type="text" id="setting-char-real-name" autocomplete="off"
+                                            style="text-align:right; border:none; background:transparent;"
+                                            placeholder="角色真名">
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">
+                                        <div class="kkt-item-title">生日</div>
+                                    </div>
+                                    <div class="kkt-item-control">
+                                        <input type="date" id="setting-char-birthday" autocomplete="off"
+                                            style="text-align:right; border:none; background:transparent;">
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">开启动态年龄<p style="font-size:12px;color:#999;margin:4px 0 0;">根据当前系统时间自动计算岁数并注入提示词</p></div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                            <input type="checkbox" id="setting-char-enable-dynamic-age">
+                                            <span class="kkt-slider"></span>
+                                        </label>
+                                    </div>
                                 </div>
                                 <div class="kkt-item">
                                     <div class="kkt-item-label">我的名字</div>
@@ -3739,6 +3813,15 @@
                                 </div>
 
                                 <div class="kkt-item">
+                                    <div class="kkt-item-label">收藏日记置顶</div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                            <input type="checkbox" id="setting-journal-favorite-top">
+                                            <span class="kkt-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
                                     <div class="kkt-item-label">角色自主收藏</div>
                                     <div class="kkt-item-control">
                                         <label class="kkt-switch">
@@ -3750,6 +3833,91 @@
                                 <div class="kkt-item" style="padding-top: 0;">
                                     <p class="kkt-item-hint" style="font-size: 12px; color: #999; margin: 0;">
                                         开启后，该角色可自主收藏认为重要的用户消息，可在「收藏」→「角色收藏」中查看</p>
+                                </div>
+                            </div>
+
+                            <!-- 角色单人思维链设置 -->
+                            <div class="kkt-group" style="margin-top:15px;">
+                                <div class="kkt-item" style="flex-direction:column; align-items:flex-start;">
+                                    <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+                                        <div class="kkt-item-label">启用单人思维链配置</div>
+                                        <div class="kkt-item-control">
+                                            <label class="kkt-switch">
+                                                <input type="checkbox" id="setting-char-cot-enabled">
+                                                <span class="kkt-slider"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <p style="font-size:12px; color:#999; margin:4px 0 0 0;">开启后，本角色的思维链配置将独立于全局设置</p>
+                                </div>
+                                <div id="setting-char-cot-options" style="display:none;">
+                                    
+                                    <!-- 聊天模式卡片 -->
+                                    <div style="background:#f9f9f9; padding:10px 15px; border-radius:8px; margin: 10px 15px; border: 1px solid #f0f0f0;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <div class="kkt-item-label" style="font-weight:600; color:#555;">聊天模式</div>
+                                            <label class="kkt-switch kkt-switch-small">
+                                                <input type="checkbox" id="setting-char-cot-chat-enabled">
+                                                <span class="kkt-slider"></span>
+                                            </label>
+                                        </div>
+                                        <div id="setting-char-cot-chat-preset-container" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e0e0e0;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                                <span style="font-size:13px; color:#666;">聊天预设</span>
+                                                <div class="kkt-item-control">
+                                                    <select id="setting-char-cot-chat-preset" style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; padding-right: 15px; max-width: 150px; font-size:13px; color:#333;">
+                                                        <option value="">默认预设</option>
+                                                    </select>
+                                                    <span class="kkt-arrow">›</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 通话模式卡片 -->
+                                    <div style="background:#f9f9f9; padding:10px 15px; border-radius:8px; margin: 10px 15px; border: 1px solid #f0f0f0;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <div class="kkt-item-label" style="font-weight:600; color:#555;">通话模式</div>
+                                            <label class="kkt-switch kkt-switch-small">
+                                                <input type="checkbox" id="setting-char-cot-call-enabled">
+                                                <span class="kkt-slider"></span>
+                                            </label>
+                                        </div>
+                                        <div id="setting-char-cot-call-preset-container" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e0e0e0;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                                <span style="font-size:13px; color:#666;">通话预设</span>
+                                                <div class="kkt-item-control">
+                                                    <select id="setting-char-cot-call-preset" style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; padding-right: 15px; max-width: 150px; font-size:13px; color:#333;">
+                                                        <option value="">默认通话预设</option>
+                                                    </select>
+                                                    <span class="kkt-arrow">›</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 线下模式卡片 -->
+                                    <div style="background:#f9f9f9; padding:10px 15px; border-radius:8px; margin: 10px 15px 15px 15px; border: 1px solid #f0f0f0;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <div class="kkt-item-label" style="font-weight:600; color:#555;">线下模式</div>
+                                            <label class="kkt-switch kkt-switch-small">
+                                                <input type="checkbox" id="setting-char-cot-offline-enabled">
+                                                <span class="kkt-slider"></span>
+                                            </label>
+                                        </div>
+                                        <div id="setting-char-cot-offline-preset-container" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e0e0e0;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                                <span style="font-size:13px; color:#666;">线下预设</span>
+                                                <div class="kkt-item-control">
+                                                    <select id="setting-char-cot-offline-preset" style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; padding-right: 15px; max-width: 150px; font-size:13px; color:#333;">
+                                                        <option value="">默认线下预设</option>
+                                                    </select>
+                                                    <span class="kkt-arrow">›</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
 
@@ -3851,19 +4019,6 @@
                                 </div>
                                 <div class="kkt-item-hint" style="padding: 0 16px 12px; font-size: 12px; color: #8e8e93; line-height: 1.4;">
                                     开启后，通话因闪退、退后台或刷新等非正常挂断中断时，仍会自动保存通话记录并生成总结。
-                                </div>
-                            </div>
-
-                            <!-- 消息弹窗设置 -->
-                            <div class="kkt-group" style="margin-top:15px;">
-                                <div class="kkt-item">
-                                    <div class="kkt-item-label">消息弹窗</div>
-                                    <div class="kkt-item-control">
-                                        <label class="kkt-switch">
-                                            <input type="checkbox" id="setting-bg-toast-enabled" checked>
-                                            <span class="kkt-slider"></span>
-                                        </label>
-                                    </div>
                                 </div>
                             </div>
 
@@ -4021,6 +4176,17 @@
                                             style="margin: 0; padding: 4px 12px;">管理存档</button>
                                         <span class="kkt-arrow">›</span>
                                     </div>
+                                </div>
+                                <div class="kkt-item" style="border-top: 1px solid #f5f5f5;">
+                                    <div class="kkt-item-label">重新开始 (开新档)</div>
+                                    <div class="kkt-item-control">
+                                        <button type="button" id="archive-new-game-btn" class="btn btn-small btn-secondary"
+                                            style="margin: 0; padding: 4px 12px; color: #ff3b30; border-color: #ff3b30; background: transparent;">开新档</button>
+                                        <span class="kkt-arrow">›</span>
+                                    </div>
+                                </div>
+                                <div class="kkt-item" style="padding-top: 0;">
+                                    <p class="kkt-item-hint" style="font-size: 11px; color: #bbb; margin: 0;">保留基础人设，清空所有聊天和记忆记录，重新开始</p>
                                 </div>
                             </div>
 
@@ -5427,6 +5593,15 @@
                                 </div>
                             </div>
                             <div class="kkt-item">
+                                <div class="kkt-item-label">收藏总结置顶</div>
+                                <div class="kkt-item-control">
+                                    <label class="kkt-switch">
+                                        <input type="checkbox" id="setting-group-journal-favorite-top">
+                                        <span class="kkt-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="kkt-item">
                                 <div class="kkt-item-label">自动生成总结</div>
                                 <div class="kkt-item-control">
                                     <label class="kkt-switch">
@@ -5621,7 +5796,7 @@
             <header class="app-header">
                 <button class="back-btn" data-target="chat-room-screen">‹</button>
                 <div class="title-container">
-                    <h1 class="title">回忆日记</h1>
+                    <h1 class="title" id="journal-title-btn">回忆日记</h1>
                 </div>
                 <div class="action-btn-group">
                     <button class="action-btn" id="journal-manage-btn" title="管理日记">
@@ -5650,6 +5825,15 @@
                     </button>
                 </div>
             </header>
+            <div id="journal-search-bar" style="display: none; padding: 10px 15px; background: var(--bg-color);">
+                <div class="search-input-wrapper">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="journal-search-input" placeholder="搜索日记标题..." autocomplete="off">
+                </div>
+            </div>
             <main class="content">
                 <ul class="list-container" id="journal-list-container">
                     <!-- Journal cards will be rendered here -->
@@ -5668,6 +5852,7 @@
                 </div>
                 <div style="display: flex; gap: 10px;">
                     <button class="btn btn-danger btn-small" id="journal-batch-delete-btn">删除</button>
+                    <button class="btn btn-secondary btn-small" id="journal-batch-export-btn">导出</button>
                     <button class="btn btn-primary btn-small" id="journal-merge-btn">合并精简</button>
                 </div>
             </div>
@@ -6351,32 +6536,6 @@
                     </div>
                 </form>
             </div>
-        </div>
-
-        <div id="app-settings-screen" class="screen">
-            <header class="app-header">
-                <button class="back-btn" data-target="home-screen">‹</button>
-                <div class="title-container">
-                    <h1 class="title">应用设置</h1>
-                </div>
-                <div class="placeholder"></div>
-            </header>
-            <main class="content">
-                <div class="kkt-settings-container">
-                    <div class="kkt-group" style="margin-top: 15px;">
-                        <div class="kkt-item">
-                            <div class="kkt-item-label">全局消息弹窗通知</div>
-                            <div class="kkt-item-control">
-                                <label class="kkt-switch">
-                                    <input type="checkbox" id="setting-global-toast-enabled" checked>
-                                    <span class="kkt-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                        <p style="font-size: 12px; color: #999; margin: 10px 15px;">开启后默认允许消息弹窗。注意：角色的单人弹窗设置优先级高于此全局设置。</p>
-                    </div>
-                </div>
-            </main>
         </div>
 
         <div id="storage-analysis-screen" class="screen">
@@ -7894,6 +8053,39 @@
         </div>
     </div>
 
+
+    <!-- Journal Title Action Sheet -->
+    <div id="journal-title-actionsheet" class="action-sheet-overlay">
+        <div class="action-sheet">
+            <button class="action-sheet-button" id="manual-add-journal-btn">手动添加新记忆</button>
+            <button class="action-sheet-button" id="search-journal-btn">搜索日记</button>
+            <button class="action-sheet-button" id="export-journal-btn">导出日记</button>
+            <button class="action-sheet-button" id="import-journal-btn">导入日记</button>
+            <input type="file" id="import-journal-file-input" accept=".json" style="display:none;">
+            <button class="action-sheet-button danger" id="journal-title-cancel-btn">取消</button>
+        </div>
+    </div>
+
+    <!-- Manual Journal Modal -->
+    <div id="manual-journal-modal" class="modal-overlay">
+        <div class="modal-window">
+            <h3>手动添加新记忆</h3>
+            <form id="manual-journal-form">
+                <div class="form-group">
+                    <label for="manual-journal-title">标题</label>
+                    <input type="text" id="manual-journal-title" placeholder="例如：回忆的标题" required>
+                </div>
+                <div class="form-group">
+                    <label for="manual-journal-content">内容</label>
+                    <textarea id="manual-journal-content" rows="6" placeholder="回忆的内容..." required></textarea>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button type="submit" class="btn btn-primary" style="flex:1;">保存</button>
+                    <button type="button" class="btn btn-neutral" id="manual-journal-cancel-btn" style="flex:1;">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Generate Journal Modal -->
     <div id="generate-journal-modal" class="modal-overlay">

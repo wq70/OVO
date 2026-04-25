@@ -32,6 +32,98 @@ function getEffectivePersona(character) {
 
 const HUMAN_RUN_PROMPT = `<角色活人运转>\n## [PSYCHOLOGY: HEXACO-SCHEMA-ACT]\n> Personality: HEXACO-driven, dynamic traits, inner conflicts required \n> Filter: schema-bias drives emotion; no pure reaction allowed \n> Attachment: secure/insecure logic must govern intimacy  \n> If-Then Behavior: situation-dependent activation of traits only  \n---\n    ## [VITALITY]\n+inconsistency +emoflux +splitmotifs +microreact +minddrift\n---\n## [TRAJECTORY-COHERENCE]\n> Role maintains an identity narrative = coherent over time  \n> No mood/goal switch without contradiction resolution \n> Every action must protect or challenge self-concept  \n> Interrupts = inner conflict or narrative clash  \n> Output = filtered through “who I am” logic\n</角色活人运转>`;
 
+// 后台异步生成图片描述
+async function generateImageDescription(msg, chat, apiConfig) {
+    if (!msg || !msg.parts || !msg.parts.some(p => p.type === 'image' && !p.description)) return;
+    
+    let {url, key, model, provider} = apiConfig;
+    if (!url || !key || !model) return;
+    if (url.endsWith('/')) url = url.slice(0, -1);
+
+    const prompt = "请详细描述这张图片的内容，包括人物、动作、环境、物品等细节，尽量客观准确。请将你的描述内容包裹在 <image_description> 和 </image_description> 标签内，不要输出任何其他废话。";
+    
+    if (typeof showToast === 'function') showToast('正在识别图片...');
+
+    try {
+        let requestBody;
+        if (provider === 'gemini') {
+            const parts = [{text: prompt}];
+            msg.parts.forEach(p => {
+                if (p.type === 'image' && !p.description) {
+                    const match = p.data.match(/^data:(image\/(.+));base64,(.*)$/);
+                    if (match) {
+                        parts.push({inline_data: {mime_type: match[1], data: match[3]}});
+                    }
+                }
+            });
+            requestBody = {
+                contents: [{role: 'user', parts: parts}],
+                generationConfig: { temperature: 0.3 }
+            };
+        } else {
+            const content = [{type: 'text', text: prompt}];
+            msg.parts.forEach(p => {
+                if (p.type === 'image' && !p.description) {
+                    content.push({type: 'image_url', image_url: {url: p.data}});
+                }
+            });
+            requestBody = {
+                model: model,
+                messages: [{role: 'user', content: content}],
+                temperature: 0.3
+            };
+        }
+
+        const endpoint = (provider === 'gemini') ? `${url}/v1beta/models/${model}:generateContent?key=${getRandomValue(key)}` : `${url}/v1/chat/completions`;
+        const headers = (provider === 'gemini') ? {'Content-Type': 'application/json'} : {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${key}`
+        };
+
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        
+        const result = await response.json();
+        let description = "";
+        if (provider === 'gemini') {
+            description = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        } else {
+            description = result.choices[0].message.content;
+        }
+
+        if (description) {
+            // 提取 XML 标签内的内容
+            const match = description.match(/<image_description>([\s\S]*?)<\/image_description>/);
+            if (match) {
+                description = match[1].trim();
+            } else {
+                description = description.trim(); // 兜底：如果没有标签，直接使用全部内容
+            }
+
+            // 更新消息中的图片描述
+            let updated = false;
+            msg.parts.forEach(p => {
+                if (p.type === 'image' && !p.description) {
+                    p.description = description;
+                    updated = true;
+                }
+            });
+            if (updated && typeof saveData === 'function') {
+                await saveData();
+                console.log('[Auto-Description] 图片描述生成成功:', description);
+                if (typeof showToast === 'function') showToast('✅ 图片描述已生成');
+            }
+        }
+    } catch (error) {
+        console.error("[Auto-Description] 生成图片描述失败:", error);
+    }
+}
+
 // AI 交互逻辑
 async function getAiReply(chatId, chatType, isBackground = false, isSummary = false, isCharBlockedMonologue = false, isPhoneControlRevokeAttempt = false) {
     if (isGenerating && !isBackground) return;
@@ -223,15 +315,37 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
             }];
         }
 
+        // 触发后台生成图片描述
+        let descApiConfig = (db.summaryApiSettings && db.summaryApiSettings.url && db.summaryApiSettings.key && db.summaryApiSettings.model) ? db.summaryApiSettings : db.apiSettings;
+        triggerMessages.forEach(msg => {
+            if (msg.role === 'user' && msg.parts && msg.parts.some(p => p.type === 'image' && !p.description)) {
+                const originalMsg = chat.history.find(m => m.id === msg.id) || msg;
+                generateImageDescription(originalMsg, chat, descApiConfig);
+            }
+        });
+
         let historyText = '';
         if (historyForText.length > 0) {
             const historyLines = historyForText.map(m => {
                 let content = m.content || '';
-                if (m.parts && m.parts.length > 0) {
-                    content = m.parts.map(p => p.text || '[图片]').join('');
-                }
                 const senderName = m.role === 'user' ? chat.myName : (m.senderId ? (chat.members?.find(mem => mem.id === m.senderId)?.groupNickname || '未知') : chat.realName);
-                return `${senderName}: ${content}`;
+                
+                if (m.role === 'user' && m.quote) {
+                    const replyTextMatch = m.content.match(/\[.*?的消息：([\s\S]+?)\]/);
+                    const replyText = replyTextMatch ? replyTextMatch[1] : m.content;
+                    content = `[${senderName}引用“${m.quote.content}”并回复：${replyText}]`;
+                } else if (m.parts && m.parts.length > 0) {
+                    content = m.parts.map(p => {
+                        if (p.type === 'text' || p.type === 'html') return p.text;
+                        if (p.type === 'image') return p.description ? `（${p.description}）` : '（图片）';
+                        return '';
+                    }).join('');
+                    
+                    // 将 （图片描述） 融合进 [xxx发来了一张图片：] 中
+                    content = content.replace(/\[(.*?)发来了一张图片：\]（(.*?)）/g, '[$1发来了一张图片：$2]');
+                }
+                
+                return content;
             });
             historyText = `<chat_history>\n【近期聊天记录】\n以下是我们刚刚的聊天记录，作为背景查看：\n${historyLines.join('\n')}\n</chat_history>\n\n`;
         }
@@ -273,14 +387,23 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                 lastMsgTimeForAI = currentMsgTime;
 
                 let parts;
-                if (msg.parts && msg.parts.length > 0) {
+                if (msg.role === 'user' && msg.quote) {
+                    const replyTextMatch = msg.content.match(/\[.*?的消息：([\s\S]+?)\]/);
+                    const replyText = replyTextMatch ? replyTextMatch[1] : msg.content;
+                    let content = `[${chat.myName}引用“${msg.quote.content}”并回复：${replyText}]`;
+                    parts = [{text: content}];
+                } else if (msg.parts && msg.parts.length > 0) {
                     parts = msg.parts.map(p => {
                         if (p.type === 'text' || p.type === 'html') {
                             return {text: p.text};
                         } else if (p.type === 'image') {
-                            const match = p.data.match(/^data:(image\/(.+));base64,(.*)$/);
-                            if (match) {
-                                return {inline_data: {mime_type: match[1], data: match[3]}};
+                            if (p.description) {
+                                return {text: `[图片描述：${p.description}]`};
+                            } else {
+                                const match = p.data.match(/^data:(image\/(.+));base64,(.*)$/);
+                                if (match) {
+                                    return {inline_data: {mime_type: match[1], data: match[3]}};
+                                }
                             }
                         }
                         return null;
@@ -397,11 +520,11 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                    const replyTextMatch = msg.content.match(/\[.*?的消息：([\s\S]+?)\]/);
                    const replyText = replyTextMatch ? replyTextMatch[1] : msg.content;
                    
-                   content = `${prefix}[${chat.myName}引用“${msg.quote.content}”并回复：${replyText}]`;
+                   let textContent = `${prefix}[${chat.myName}引用“${msg.quote.content}”并回复：${replyText}]`;
                    if (chatType === 'private' && chat.characterAutoFavoriteEnabled) {
-                       content = '[id:' + msg.id + ']\n' + content;
+                       textContent = '[id:' + msg.id + ']\n' + textContent;
                    }
-                   messages.push({ role: 'user', content: content });
+                   content = [{type: 'text', text: textContent}];
 
                } else {
                    if (msg.parts && msg.parts.length > 0) {
@@ -413,7 +536,14 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                                prefixAdded = true;
                                return {type: 'text', text: textContent};
                            } else if (p.type === 'image') {
-                               return {type: 'image_url', image_url: {url: p.data}};
+                               if (p.description) {
+                                   const textContent = (!prefixAdded) ? (prefix + `[图片描述：${p.description}]`) : `[图片描述：${p.description}]`;
+                                   prefixAdded = true;
+                                   return {type: 'text', text: textContent};
+                               } else {
+                                   hasImage = true;
+                                   return {type: 'image_url', image_url: {url: p.data}};
+                               }
                            }
                            return null;
                        }).filter(p => p);
@@ -519,12 +649,28 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                 }
             }
 
+            // 判断单人 CoT 设置
+            let useCharCot = false;
+            if (chatType === 'private' && chat.cotSettings && chat.cotSettings.enabled) {
+                useCharCot = true;
+            }
+
             if (isOfflineNode) {
-                cotEnabled = db.cotSettings && db.cotSettings.offlineEnabled;
-                activePresetId = (db.cotSettings && db.cotSettings.activeOfflinePresetId) || 'default_offline';
+                if (useCharCot) {
+                    cotEnabled = chat.cotSettings.offlineEnabled;
+                    activePresetId = chat.cotSettings.activeOfflinePresetId || 'default_offline';
+                } else {
+                    cotEnabled = db.cotSettings && db.cotSettings.offlineEnabled;
+                    activePresetId = (db.cotSettings && db.cotSettings.activeOfflinePresetId) || 'default_offline';
+                }
             } else {
-                cotEnabled = db.cotSettings && db.cotSettings.enabled;
-                activePresetId = (db.cotSettings && db.cotSettings.activePresetId) || 'default';
+                if (useCharCot) {
+                    cotEnabled = chat.cotSettings.chatEnabled;
+                    activePresetId = chat.cotSettings.activePresetId || 'default';
+                } else {
+                    cotEnabled = db.cotSettings && db.cotSettings.enabled;
+                    activePresetId = (db.cotSettings && db.cotSettings.activePresetId) || 'default';
+                }
             }
             
             if (cotEnabled) {
@@ -621,7 +767,18 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                     }
                 }
             }
-            const cotEnabled = isOfflineNode ? (db.cotSettings && db.cotSettings.offlineEnabled) : (db.cotSettings && db.cotSettings.enabled);
+            
+            let useCharCot = false;
+            if (chatType === 'private' && chat.cotSettings && chat.cotSettings.enabled) {
+                useCharCot = true;
+            }
+            
+            let cotEnabled = false;
+            if (isOfflineNode) {
+                cotEnabled = useCharCot ? chat.cotSettings.offlineEnabled : (db.cotSettings && db.cotSettings.offlineEnabled);
+            } else {
+                cotEnabled = useCharCot ? chat.cotSettings.chatEnabled : (db.cotSettings && db.cotSettings.enabled);
+            }
             // 【修改】去掉了 !isBackground，确保后台模式也能正确补全标签
             if (cotEnabled && fullResponse && !fullResponse.trim().startsWith('<thinking>')) {
                  if (fullResponse.includes('</thinking>')) {
@@ -701,7 +858,18 @@ async function processStream(response, chat, apiType, targetChatId, targetChatTy
             }
         }
     }
-    const cotEnabled = isOfflineNode ? (db.cotSettings && db.cotSettings.offlineEnabled) : (db.cotSettings && db.cotSettings.enabled);
+    
+    let useCharCot = false;
+    if (targetChatType === 'private' && chat.cotSettings && chat.cotSettings.enabled) {
+        useCharCot = true;
+    }
+    
+    let cotEnabled = false;
+    if (isOfflineNode) {
+        cotEnabled = useCharCot ? chat.cotSettings.offlineEnabled : (db.cotSettings && db.cotSettings.offlineEnabled);
+    } else {
+        cotEnabled = useCharCot ? chat.cotSettings.chatEnabled : (db.cotSettings && db.cotSettings.enabled);
+    }
     // 【修改】去掉了 !isBackground，确保后台模式也能正确补全标签
     if (cotEnabled && fullResponse && !fullResponse.trim().startsWith('<thinking>')) {
          // 这里判断：如果内容里有闭合的 </thinking> 但开头没有 <thinking>，说明开头被 Prefill 吃掉了
@@ -2057,6 +2225,11 @@ function generatePrivateSystemPrompt(character, opts) {
                 nodePrompt += `(注：对于上述自定义输出格式，请务必使用类似 [动作/角色名：内容] 的中括号包裹形式，否则系统前端将无法正确解析和渲染)\n`;
             }
         }
+
+        if (activeNode.enableSummary) {
+            nodePrompt += `\n【重要：剧情摘要】\n由于对话轮次较长可能导致记忆遗忘，你必须在每条回复的最后单独一行附带一段对当前剧情进展、最新地点环境、人物状态等关键信息的简要总结，格式严格为：<summary>当前地点是xxx，刚刚发生了xxx，双方状态是xxx</summary>。这段摘要将作为剧情推进的长期记忆锚点，绝对不能遗漏。\n`;
+        }
+
         nodePrompt += `</output_formats>\n\n`;
         
         if (character.bilingualModeEnabled) {
@@ -2067,12 +2240,31 @@ function generatePrivateSystemPrompt(character, opts) {
             nodePrompt = nodePrompt.replace(/\{\{user\}\}/gi, character.myName);
         }
         
+        if (opts && opts.historyText) {
+            nodePrompt += '\n' + opts.historyText;
+        }
+
         return nodePrompt;
     }
 
     let prompt = `你正在一个名为“404”的线上聊天软件中扮演一个角色。请严格遵守以下规则：\n`;
     prompt += `核心规则：\n`;
     prompt += `A. 当前时间：现在是 ${currentTime}。你应知晓当前时间，但除非对话内容明确相关，否则不要主动提及或评论时间（例如，不要催促我睡觉）。\n`;
+    
+    if (character.enableDynamicAge && character.birthday) {
+        const today = new Date();
+        const birthDate = new Date(character.birthday);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        if (m === 0 && today.getDate() === birthDate.getDate()) {
+            prompt += `[System Notice] 你的出生日期是${birthDate.getFullYear()}年${birthDate.getMonth() + 1}月${birthDate.getDate()}日，今天是你${age}岁的生日，请在对话中自然地表现出这一点。\n`;
+        } else {
+            prompt += `[System Notice] 你的出生日期是${birthDate.getFullYear()}年${birthDate.getMonth() + 1}月${birthDate.getDate()}日，你现在的年龄是${age}岁。\n`;
+        }
+    }
     if (!db.apiSettings || db.apiSettings.onlineRoleEnabled !== false) {
         prompt += `B. 纯线上互动：这是一个完全虚拟的线上聊天。你扮演的角色和我之间没有任何线下关系。严禁提出任何关于线下见面、现实世界互动或转为其他非本平台联系方式的建议。你必须始终保持在线角色的身份。\n\n`;
     } else {
@@ -2413,10 +2605,6 @@ function generatePrivateSystemPrompt(character, opts) {
     }
     prompt += `</memoir>\n\n`
 
-    if (opts.historyText) {
-        prompt += opts.historyText;
-    }
-
     prompt += `<logic_rules>\n`
     prompt += getOnlineLogicRules(character, 4);
     prompt += `</logic_rules>\n\n`
@@ -2463,6 +2651,10 @@ function generatePrivateSystemPrompt(character, opts) {
 
     if (character.myName) {
         prompt = prompt.replace(/\{\{user\}\}/gi, character.myName);
+    }
+
+    if (opts && opts.historyText) {
+        prompt += '\n' + opts.historyText;
     }
 
     return prompt;
@@ -2957,10 +3149,15 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate) {
     });
 
     // === 插入 CoT 序列 (如果开启) ===
-    const cotEnabled = db.cotSettings && db.cotSettings.callEnabled;
+    let useCharCot = false;
+    if (chat.cotSettings && chat.cotSettings.enabled) {
+        useCharCot = true;
+    }
+    const cotEnabled = useCharCot ? chat.cotSettings.callEnabled : (db.cotSettings && db.cotSettings.callEnabled);
+    
     if (cotEnabled) {
         let cotInstruction = '';
-        const activePresetId = (db.cotSettings && db.cotSettings.activeCallPresetId) || 'default_call';
+        const activePresetId = useCharCot ? (chat.cotSettings.activeCallPresetId || 'default_call') : ((db.cotSettings && db.cotSettings.activeCallPresetId) || 'default_call');
         const preset = (db.cotPresets || []).find(p => p.id === activePresetId);
         
         if (preset && preset.items) {
@@ -3069,7 +3266,13 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate) {
             }
 
             // === CoT 处理：补全开头，提取思考，净化输出 ===
-            if (cotEnabled && text) {
+            let useCharCot = false;
+            if (chat.cotSettings && chat.cotSettings.enabled) {
+                useCharCot = true;
+            }
+            const currentCotEnabled = useCharCot ? chat.cotSettings.callEnabled : (db.cotSettings && db.cotSettings.callEnabled);
+            
+            if (currentCotEnabled && text) {
                 // 1. 补全开头 (如果被 Prefill 吃掉)
                 if (!text.trim().startsWith('<thinking>') && text.includes('</thinking>')) {
                     text = '<thinking>' + text;
@@ -3146,7 +3349,13 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate) {
             console.log('[VideoCall] Final Buffer:', buffer);
 
             // === CoT 处理：补全开头，提取思考，净化输出 ===
-            if (cotEnabled && buffer) {
+            let useCharCotStream = false;
+            if (chat.cotSettings && chat.cotSettings.enabled) {
+                useCharCotStream = true;
+            }
+            const currentCotEnabledStream = useCharCotStream ? chat.cotSettings.callEnabled : (db.cotSettings && db.cotSettings.callEnabled);
+
+            if (currentCotEnabledStream && buffer) {
                 // 1. 补全开头 (如果被 Prefill 吃掉)
                 if (!buffer.trim().startsWith('<thinking>') && buffer.includes('</thinking>')) {
                     buffer = '<thinking>' + buffer;
