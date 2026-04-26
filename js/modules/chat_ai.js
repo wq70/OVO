@@ -299,14 +299,14 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
             }
         }
 
-        // 触发后台生成图片描述
-        let descApiConfig = (db.summaryApiSettings && db.summaryApiSettings.url && db.summaryApiSettings.key && db.summaryApiSettings.model) ? db.summaryApiSettings : db.apiSettings;
-        historySlice.forEach(msg => {
-            if (msg.role === 'user' && msg.parts && msg.parts.some(p => p.type === 'image' && !p.description)) {
-                const originalMsg = chat.history.find(m => m.id === msg.id) || msg;
-                generateImageDescription(originalMsg, chat, descApiConfig);
-            }
-        });
+        // 暂时禁用后台生成图片描述
+        // let descApiConfig = (db.summaryApiSettings && db.summaryApiSettings.url && db.summaryApiSettings.key && db.summaryApiSettings.model) ? db.summaryApiSettings : db.apiSettings;
+        // historySlice.forEach(msg => {
+        //     if (msg.role === 'user' && msg.parts && msg.parts.some(p => p.type === 'image' && !p.description)) {
+        //         const originalMsg = chat.history.find(m => m.id === msg.id) || msg;
+        //         generateImageDescription(originalMsg, chat, descApiConfig);
+        //     }
+        // });
 
         if (provider === 'gemini') {
             let lastMsgTimeForAI = 0;

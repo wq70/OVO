@@ -1374,7 +1374,16 @@ function loadSettingsToSidebar() {
         if (stickerSmartMatchEl) stickerSmartMatchEl.checked = e.stickerSmartMatchEnabled || false;
 
         const stickerImageRecognitionEl = document.getElementById('setting-sticker-image-recognition-enabled');
-        if (stickerImageRecognitionEl) stickerImageRecognitionEl.checked = e.stickerImageRecognitionEnabled || false;
+        if (stickerImageRecognitionEl) {
+            stickerImageRecognitionEl.checked = false; // 强制为 false，兼容旧数据
+            stickerImageRecognitionEl.disabled = true;
+            stickerImageRecognitionEl.parentElement.addEventListener('click', (ev) => {
+                if (stickerImageRecognitionEl.disabled) {
+                    ev.preventDefault();
+                    if (typeof showToast === 'function') showToast('该功能暂时维护中，不允许打开');
+                }
+            }, true);
+        }
 
         document.getElementById('setting-auto-journal-enabled').checked = e.autoJournalEnabled || false;
         const autoJournalIntervalContainer = document.getElementById('setting-auto-journal-interval-container');
@@ -1987,7 +1996,7 @@ async function saveSettingsFromSidebar() {
         e.stickerSmartMatchEnabled = stickerSmartMatchCb ? stickerSmartMatchCb.checked : false;
         
         const stickerImageRecognitionCb = document.getElementById('setting-sticker-image-recognition-enabled');
-        e.stickerImageRecognitionEnabled = stickerImageRecognitionCb ? stickerImageRecognitionCb.checked : false;
+        e.stickerImageRecognitionEnabled = false; // 强制设为 false，兼容旧数据
 
         e.autoJournalEnabled = document.getElementById('setting-auto-journal-enabled').checked;
         const autoJournalIntervalInput = parseInt(document.getElementById('setting-auto-journal-interval').value, 10);
