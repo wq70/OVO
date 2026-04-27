@@ -110,7 +110,11 @@ async function generateImageDescription(msg, chat, apiConfig) {
                     const processedData = await processImage(p.data);
                     const match = processedData.match(/^data:(image\/(.+));base64,(.*)$/);
                     if (match) {
-                        parts.push({inline_data: {mime_type: match[1], data: match[3]}});
+                        if (match[1] === 'image/gif') {
+                            parts.push({text: `[动态图片(GIF)]`});
+                        } else {
+                            parts.push({inline_data: {mime_type: match[1], data: match[3]}});
+                        }
                     } else if (processedData.startsWith('http')) {
                         parts.push({text: `[图片地址: ${processedData}]`}); // Gemini 兜底
                     }
@@ -437,6 +441,9 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                             } else {
                                 const match = p.data.match(/^data:(image\/(.+));base64,(.*)$/);
                                 if (match) {
+                                    if (match[1] === 'image/gif') {
+                                        return {text: `[动态图片(GIF)]`};
+                                    }
                                     return {inline_data: {mime_type: match[1], data: match[3]}};
                                 }
                             }
@@ -444,12 +451,7 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                             if (p.description) {
                                 return {text: `[表情包画面：${p.description}]`};
                             } else {
-                                const match = p.data.match(/^data:(image\/(.+));base64,(.*)$/);
-                                if (match) {
-                                    return {inline_data: {mime_type: match[1], data: match[3]}};
-                                } else if (p.data.startsWith('http')) {
-                                    return {text: `[表情包图片链接: ${p.data}]`}; // Gemini 兜底
-                                }
+                                return {text: `[一个表情包]`}; // 兜底，不再尝试发送表情包的原图数据给API
                             }
                         }
                         return null;
@@ -600,15 +602,13 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                                }
                            } else if (p.type === 'sticker') {
                                if (p.description) {
-                                   // 即便有描述，也同时把原图发给模型（如果模型支持的话）
                                    const textContent = (!prefixAdded) ? (prefix + `[表情包画面：${p.description}]`) : `[表情包画面：${p.description}]`;
                                    prefixAdded = true;
-                                   return [
-                                        {type: 'text', text: textContent},
-                                        {type: 'image_url', image_url: {url: p.data}}
-                                   ];
+                                   return {type: 'text', text: textContent};
                                } else {
-                                   return {type: 'image_url', image_url: {url: p.data}};
+                                   const textContent = (!prefixAdded) ? (prefix + `[一个表情包]`) : `[一个表情包]`;
+                                   prefixAdded = true;
+                                   return {type: 'text', text: textContent};
                                }
                            }
                            return null;

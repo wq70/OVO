@@ -210,16 +210,9 @@ const GuideSystem = {
                 break;
             case 'guide_token_distribution':
                 config = {
-                    target: '#pc-stat-token-click',
-                    text: '点击这里可查看 Token 分布，了解当前对话的 token 使用情况！',
+                    target: '#chat-expansion-panel',
+                    text: '💡 提示：您现在可以从输入框上方的按钮，手动给单个人设分配指定的 Token。可以针对多人物合卡，单独给部分人设分配更多 Token 资源！',
                     position: 'top'
-                };
-                break;
-            case 'guide_image_recognition_api':
-                config = {
-                    target: '#guide-image-recognition-header',
-                    text: '💡 提示：强烈建议填入轻量级或免费视觉大模型的 API！发送图片时会先用此 API 生成文字描述，然后再发给主模型，能大幅节省主模型的高昂 Token，且只需识别一次！',
-                    position: 'bottom'
                 };
                 break;
         }

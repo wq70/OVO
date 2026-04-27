@@ -349,6 +349,10 @@ async function setupStickerSystem() {
             const parts = [{text: prompt}];
             const match = processedImageData.match(/^data:(image\/(.+));base64,(.*)$/);
             if (match) {
+                if (match[1] === 'image/gif') {
+                    // Gemini 暂时不支持 image/gif，此时放弃识图，退回返回空
+                    return null;
+                }
                 parts.push({inline_data: {mime_type: match[1], data: match[3]}});
             } else if (processedImageData.startsWith('http')) {
                 // 如果转 base64 失败，依然是 http 链接，由于 Gemini 可能不认 URL 参数，只能拼入文本
