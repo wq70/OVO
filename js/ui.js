@@ -77,6 +77,17 @@ const switchScreen = (targetId) => {
     if (targetId === 'more-screen') {
         renderMoreScreen();
     }
+    if (targetId === 'api-settings-screen') {
+        if (window.GuideSystem) {
+            setTimeout(() => {
+                const irSection = document.getElementById('guide-image-recognition-section');
+                if (irSection && !irSection.classList.contains('open')) {
+                    irSection.classList.add('open');
+                }
+                window.GuideSystem.check('guide_image_recognition_api');
+            }, 300);
+        }
+    }
     if (targetId === 'piggy-bank-screen' && typeof renderPiggyBankScreen === 'function') {
         renderPiggyBankScreen();
     }

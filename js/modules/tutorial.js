@@ -215,6 +215,13 @@ const GuideSystem = {
                     position: 'top'
                 };
                 break;
+            case 'guide_image_recognition_api':
+                config = {
+                    target: '#guide-image-recognition-header',
+                    text: '💡 提示：强烈建议填入轻量级或免费视觉大模型的 API！发送图片时会先用此 API 生成文字描述，然后再发给主模型，能大幅节省主模型的高昂 Token，且只需识别一次！',
+                    position: 'bottom'
+                };
+                break;
         }
 
         if (config) {

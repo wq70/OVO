@@ -1373,18 +1373,6 @@ function loadSettingsToSidebar() {
         const stickerSmartMatchEl = document.getElementById('setting-sticker-smart-match');
         if (stickerSmartMatchEl) stickerSmartMatchEl.checked = e.stickerSmartMatchEnabled || false;
 
-        const stickerImageRecognitionEl = document.getElementById('setting-sticker-image-recognition-enabled');
-        if (stickerImageRecognitionEl) {
-            stickerImageRecognitionEl.checked = false; // 强制为 false，兼容旧数据
-            stickerImageRecognitionEl.disabled = true;
-            stickerImageRecognitionEl.parentElement.addEventListener('click', (ev) => {
-                if (stickerImageRecognitionEl.disabled) {
-                    ev.preventDefault();
-                    if (typeof showToast === 'function') showToast('该功能暂时维护中，不允许打开');
-                }
-            }, true);
-        }
-
         document.getElementById('setting-auto-journal-enabled').checked = e.autoJournalEnabled || false;
         const autoJournalIntervalContainer = document.getElementById('setting-auto-journal-interval-container');
         if (autoJournalIntervalContainer) {
@@ -1994,9 +1982,6 @@ async function saveSettingsFromSidebar() {
         e.replyCountMax = parseInt(document.getElementById('setting-reply-count-max').value, 10) || 8;
         const stickerSmartMatchCb = document.getElementById('setting-sticker-smart-match');
         e.stickerSmartMatchEnabled = stickerSmartMatchCb ? stickerSmartMatchCb.checked : false;
-        
-        const stickerImageRecognitionCb = document.getElementById('setting-sticker-image-recognition-enabled');
-        e.stickerImageRecognitionEnabled = false; // 强制设为 false，兼容旧数据
 
         e.autoJournalEnabled = document.getElementById('setting-auto-journal-enabled').checked;
         const autoJournalIntervalInput = parseInt(document.getElementById('setting-auto-journal-interval').value, 10);
@@ -2351,9 +2336,16 @@ function setupApiSettingsApp() {
             quickReplyEnabled: document.getElementById('quick-reply-switch').checked,
             temperature: parseFloat(document.getElementById('temperature-slider').value)
         };
+        
+        // 保存自动识图全局开关
+        const irSwitch = document.getElementById('imageRecognition-enabled-switch');
+        if (irSwitch) {
+            db.imageRecognitionEnabled = irSwitch.checked;
+        }
+
         await saveData();
         showToast('API设置已保存！')
-    })
+    });
     
     // === 副API设置：总结API ===
     setupSubApiSettings('summary', 'summaryApiSettings', 'summaryApiPresets');
@@ -2366,6 +2358,18 @@ function setupApiSettingsApp() {
     
     // === 副API设置：偷看手机API ===
     setupSubApiSettings('peek', 'peekApiSettings', 'peekApiPresets');
+
+    // === 副API设置：自动识图 API ===
+    setupSubApiSettings('imageRecognition', 'imageRecognitionApiSettings', 'imageRecognitionApiPresets');
+    
+    if (db.imageRecognitionEnabled !== undefined) {
+        document.getElementById('imageRecognition-enabled-switch').checked = db.imageRecognitionEnabled;
+    } else {
+        document.getElementById('imageRecognition-enabled-switch').checked = false; // 默认关闭
+    }
+
+    // === 副API设置：表情包识图 API ===
+    setupSubApiSettings('stickerRecognition', 'stickerRecognitionApiSettings', 'stickerRecognitionApiPresets');
 
     // === NovelAI 生图 API 设置 ===
     setupNovelAiSettings();
@@ -2521,7 +2525,7 @@ function importApiPresets() {
 }
 
     // === 副API通用设置函数 ===
-    var subApiDisplayNames = { summary: '总结', background: '后台活动', supplementPersona: '补齐人设', peek: '偷看手机' };
+    var subApiDisplayNames = { summary: '总结', background: '后台活动', supplementPersona: '补齐人设', peek: '偷看手机', imageRecognition: '自动识图', stickerRecognition: '表情包识图' };
 function setupSubApiSettings(prefix, dbKey, presetsKey) {
     const displayName = subApiDisplayNames[prefix] || prefix;
     const providerEl = document.getElementById(`${prefix}-api-provider`);

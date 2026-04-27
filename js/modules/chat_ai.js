@@ -46,27 +46,88 @@ async function generateImageDescription(msg, chat, apiConfig) {
 
     try {
         let requestBody;
+        
+        // 尝试将所有非 Base64 链接转换为 Base64
+        const processImage = async (url) => {
+            if (url.startsWith('data:image')) return url;
+            try {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                return await new Promise((resolve, reject) => {
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        let w = img.naturalWidth;
+                        let h = img.naturalHeight;
+                        const max_size = 512;
+                        if (w > max_size || h > max_size) {
+                            const ratio = Math.min(max_size / w, max_size / h);
+                            w = Math.floor(w * ratio);
+                            h = Math.floor(h * ratio);
+                        }
+                        canvas.width = w;
+                        canvas.height = h;
+                        ctx.drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                    };
+                    img.onerror = () => {
+                        const imgNoCors = new Image();
+                        imgNoCors.onload = () => {
+                            try {
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+                                let w = imgNoCors.naturalWidth;
+                                let h = imgNoCors.naturalHeight;
+                                const max_size = 512;
+                                if (w > max_size || h > max_size) {
+                                    const ratio = Math.min(max_size / w, max_size / h);
+                                    w = Math.floor(w * ratio);
+                                    h = Math.floor(h * ratio);
+                                }
+                                canvas.width = w;
+                                canvas.height = h;
+                                ctx.drawImage(imgNoCors, 0, 0, w, h);
+                                resolve(canvas.toDataURL('image/jpeg', 0.8));
+                            } catch(err) {
+                                reject(new Error('Canvas tainted, cannot convert to Base64'));
+                            }
+                        };
+                        imgNoCors.onerror = () => reject(new Error('Image load error completely'));
+                        imgNoCors.src = url;
+                    };
+                    img.src = url;
+                });
+            } catch (e) {
+                console.warn('[Auto-Description] Image to base64 failed, using original URL:', e);
+                return url;
+            }
+        };
+
         if (provider === 'gemini') {
             const parts = [{text: prompt}];
-            msg.parts.forEach(p => {
+            for (const p of msg.parts) {
                 if (p.type === 'image' && !p.description) {
-                    const match = p.data.match(/^data:(image\/(.+));base64,(.*)$/);
+                    const processedData = await processImage(p.data);
+                    const match = processedData.match(/^data:(image\/(.+));base64,(.*)$/);
                     if (match) {
                         parts.push({inline_data: {mime_type: match[1], data: match[3]}});
+                    } else if (processedData.startsWith('http')) {
+                        parts.push({text: `[图片地址: ${processedData}]`}); // Gemini 兜底
                     }
                 }
-            });
+            }
             requestBody = {
                 contents: [{role: 'user', parts: parts}],
                 generationConfig: { temperature: 0.3 }
             };
         } else {
             const content = [{type: 'text', text: prompt}];
-            msg.parts.forEach(p => {
+            for (const p of msg.parts) {
                 if (p.type === 'image' && !p.description) {
-                    content.push({type: 'image_url', image_url: {url: p.data}});
+                    const processedData = await processImage(p.data);
+                    content.push({type: 'image_url', image_url: {url: processedData}});
                 }
-            });
+            }
             requestBody = {
                 model: model,
                 messages: [{role: 'user', content: content}],
@@ -74,6 +135,7 @@ async function generateImageDescription(msg, chat, apiConfig) {
             };
         }
 
+        console.log('[Auto-Description] Image Request:', JSON.stringify(requestBody).substring(0, 500) + '...');
         const endpoint = (provider === 'gemini') ? `${url}/v1beta/models/${model}:generateContent?key=${getRandomValue(key)}` : `${url}/v1/chat/completions`;
         const headers = (provider === 'gemini') ? {'Content-Type': 'application/json'} : {
             'Content-Type': 'application/json',
@@ -299,14 +361,42 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
             }
         }
 
-        // 暂时禁用后台生成图片描述
-        // let descApiConfig = (db.summaryApiSettings && db.summaryApiSettings.url && db.summaryApiSettings.key && db.summaryApiSettings.model) ? db.summaryApiSettings : db.apiSettings;
-        // historySlice.forEach(msg => {
-        //     if (msg.role === 'user' && msg.parts && msg.parts.some(p => p.type === 'image' && !p.description)) {
-        //         const originalMsg = chat.history.find(m => m.id === msg.id) || msg;
-        //         generateImageDescription(originalMsg, chat, descApiConfig);
-        //     }
-        // });
+        // 检查是否开启了后台自动识图
+        if (db.imageRecognitionEnabled) {
+            let descApiConfig = (db.imageRecognitionApiSettings && db.imageRecognitionApiSettings.url && db.imageRecognitionApiSettings.key && db.imageRecognitionApiSettings.model) ? db.imageRecognitionApiSettings : db.apiSettings;
+            
+            // 从后往前找，只看开启之后的轮数（只找最新的一条用户消息）
+            let lastUserMsg = null;
+            for (let i = historySlice.length - 1; i >= 0; i--) {
+                if (historySlice[i].role === 'user') {
+                    lastUserMsg = historySlice[i];
+                    break;
+                }
+            }
+
+            if (lastUserMsg && lastUserMsg.parts) {
+                const hasUnprocessedImage = lastUserMsg.parts.some(p => p.type === 'image' && !p.description);
+                // 只有当有未处理图片且本消息还未触发过识图时才执行
+                if (hasUnprocessedImage && !lastUserMsg.isImageRecognitionTriggered) {
+                    const originalMsg = chat.history.find(m => m.id === lastUserMsg.id) || lastUserMsg;
+                    // 打上标记，无论成功失败都只触发一次，避免死循环扣费
+                    originalMsg.isImageRecognitionTriggered = true;
+                    lastUserMsg.isImageRecognitionTriggered = true; 
+                    
+                    if (typeof saveData === 'function') saveData(); // 先保存一下标记
+                    
+                    // 同步调用识图，等待结果后再继续，以便本轮主模型能看到图片描述
+                    await generateImageDescription(originalMsg, chat, descApiConfig);
+                    
+                    // 同步描述到 historySlice 的 lastUserMsg 中
+                    lastUserMsg.parts.forEach((p, idx) => {
+                        if (p.type === 'image' && originalMsg.parts[idx] && originalMsg.parts[idx].description) {
+                            p.description = originalMsg.parts[idx].description;
+                        }
+                    });
+                }
+            }
+        }
 
         if (provider === 'gemini') {
             let lastMsgTimeForAI = 0;
@@ -348,6 +438,17 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                                 const match = p.data.match(/^data:(image\/(.+));base64,(.*)$/);
                                 if (match) {
                                     return {inline_data: {mime_type: match[1], data: match[3]}};
+                                }
+                            }
+                        } else if (p.type === 'sticker') {
+                            if (p.description) {
+                                return {text: `[表情包画面：${p.description}]`};
+                            } else {
+                                const match = p.data.match(/^data:(image\/(.+));base64,(.*)$/);
+                                if (match) {
+                                    return {inline_data: {mime_type: match[1], data: match[3]}};
+                                } else if (p.data.startsWith('http')) {
+                                    return {text: `[表情包图片链接: ${p.data}]`}; // Gemini 兜底
                                 }
                             }
                         }
@@ -487,15 +588,31 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
                                return {type: 'text', text: textContent};
                            } else if (p.type === 'image') {
                                if (p.description) {
+                                   // 即便有描述，也同时把原图发给模型（如果模型支持的话）
                                    const textContent = (!prefixAdded) ? (prefix + `[图片描述：${p.description}]`) : `[图片描述：${p.description}]`;
                                    prefixAdded = true;
-                                   return {type: 'text', text: textContent};
+                                   return [
+                                        {type: 'text', text: textContent},
+                                        {type: 'image_url', image_url: {url: p.data}}
+                                   ];
+                               } else {
+                                   return {type: 'image_url', image_url: {url: p.data}};
+                               }
+                           } else if (p.type === 'sticker') {
+                               if (p.description) {
+                                   // 即便有描述，也同时把原图发给模型（如果模型支持的话）
+                                   const textContent = (!prefixAdded) ? (prefix + `[表情包画面：${p.description}]`) : `[表情包画面：${p.description}]`;
+                                   prefixAdded = true;
+                                   return [
+                                        {type: 'text', text: textContent},
+                                        {type: 'image_url', image_url: {url: p.data}}
+                                   ];
                                } else {
                                    return {type: 'image_url', image_url: {url: p.data}};
                                }
                            }
                            return null;
-                       }).filter(p => p);
+                       }).flat().filter(p => p);
                    } else {
                        content = prefix + msg.content;
                        const theaterShareMatch = content.match(/\[小剧场分享[：:](.+?)\]/);
@@ -1833,7 +1950,8 @@ function getOnlineLogicRules(character, startIndex = 4) {
 - [${character.myName}发来了一张图片：]：我给你发送了一张图片，你需要对图片内容做出回应。
 - [${character.myName}送来的礼物：xxx]：我给你送了一个礼物，xxx是礼物的描述。
 - [${character.myName}的语音：xxx]：我给你发送了一段内容为xxx的语音。
-- [${character.myName}发来的照片/视频：xxx]：我给你分享了一个描述为xxx的照片或视频。
+- [${character.myName}发来的照片/视频：xxx]：我给你分享了一个描述为xxx的真实的物理照片或视频。你需要对具体的照片内容做出回应。
+- [${character.myName}发送的表情包：xxx]：我给你发送了一个网络聊天用的表情包/贴图，并可能附带了它的画面描述。请注意：这是用来表达情绪、吐槽或玩梗的网络表情，**绝对不是真实的物理照片**。你需要结合我的上下文和表情包的画面，理解我此刻的心情并做出自然的回应。
 - [${character.myName}给你转账：xxx元；备注：xxx]：我给你转了一笔钱。
 - [我的位置：xxx；距你约 x 千米]：我向你发送了我当前所在的位置。其中“我的位置”后的内容为我目前的地点；“距你约”后的数字和单位（如米、千米）（我选填）表示我与你之间的距离。请根据我所在的位置以及距离信息（如果有距离信息的话）自然地回应，例如关心安全、提议见面、调侃距离远近等。
 - 你也可以主动告诉我你当前所在位置，使用格式 [${character.realName}的位置：xxx；距你约 x 米]（地点必填，距你约为选填），这样我就知道你在哪里，我们之间距离有多少。

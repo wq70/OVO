@@ -2127,6 +2127,237 @@
                         </div>
                     </div>
 
+                    <!-- 副API 5: 自动识图专用 API -->
+                    <div class="kkt-group collapsible-section" id="guide-image-recognition-section" style="margin-top: 30px; padding-top: 0; border-top: 2px solid #eee;">
+                        <div class="collapsible-header" id="guide-image-recognition-header" style="padding: 15px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="this.parentElement.classList.toggle('open')">
+                            <div>
+                                <h3 style="margin: 0; font-size: 16px; color: var(--primary-color);">自动识图专用 API（可选）</h3>
+                                <p style="font-size: 12px; color: #999; margin: 5px 0 0;">全局开关。留空则使用主API进行识图，开启后发送图片会在后台自动转文字替换给AI看</p>
+                            </div>
+                            <span class="collapsible-arrow">▼</span>
+                        </div>
+                        
+                        <div class="collapsible-content">
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">启用后台自动识图</div>
+                                <div class="kkt-item-control">
+                                    <label class="kkt-switch">
+                                        <input type="checkbox" id="imageRecognition-enabled-switch">
+                                        <span class="kkt-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">服务商</div>
+                                <div class="kkt-item-control">
+                                    <select id="imageRecognition-api-provider"
+                                        style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                        <option value="newapi">NewAPI (自定义)</option>
+                                        <option value="deepseek">DeepSeek</option>
+                                        <option value="claude">Claude</option>
+                                        <option value="gemini">Gemini</option>
+                                    </select>
+                                    <span class="kkt-arrow">›</span>
+                                </div>
+                            </div>
+                            
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">API 地址</div>
+                                <div class="kkt-item-control">
+                                    <input type="text" id="imageRecognition-api-url" autocomplete="off"
+                                        placeholder="https://..."
+                                        style="text-align:right; border:none; background:transparent; width: 100%;">
+                                </div>
+                            </div>
+                            
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">密钥 (Key)</div>
+                                <div class="kkt-item-control">
+                                    <input type="password" id="imageRecognition-api-key" autocomplete="new-password"
+                                        placeholder="sk-..."
+                                        style="text-align:right; border:none; background:transparent; width: 100%;">
+                                </div>
+                            </div>
+                            
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">模型列表</div>
+                                <div class="kkt-item-control">
+                                    <button type="button" class="btn btn-small btn-secondary" id="imageRecognition-fetch-models-btn"
+                                        style="margin:0; padding: 4px 8px;">
+                                        <span class="btn-text">拉取</span>
+                                        <div class="spinner"></div>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">选择模型</div>
+                                <div class="kkt-item-control">
+                                    <select id="imageRecognition-api-model"
+                                        style="border:none; background:transparent; text-align:right; direction: rtl; max-width: 180px; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                        <option value="">请先拉取</option>
+                                    </select>
+                                    <span class="kkt-arrow">›</span>
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary" id="imageRecognition-api-save-btn"
+                                style="margin-top: 15px; width: 100%;">
+                                <span class="btn-text">保存自动识图API设置</span>
+                                <div class="spinner"></div>
+                            </button>
+                            
+                            <div class="api-presets-embedded" style="margin-top:20px;">
+                                <div style="margin-bottom: 10px;">
+                                    <h3 style="margin: 0; font-size: 14px; color: var(--primary-color);">自动识图API预设管理</h3>
+                                    <p style="font-size: 11px; color: #999; margin: 3px 0 0;">管理自动识图API配置预设</p>
+                                </div>
+                                <div id="imageRecognition-api-presets-control"
+                                    style="padding:12px; border-radius:8px; background: #f5f5f5; border: 1px solid #eee;">
+                                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                        <label style="min-width:40px; color:#666; font-size: 14px;">预设</label>
+                                        <select id="imageRecognition-api-preset-select"
+                                            style="flex:1; padding:6px; border-radius:6px; border:1px solid #ddd;">
+                                            <option value="">— 选择 —</option>
+                                        </select>
+                                        <button id="imageRecognition-api-apply-preset" class="btn btn-primary btn-small"
+                                            style="padding: 6px 12px;">应用</button>
+                                    </div>
+                                    <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
+                                        <button id="imageRecognition-api-save-preset" class="btn btn-small" style="flex: 1;">另存为</button>
+                                        <button id="imageRecognition-api-manage-presets" class="btn btn-small" style="flex: 1;">管理</button>
+                                        <button id="imageRecognition-api-import-presets" class="btn btn-small" style="flex: 1;">导入</button>
+                                        <button id="imageRecognition-api-export-presets" class="btn btn-small" style="flex: 1;">导出</button>
+                                    </div>
+                                </div>
+                                <div id="imageRecognition-api-presets-modal"
+                                    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:9999;align-items:center;justify-content:center;">
+                                    <div
+                                        style="width:640px;max-width:94%;background:var(--panel-bg,#fff);padding:16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);">
+                                        <h3 style="margin:0 0 12px 0;">自动识图API预设管理</h3>
+                                        <div id="imageRecognition-api-presets-list"
+                                            style="max-height:360px;overflow:auto;border:1px solid #f0f0f0;padding:8px;border-radius:6px;">
+                                        </div>
+                                        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+                                            <button id="imageRecognition-api-close-modal" class="btn btn-primary">关闭</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 副API 6: 表情包识图专用 API -->
+                    <div class="kkt-group collapsible-section" style="margin-top: 30px; padding-top: 0; border-top: 2px solid #eee;">
+                        <div class="collapsible-header" style="padding: 15px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="this.parentElement.classList.toggle('open')">
+                            <div>
+                                <h3 style="margin: 0; font-size: 16px; color: var(--primary-color);">表情包识图专用 API（可选）</h3>
+                                <p style="font-size: 12px; color: #999; margin: 5px 0 0;">留空则使用主API。用于在管理表情包时手动或批量识别表情包画面</p>
+                            </div>
+                            <span class="collapsible-arrow">▼</span>
+                        </div>
+                        
+                        <div class="collapsible-content">
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">服务商</div>
+                                <div class="kkt-item-control">
+                                    <select id="stickerRecognition-api-provider"
+                                        style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                        <option value="newapi">NewAPI (自定义)</option>
+                                        <option value="deepseek">DeepSeek</option>
+                                        <option value="claude">Claude</option>
+                                        <option value="gemini">Gemini</option>
+                                    </select>
+                                    <span class="kkt-arrow">›</span>
+                                </div>
+                            </div>
+                            
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">API 地址</div>
+                                <div class="kkt-item-control">
+                                    <input type="text" id="stickerRecognition-api-url" autocomplete="off"
+                                        placeholder="https://..."
+                                        style="text-align:right; border:none; background:transparent; width: 100%;">
+                                </div>
+                            </div>
+                            
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">密钥 (Key)</div>
+                                <div class="kkt-item-control">
+                                    <input type="password" id="stickerRecognition-api-key" autocomplete="new-password"
+                                        placeholder="sk-..."
+                                        style="text-align:right; border:none; background:transparent; width: 100%;">
+                                </div>
+                            </div>
+                            
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">模型列表</div>
+                                <div class="kkt-item-control">
+                                    <button type="button" class="btn btn-small btn-secondary" id="stickerRecognition-fetch-models-btn"
+                                        style="margin:0; padding: 4px 8px;">
+                                        <span class="btn-text">拉取</span>
+                                        <div class="spinner"></div>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">选择模型</div>
+                                <div class="kkt-item-control">
+                                    <select id="stickerRecognition-api-model"
+                                        style="border:none; background:transparent; text-align:right; direction: rtl; max-width: 180px; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                        <option value="">请先拉取</option>
+                                    </select>
+                                    <span class="kkt-arrow">›</span>
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary" id="stickerRecognition-api-save-btn"
+                                style="margin-top: 15px; width: 100%;">
+                                <span class="btn-text">保存表情包识图API设置</span>
+                                <div class="spinner"></div>
+                            </button>
+                            
+                            <div class="api-presets-embedded" style="margin-top:20px;">
+                                <div style="margin-bottom: 10px;">
+                                    <h3 style="margin: 0; font-size: 14px; color: var(--primary-color);">表情包识图API预设管理</h3>
+                                    <p style="font-size: 11px; color: #999; margin: 3px 0 0;">管理表情包识图API配置预设</p>
+                                </div>
+                                <div id="stickerRecognition-api-presets-control"
+                                    style="padding:12px; border-radius:8px; background: #f5f5f5; border: 1px solid #eee;">
+                                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                        <label style="min-width:40px; color:#666; font-size: 14px;">预设</label>
+                                        <select id="stickerRecognition-api-preset-select"
+                                            style="flex:1; padding:6px; border-radius:6px; border:1px solid #ddd;">
+                                            <option value="">— 选择 —</option>
+                                        </select>
+                                        <button id="stickerRecognition-api-apply-preset" class="btn btn-primary btn-small"
+                                            style="padding: 6px 12px;">应用</button>
+                                    </div>
+                                    <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
+                                        <button id="stickerRecognition-api-save-preset" class="btn btn-small" style="flex: 1;">另存为</button>
+                                        <button id="stickerRecognition-api-manage-presets" class="btn btn-small" style="flex: 1;">管理</button>
+                                        <button id="stickerRecognition-api-import-presets" class="btn btn-small" style="flex: 1;">导入</button>
+                                        <button id="stickerRecognition-api-export-presets" class="btn btn-small" style="flex: 1;">导出</button>
+                                    </div>
+                                </div>
+                                <div id="stickerRecognition-api-presets-modal"
+                                    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:9999;align-items:center;justify-content:center;">
+                                    <div
+                                        style="width:640px;max-width:94%;background:var(--panel-bg,#fff);padding:16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);">
+                                        <h3 style="margin:0 0 12px 0;">表情包识图API预设管理</h3>
+                                        <div id="stickerRecognition-api-presets-list"
+                                            style="max-height:360px;overflow:auto;border:1px solid #f0f0f0;padding:8px;border-radius:6px;">
+                                        </div>
+                                        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+                                            <button id="stickerRecognition-api-close-modal" class="btn btn-primary">关闭</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- NovelAI 生图 API 配置 -->
                     <div class="kkt-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
                         <div style="margin-bottom: 15px;">
@@ -3916,15 +4147,6 @@
                                     <div class="kkt-item-control">
                                         <label class="kkt-switch">
                                             <input type="checkbox" id="setting-sticker-smart-match">
-                                            <span class="kkt-slider"></span>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="kkt-item">
-                                    <div class="kkt-item-label">用户发送表情包识图</div>
-                                    <div class="kkt-item-control">
-                                        <label class="kkt-switch">
-                                            <input type="checkbox" id="setting-sticker-image-recognition-enabled">
                                             <span class="kkt-slider"></span>
                                         </label>
                                     </div>

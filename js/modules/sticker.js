@@ -185,7 +185,8 @@ async function setupStickerSystem() {
             return;
         }
         
-        let apiConfig = db.apiSettings;
+        // 优先使用表情包识图 API，如果没有配置，退回使用主 API
+        let apiConfig = (db.stickerRecognitionApiSettings && db.stickerRecognitionApiSettings.url && db.stickerRecognitionApiSettings.key && db.stickerRecognitionApiSettings.model) ? db.stickerRecognitionApiSettings : db.apiSettings;
         
         const {url, key, model, provider} = apiConfig;
         if (!url || !key || !model) {
@@ -217,7 +218,8 @@ async function setupStickerSystem() {
     batchRecognizeBtn.addEventListener('click', async () => {
         if (selectedStickerIds.size === 0) return;
         
-        let apiConfig = db.apiSettings;
+        // 优先使用表情包识图 API，如果没有配置，退回使用主 API
+        let apiConfig = (db.stickerRecognitionApiSettings && db.stickerRecognitionApiSettings.url && db.stickerRecognitionApiSettings.key && db.stickerRecognitionApiSettings.model) ? db.stickerRecognitionApiSettings : db.apiSettings;
         
         const {url, key, model, provider} = apiConfig;
         if (!url || !key || !model) {
@@ -1216,8 +1218,11 @@ async function sendSticker(sticker) {
     const messageContentForAI = `[${myName}发送的表情包：${sticker.name}]`;
     const parts = [{type: 'text', text: messageContentForAI}];
     
-    if (chat && chat.stickerImageRecognitionEnabled && sticker.data) {
-        parts.push({type: 'image', data: sticker.data});
+    if (sticker.data) {
+        parts.push({type: 'sticker', data: sticker.data, stickerId: sticker.id});
+        if (dbSticker && dbSticker.description) {
+             parts[1].description = dbSticker.description;
+        }
     }
 
     const message = {
