@@ -901,22 +901,20 @@ const saveData = async () => {
     }
 
     try {
-        await dexieDB.transaction('rw', dexieDB.tables, async () => {
-            await dexieDB.characters.bulkPut(db.characters);
-            await dexieDB.groups.bulkPut(db.groups);
-            await dexieDB.worldBooks.bulkPut(db.worldBooks);
-            await dexieDB.myStickers.bulkPut(db.myStickers);
-            if (dexieDB.archives) await dexieDB.archives.bulkPut(db.archives || []);
+        await dexieDB.characters.bulkPut(db.characters);
+        await dexieDB.groups.bulkPut(db.groups);
+        await dexieDB.worldBooks.bulkPut(db.worldBooks);
+        await dexieDB.myStickers.bulkPut(db.myStickers);
+        if (dexieDB.archives) await dexieDB.archives.bulkPut(db.archives || []);
 
-            const allSettingKeys = [...globalSettingKeys, 'worldBookCategoryOrder'];
-            const settingsPromises = allSettingKeys.map(key => {
-                if (db[key] !== undefined) {
-                    return dexieDB.globalSettings.put({ key: key, value: db[key] });
-                }
-                return null;
-            }).filter(p => p);
-            await Promise.all(settingsPromises);
-        });
+        const allSettingKeys = [...globalSettingKeys, 'worldBookCategoryOrder'];
+        const settingsPromises = allSettingKeys.map(key => {
+            if (db[key] !== undefined) {
+                return dexieDB.globalSettings.put({ key: key, value: db[key] });
+            }
+            return null;
+        }).filter(p => p);
+        await Promise.all(settingsPromises);
     } catch (e) {
         console.error("saveData failed:", e);
         if (typeof showToast === 'function') {
@@ -941,8 +939,7 @@ const saveCharacter = async (characterId) => {
     try {
         await dexieDB.characters.put(character);
     } catch (e) {
-        console.error("saveCharacter failed, falling back to saveData:", e);
-        await saveData();
+        console.error("saveCharacter failed:", e);
     }
 };
 
@@ -956,8 +953,7 @@ const saveGroup = async (groupId) => {
     try {
         await dexieDB.groups.put(group);
     } catch (e) {
-        console.error("saveGroup failed, falling back to saveData:", e);
-        await saveData();
+        console.error("saveGroup failed:", e);
     }
 };
 
@@ -967,12 +963,10 @@ const saveGroup = async (groupId) => {
 const saveGlobalSettings = async () => {
     try {
         const allSettingKeys = [...globalSettingKeys, 'worldBookCategoryOrder'];
-        await dexieDB.transaction('rw', dexieDB.globalSettings, async () => {
-            const promises = allSettingKeys
-                .filter(key => db[key] !== undefined)
-                .map(key => dexieDB.globalSettings.put({ key, value: db[key] }));
-            await Promise.all(promises);
-        });
+        const promises = allSettingKeys
+            .filter(key => db[key] !== undefined)
+            .map(key => dexieDB.globalSettings.put({ key, value: db[key] }));
+        await Promise.all(promises);
     } catch (e) {
         console.error("saveGlobalSettings failed:", e);
         if (typeof showToast === 'function') showToast("保存设置失败: " + e.message);
