@@ -709,28 +709,37 @@ function getMixedContent(responseData) {
         }
         
         if (responseData[i] === '[') {
-            const endBracket = responseData.indexOf(']', i);
+            let endBracket = -1;
+            let bracketCount = 0;
+            for (let j = i; j < responseData.length; j++) {
+                if (responseData[j] === '[') bracketCount++;
+                else if (responseData[j] === ']') {
+                    bracketCount--;
+                    if (bracketCount === 0) {
+                        endBracket = j;
+                        break;
+                    }
+                }
+            }
+
             if (endBracket !== -1) {
                 let text = responseData.substring(i, endBracket + 1);
                 
-                // --- 兼容：在渲染时过滤掉表情包的 (画面:xxx) 后缀 ---
-                const stickerRegex = /^\[(?:.*?的)?表情包：(.+?)\]$/i;
-                const match = text.match(stickerRegex);
-                if (match) {
-                    let stickerName = match[1];
-                    const descIndex = stickerName.indexOf('(画面:');
-                    if (descIndex !== -1) stickerName = stickerName.substring(0, descIndex).trim();
-                    const descIndex2 = stickerName.indexOf('（画面:');
-                    if (descIndex2 !== -1) stickerName = stickerName.substring(0, descIndex2).trim();
-                    const descIndex3 = stickerName.indexOf('（画面：');
-                    if (descIndex3 !== -1) stickerName = stickerName.substring(0, descIndex3).trim();
-                    const descIndex4 = stickerName.indexOf('(画面：');
-                    if (descIndex4 !== -1) stickerName = stickerName.substring(0, descIndex4).trim();
-                    
-                    // 重新拼装备用于前端渲染的纯净文本
-                    text = text.replace(match[1], stickerName);
-                }
-                
+                // 兼容：过滤掉嵌套在消息中的表情包的 (画面:xxx) 后缀，避免后续渲染找不到匹配的表情包名称
+                const stickerRegex = /(\[(?:.*?的)?表情包[：:])(.+?)(\])/g;
+                text = text.replace(stickerRegex, (match, prefix, stickerName, suffix) => {
+                    let cleanName = stickerName;
+                    const suffixIndex1 = cleanName.indexOf('(画面:');
+                    if (suffixIndex1 !== -1) cleanName = cleanName.substring(0, suffixIndex1).trim();
+                    const suffixIndex2 = cleanName.indexOf('（画面:');
+                    if (suffixIndex2 !== -1) cleanName = cleanName.substring(0, suffixIndex2).trim();
+                    const suffixIndex3 = cleanName.indexOf('（画面：');
+                    if (suffixIndex3 !== -1) cleanName = cleanName.substring(0, suffixIndex3).trim();
+                    const suffixIndex4 = cleanName.indexOf('(画面：');
+                    if (suffixIndex4 !== -1) cleanName = cleanName.substring(0, suffixIndex4).trim();
+                    return prefix + cleanName + suffix;
+                });
+
                 results.push({ type: 'text', content: text });
                 i = endBracket + 1;
                 continue;

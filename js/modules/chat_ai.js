@@ -1318,7 +1318,7 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
         const trimmedResponse = cleanedResponse.trim();
         let messages;
 
-        if (trimmedResponse.startsWith('<') && trimmedResponse.endsWith('>')) {
+        if (trimmedResponse.startsWith('<uwuxjc>') && trimmedResponse.endsWith('</uwuxjc>')) {
             messages = [{ type: 'html', content: trimmedResponse }];
         } else {
             messages = getMixedContent(fullResponse).filter(item => item.content.trim() !== '');
@@ -3105,7 +3105,7 @@ function getChatTokenBreakdown(chatId, chatType = 'private') {
     
     // 如果开启了自定义底层提示词或者是群聊，走旧逻辑（整体 systemPrompt 拆分）
     if (chatType !== 'private' || (db.magicRoom && db.magicRoom.customPromptEnabled) || useCustomPrompt) {
-        return _getChatTokenBreakdownGroup(chat);
+        return _getChatTokenBreakdownGroup(chat, chatType);
     }
 
     // --- 私聊：逐项独立计算各模块 Token ---
@@ -3330,10 +3330,16 @@ function getChatTokenBreakdown(chatId, chatType = 'private') {
 }
 
 // 群聊 Token 分布（保持兼容，从完整 systemPrompt 拆分）
-function _getChatTokenBreakdownGroup(chat) {
+function _getChatTokenBreakdownGroup(chat, chatType = 'group') {
     let systemPrompt = '';
-    if (typeof generateGroupSystemPrompt === 'function') {
-        systemPrompt = generateGroupSystemPrompt(chat);
+    if (chatType === 'private') {
+        if (typeof generatePrivateSystemPrompt === 'function') {
+            systemPrompt = generatePrivateSystemPrompt(chat);
+        }
+    } else {
+        if (typeof generateGroupSystemPrompt === 'function') {
+            systemPrompt = generateGroupSystemPrompt(chat);
+        }
     }
     const memoirMatch = systemPrompt.match(/<memoir>([\s\S]*?)<\/memoir>/);
     const memoirText = memoirMatch ? memoirMatch[1].trim() : '';

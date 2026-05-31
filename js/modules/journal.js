@@ -647,6 +647,7 @@ function setupMemoryJournalScreen() {
             await saveData();
             target.closest('.favorite-journal-btn').classList.toggle('favorited', journal.isFavorited);
             showToast(journal.isFavorited ? '已收藏' : '已取消收藏');
+            renderJournalList();
             return;
         }
         

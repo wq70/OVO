@@ -2267,7 +2267,11 @@ async function saveSettingsFromSidebar() {
         e.awareFavoriteScope = (awareScopeAll && awareScopeAll.checked) ? 'all' : 'current';
 
         const journalFavTopEl = document.getElementById('setting-journal-favorite-top');
-        if (journalFavTopEl) e.journalFavoriteTop = journalFavTopEl.checked;
+        if (journalFavTopEl) {
+            e.journalFavoriteTop = journalFavTopEl.checked;
+        } else if (e.journalFavoriteTop === undefined) {
+            e.journalFavoriteTop = true; // 如果元素不存在且未定义过，默认保护为 true
+        }
 
         // 保存单人思维链设置
         const charCotEnabledSave = document.getElementById('setting-char-cot-enabled');
