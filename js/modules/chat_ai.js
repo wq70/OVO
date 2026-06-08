@@ -2126,16 +2126,25 @@ b) [${character.realName}拒绝了${character.myName}的代付请求]\n`;
 
 function getOnlineOutputFormats(character, worldBooksBefore, worldBooksAfter) {
     let photoVideoFormat = '';
-    const _novelAiAutoEnabled = db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token;
+    
+    // === 自动生图判断 (支持 NovelAI / GPT) ===
+    const engine = db.imageGenerationEngine || 'novelai';
+    let _imgEnabled = false;
+    if (engine === 'gpt') {
+        _imgEnabled = db.gptImageSettings && db.gptImageSettings.enabled && db.gptImageSettings.url && db.gptImageSettings.key;
+    } else {
+        _imgEnabled = db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token;
+    }
+    
     if (character.useRealGallery && character.gallery && character.gallery.length > 0) {
-        if (_novelAiAutoEnabled) {
-            photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{相册图片名称} 或 {中文描述}{{english, novelai, tags}}] (优先使用相册名称；若相册无匹配则填写中文描述，并在 {{ }} 内写英文 NovelAI/Danbooru 风格 tag。根据角色性别用1boy或1girl，包含外貌特征、服装、表情、动作、场景，不加质量词，不超过25个tag)`;
+        if (_imgEnabled) {
+            photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{相册图片名称} 或 {中文描述}{{english, novelai, tags}}] (优先使用相册名称；若相册无匹配则填写中文描述，并在 {{ }} 内写英文 ${engine === 'gpt' ? 'DALL-E' : 'NovelAI'} 风格 tag。根据角色性别用1boy或1girl，包含外貌特征、服装、表情、动作、场景，不加质量词，不超过25个tag)`;
         } else {
             photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{相册图片名称} 或 {文字描述}] (优先使用相册名称，若相册无匹配则填写照片/视频的详细文字描述)`;
         }
     } else {
-        if (_novelAiAutoEnabled) {
-            photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{中文描述}{{english, novelai, tags}}] (发图时必须在 {{ }} 内写英文 NovelAI/Danbooru 风格 tag。根据角色性别用1boy或1girl，包含外貌特征、服装、表情、动作、场景，不加质量词，不超过25个tag)`;
+        if (_imgEnabled) {
+            photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{中文描述}{{english, novelai, tags}}] (发图时必须在 {{ }} 内写英文 ${engine === 'gpt' ? 'DALL-E' : 'NovelAI'} 风格 tag。根据角色性别用1boy或1girl，包含外貌特征、服装、表情、动作、场景，不加质量词，不超过25个tag)`;
         } else {
             photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{描述}]`;
         }
@@ -3545,9 +3554,10 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate) {
         systemPrompt += `${chat.myName}已开启真实摄像头，你可以通过附带的图片看到${chat.myName}的真实画面。请根据你看到的画面内容自然地融入对话中（比如评论对方的穿着、表情、动作、环境等），但不要每次都刻意提及，保持自然。如果图片模糊或看不清，也不必强行描述。\n`;
     }
 
-    // === NovelAI 视频通话生图模式 ===
+    // === 视频通话生图模式 ===
     const _vcNaiEnabled = chat.vcNovelAiEnabled && db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token && callType === 'video';
-    if (_vcNaiEnabled) {
+    const _vcGptDrawEnabled = chat.vcGptDrawEnabled && db.gptImageSettings && db.gptImageSettings.enabled && db.gptImageSettings.url && db.gptImageSettings.key && callType === 'video';
+    if (_vcNaiEnabled || _vcGptDrawEnabled) {
         systemPrompt += `\n【视频通话生图模式】\n`;
         systemPrompt += `你正在视频通话中，每次回复时你必须额外输出一条 [${chat.realName}的画面生图：{{english, danbooru, tags}}] 来描述当前视频画面中你的样子。\n`;
         systemPrompt += `tag 规则：根据角色性别用 1boy 或 1girl，必须包含角色外貌特征（发色、瞳色、发型等）、当前服装、表情、动作/姿势、背景/场景。不要加质量词。不超过 25 个 tag。用英文逗号分隔。\n`;
@@ -3557,7 +3567,7 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate) {
 
     systemPrompt += `【输出格式】\n`;
     systemPrompt += `请严格按照以下格式输出（可以发送多条）：\n`;
-    if (_vcNaiEnabled) {
+    if (_vcNaiEnabled || _vcGptDrawEnabled) {
         systemPrompt += `[${chat.realName}的画面生图：{{english, danbooru, tags}}]（每次必须恰好输出一条）\n`;
     }
     systemPrompt += `${callType === 'video' ? `[${chat.realName}的画面/环境音：描述画面动作或环境声音]\n[${chat.realName}的声音：${chat.realName}说话的内容]` : `[${chat.realName}的环境音：描述环境声音]\n[${chat.realName}的声音：${chat.realName}说话的内容]`}\n`;

@@ -172,14 +172,33 @@ const globalSettingKeys = [
     'theaterScenarios', 'theaterPromptPresets',
     'theaterHtmlScenarios', 'theaterHtmlPromptPresets', 'theaterMode',
     'theaterApiSettings', 'theaterFontSize', 'theaterFontPreset',
-    'novelAiSettings', 'avatarRecognitionDetailLevel',
+    'novelAiSettings', 'imageGenerationEngine', 'gptImageSettings', 'gptImagePresets', 'avatarRecognitionDetailLevel',
     'phoneControlRecycleBin', 'nodeTemplates', 'nodeSummaryText', 'memoryTableTemplates', 'vectorMemoryTemplates',
     'nightModeSettings', 'homeStatusBarSettings', 'stickerCategories', 'magicRoom'
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
 
-const appVersion = "5.1";
+const appVersion = "6.8";
 const updateLog = [
+    {
+        version: "6.8",
+        date: "2026-06-08",
+        notes: [
+            "6.8更新（上）：",
+            "1.优化存储",
+            "2.优化收藏日记置顶的功能",
+            "3.修复表情包掉格式的问题",
+            "4.重构整个自动总结",
+            "5.新增两个总结按钮",
+            "6.新增结构化记忆",
+            "7.新增向量记忆",
+            "8.新增系统级通知在聊天详情页面也能收到通知的",
+            "9.优化了本地字体的上传，方法来自1900老师",
+            "10.新增单独保活",
+            "11.新增给NOVEL生图新增自定义API地址和预设管理",
+            "12.新增GPT生图（生图成功版）"
+        ]
+    },
     {
         version: "5.1",
         date: "2026-05-01",
@@ -860,6 +879,9 @@ function initDatabase() {
             cotSettings: data.cotSettings || { enabled: false, activePresetId: 'default' },
             cotPresets: data.cotPresets || JSON.parse(JSON.stringify(DEFAULT_COT_PRESETS)),
             stickerCategories: data.stickerCategories || [],
+            imageGenerationEngine: data.imageGenerationEngine || 'novelai',
+            gptImageSettings: data.gptImageSettings || {},
+            gptImagePresets: data.gptImagePresets || [],
             magicRoom: Object.assign({
                 customPromptEnabled: false,
                 customPromptTemplate: '',
@@ -1092,6 +1114,9 @@ const loadData = async () => {
             theaterFontSize: 15,
         theaterFontPreset: null,
         avatarRecognitionDetailLevel: 'detailed',
+        imageGenerationEngine: 'novelai',
+        gptImageSettings: {},
+        gptImagePresets: [],
         nodeTemplates: [],
         nodeSummaryText: '摘要',
         stickerCategories: [],

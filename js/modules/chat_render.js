@@ -1156,16 +1156,22 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
             bubbleElement.className = 'image-bubble';
             bubbleElement.innerHTML = `<img src="${realPhotoUrl}" alt="${pvContent}" onclick="openImageViewer(this.src)" style="cursor: zoom-in;">`;
         } else {
-            // === NovelAI 自动生图逻辑 ===
-            const _naiEnabled = db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token;
+            // === 自动生图逻辑 (NovelAI 或 GPT) ===
+            const engine = db.imageGenerationEngine || 'novelai';
+            let _imgEnabled = false;
+            if (engine === 'gpt') {
+                _imgEnabled = db.gptImageSettings && db.gptImageSettings.enabled && db.gptImageSettings.url && db.gptImageSettings.key;
+            } else {
+                _imgEnabled = db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token;
+            }
             
             if (message.novelAiImageUrl) {
-                // 已有生成好的图片（即使 NovelAI 已关闭也显示已生成的图片）
+                // 已有生成好的图片（即使生图已关闭也显示已生成的图片）
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = 'image-bubble';
                 bubbleElement.innerHTML = `<img src="${message.novelAiImageUrl}" alt="${pvContent}" onclick="openImageViewer(this.src)" style="cursor: zoom-in; max-width: 280px; border-radius: 12px;">`;
-            } else if (_naiEnabled && !isSent && _naiAutoGenNewMsgIds.has(message.id)) {
-                // NovelAI 已启用，角色发的新照片消息，触发自动生成
+            } else if (_imgEnabled && !isSent && _naiAutoGenNewMsgIds.has(message.id)) {
+                // 生图已启用，角色发的新照片消息，触发自动生成
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = 'image-bubble nai-generating';
                 bubbleElement.innerHTML = `
@@ -1213,7 +1219,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
                             bubbleRef.innerHTML = `<img src="${result.imageUrl}" alt="${_pvContent}" onclick="openImageViewer(this.src)" style="cursor: zoom-in; max-width: 280px; border-radius: 12px;">`;
                         }
                     } catch (err) {
-                        console.error('[NovelAI Auto] 生图失败:', err);
+                        console.error('[Image Auto] 生图失败:', err);
                         // 失败时回退为普通 pv-card
                         bubbleRef.className = 'pv-card';
                         const displayContent = _pvContent.replace(/\{\{[\s\S]+?\}\}/, '').trim();
@@ -1222,7 +1228,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
                 });
                 _naiAutoGenProcess();
             } else {
-                // NovelAI 未启用或是用户发的，显示原始 pv-card
+                // 生图未启用或是用户发的，显示原始 pv-card
                 const displayContent = pvContent.replace(/\{\{[\s\S]+?\}\}/, '').trim() || pvContent;
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = 'pv-card';

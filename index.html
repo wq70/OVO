@@ -2310,6 +2310,16 @@
                         </div>
 
                         <div class="kkt-item">
+                            <div class="kkt-item-label">启用 GPT 生图</div>
+                            <div class="kkt-item-control">
+                                <label class="kkt-switch">
+                                    <input type="checkbox" id="gpt-image-enabled">
+                                    <span class="kkt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="kkt-item">
                             <div class="kkt-item-label">API 地址 (Base URL)</div>
                             <div class="kkt-item-control">
                                 <input type="text" id="gpt-image-url" autocomplete="off"
@@ -4659,6 +4669,18 @@
                                 </div>
                                 <div class="kkt-item-hint" style="padding: 0 16px 12px; font-size: 12px; color: #8e8e93; line-height: 1.4;">
                                     开启后，视频通话中角色每轮回复会生成 NovelAI 图片作为通话画面背景。需先在 API 设置中配置 NovelAI。
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">视频通话 GPT 生图</div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                            <input type="checkbox" id="setting-vc-gpt-draw-enabled">
+                                            <span class="kkt-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="kkt-item-hint" style="padding: 0 16px 12px; font-size: 12px; color: #8e8e93; line-height: 1.4;">
+                                    开启后，视频通话中角色每轮回复会生成 GPT 图片作为通话画面背景（独立于 NovelAI）。
                                 </div>
                                 <div class="kkt-item">
                                     <div class="kkt-item-label">通话中断时保存记录</div>

@@ -180,9 +180,15 @@ function handleMessageLongPress(messageWrapper, x, y) {
         });
     }
 
-    // 重新生图：NovelAI 已启用 + 消息是已生成过图的照片/视频消息
-    if (!isWithdrawn && isPhotoVideoMessage && message.novelAiImageUrl &&
-        db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token) {
+    // 重新生图：生图已启用 + 消息是已生成过图的照片/视频消息
+    const engine = db.imageGenerationEngine || 'novelai';
+    let _imgEnabled = false;
+    if (engine === 'gpt') {
+        _imgEnabled = db.gptImageSettings && db.gptImageSettings.enabled && db.gptImageSettings.url && db.gptImageSettings.key;
+    } else {
+        _imgEnabled = db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token;
+    }
+    if (!isWithdrawn && isPhotoVideoMessage && message.novelAiImageUrl && _imgEnabled) {
         menuItems.push({
             label: '重新生图',
             action: async () => {

@@ -947,12 +947,13 @@ const VideoCallModule = {
             callSceneEl.style.backgroundImage = bgUrl ? `url(${bgUrl})` : 'none';
         }
 
-        // === 初始化 NovelAI 视频通话生图背景 ===
+        // === 初始化 视频通话生图背景 ===
         const _vcNaiOn = chat && chat.vcNovelAiEnabled && db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token && this.state.callType === 'video';
+        const _vcGptDrawOn = chat && chat.vcGptDrawEnabled && db.gptImageSettings && db.gptImageSettings.enabled && db.gptImageSettings.url && db.gptImageSettings.key && this.state.callType === 'video';
         const bgEl = document.getElementById('vc-nai-bg');
         const bgImg = document.getElementById('vc-nai-bg-img');
         if (bgEl) {
-            if (_vcNaiOn) {
+            if (_vcNaiOn || _vcGptDrawOn) {
                 bgEl.style.display = 'block';
                 if (callSceneEl) callSceneEl.classList.add('vc-nai-active');
                 if (bgImg) { bgImg.src = ''; bgImg.style.opacity = '0'; }
@@ -1067,10 +1068,12 @@ const VideoCallModule = {
             parsedMessages.push({ type, content });
         }
 
-        // 判断是否需要等待 NovelAI 生图
+        // 判断是否需要等待 生图
         const chat = this.state.currentChat;
         const _vcNaiOn = chat && chat.vcNovelAiEnabled && db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token;
-        const needGenImage = naiTags.length > 0 && _vcNaiOn;
+        const _vcGptDrawOn = chat && chat.vcGptDrawEnabled && db.gptImageSettings && db.gptImageSettings.enabled && db.gptImageSettings.url && db.gptImageSettings.key;
+        
+        const needGenImage = naiTags.length > 0 && (_vcNaiOn || _vcGptDrawOn);
 
         if (needGenImage) {
             // === 同步模式：等图片和文字都准备好再一起展示 ===
@@ -1078,7 +1081,12 @@ const VideoCallModule = {
             if (loadingEl) loadingEl.style.display = 'flex';
 
             // 等待图片生成完成
-            const imageUrl = await this.generateVcNovelAiImage(naiTags[0]);
+            let imageUrl = null;
+            if (_vcGptDrawOn) {
+                 imageUrl = await this.generateVcGptImage(naiTags[0]);
+            } else if (_vcNaiOn) {
+                 imageUrl = await this.generateVcNovelAiImage(naiTags[0]);
+            }
 
             // 图片就绪（或失败）后，一次性展示所有文字消息
             let delay = 300;
@@ -1137,6 +1145,49 @@ const VideoCallModule = {
             }
         } catch (err) {
             console.error('[VC-NovelAI] 生图失败:', err);
+        } finally {
+            if (loadingEl) loadingEl.style.display = 'none';
+        }
+        return null;
+    },
+
+    // === GPT 视频通话生图（返回 imageUrl 或 null） ===
+    generateVcGptImage: async function(tags) {
+        const bgEl = document.getElementById('vc-nai-bg');
+        const imgEl = document.getElementById('vc-nai-bg-img');
+        const loadingEl = document.getElementById('vc-nai-bg-loading');
+        if (!bgEl || !imgEl) return null;
+
+        // 显示背景容器和加载指示器
+        bgEl.style.display = 'block';
+        if (loadingEl) loadingEl.style.display = 'flex';
+
+        try {
+            console.log('[VC-GPT-ImageGen] 生成视频通话画面, tags:', tags);
+            const result = await generateGptImage(tags);
+            if (result && result.imageUrl) {
+                // 等待图片加载完成后再显示（返回 Promise）
+                await new Promise((resolve) => {
+                    imgEl.style.opacity = '0';
+                    imgEl.src = result.imageUrl;
+                    imgEl.onload = () => {
+                        imgEl.style.opacity = '1';
+                        // 显示保存按钮
+                        const saveBtn = document.getElementById('vc-nai-save-btn');
+                        if (saveBtn) saveBtn.style.display = 'flex';
+                        resolve();
+                    };
+                    imgEl.onerror = () => {
+                        console.error('[VC-GPT-ImageGen] 图片加载失败');
+                        resolve(); // 即使失败也继续
+                    };
+                    // 兜底超时
+                    setTimeout(resolve, 5000);
+                });
+                return result.imageUrl;
+            }
+        } catch (err) {
+            console.error('[VC-GPT-ImageGen] 生图失败:', err);
         } finally {
             if (loadingEl) loadingEl.style.display = 'none';
         }

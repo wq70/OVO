@@ -2122,6 +2122,8 @@ function loadSettingsToSidebar() {
         document.getElementById('setting-video-call-enabled').checked = e.videoCallEnabled || false;
         document.getElementById('setting-real-camera-enabled').checked = e.realCameraEnabled || false;
         document.getElementById('setting-vc-novelai-enabled').checked = e.vcNovelAiEnabled || false;
+        const vcGptDrawEl = document.getElementById('setting-vc-gpt-draw-enabled');
+        if (vcGptDrawEl) vcGptDrawEl.checked = e.vcGptDrawEnabled || false;
         const saveCallOnInterruptEl = document.getElementById('setting-save-call-on-interrupt');
         if (saveCallOnInterruptEl) saveCallOnInterruptEl.checked = e.saveCallOnInterrupt || false;
 
@@ -2560,6 +2562,8 @@ async function saveSettingsFromSidebar() {
         e.videoCallEnabled = document.getElementById('setting-video-call-enabled').checked;
         e.realCameraEnabled = document.getElementById('setting-real-camera-enabled').checked;
         e.vcNovelAiEnabled = document.getElementById('setting-vc-novelai-enabled').checked;
+        const vcGptDrawSave = document.getElementById('setting-vc-gpt-draw-enabled');
+        e.vcGptDrawEnabled = vcGptDrawSave ? vcGptDrawSave.checked : false;
         const saveCallOnInterruptSave = document.getElementById('setting-save-call-on-interrupt');
         e.saveCallOnInterrupt = saveCallOnInterruptSave ? saveCallOnInterruptSave.checked : false;
 
@@ -3730,6 +3734,8 @@ function setupGptImageSettings() {
     // 加载设置
     if (db.gptImageSettings) {
         const s = db.gptImageSettings;
+        const enabledEl = document.getElementById('gpt-image-enabled');
+        if (enabledEl) enabledEl.checked = !!s.enabled;
         if (urlEl) urlEl.value = s.url || '';
         if (keyEl) keyEl.value = s.key || '';
         if (modelEl) modelEl.value = s.model || 'dall-e-3';
@@ -3741,7 +3747,9 @@ function setupGptImageSettings() {
     // 保存设置
     if (saveBtn) {
         saveBtn.addEventListener('click', async () => {
+            const enabledEl = document.getElementById('gpt-image-enabled');
             db.gptImageSettings = {
+                enabled: enabledEl ? enabledEl.checked : false,
                 url: urlEl ? urlEl.value.trim() : '',
                 key: keyEl ? keyEl.value.trim() : '',
                 model: modelEl ? modelEl.value.trim() : 'dall-e-3',
@@ -3903,6 +3911,8 @@ function setupGptImageSettings() {
             const p = _getGptPresets().find(x => x.name === name);
             if (!p) return showToast('未找到该预设');
 
+            const enabledEl = document.getElementById('gpt-image-enabled');
+            if (enabledEl && p.data.enabled !== undefined) enabledEl.checked = !!p.data.enabled;
             if (urlEl && p.data.url !== undefined) urlEl.value = p.data.url;
             if (keyEl && p.data.key !== undefined) keyEl.value = p.data.key;
             if (modelEl && p.data.model !== undefined) {
@@ -3921,7 +3931,9 @@ function setupGptImageSettings() {
 
     if (savePresetBtn) {
         savePresetBtn.addEventListener('click', () => {
+            const enabledEl = document.getElementById('gpt-image-enabled');
             const data = {
+                enabled: enabledEl ? enabledEl.checked : false,
                 url: urlEl ? urlEl.value.trim() : '',
                 key: keyEl ? keyEl.value.trim() : '',
                 model: modelEl ? modelEl.value.trim() : 'dall-e-3',
