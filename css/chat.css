@@ -797,7 +797,6 @@
 
 /* 图片/表情包消息 */
 .image-bubble {
-    max-width: 84px;
     margin: 0 8px;
     padding: 0;
     background-color: transparent;
@@ -810,11 +809,25 @@
     overflow: visible; /* 确保时间戳显示在外部 */
 }
 
+/* 小表情包样式 */
+.sticker-bubble {
+    max-width: 84px;
+}
+
+/* 大图片消息样式 (支持生图) */
+.photo-bubble {
+    max-width: 280px;
+}
+
 .image-bubble img {
     width: 100%;
     height: auto;
     display: block;
     border-radius: 8px;
+}
+
+.photo-bubble img {
+    border-radius: 12px;
 }
 
 /* 修复图片/表情包消息时间戳样式 */

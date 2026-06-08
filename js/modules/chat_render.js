@@ -1055,7 +1055,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
         }
     } else if ((isSent && sentStickerMatch) || (!isSent && receivedStickerMatch)) {
         bubbleElement = document.createElement('div');
-        bubbleElement.className = 'image-bubble';
+        bubbleElement.className = 'image-bubble sticker-bubble';
         let stickerSrc = '';
         
         if (isSent && stickerData) {
@@ -1168,12 +1168,12 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
             if (message.novelAiImageUrl) {
                 // 已有生成好的图片（即使生图已关闭也显示已生成的图片）
                 bubbleElement = document.createElement('div');
-                bubbleElement.className = 'image-bubble';
+                bubbleElement.className = 'image-bubble photo-bubble';
                 bubbleElement.innerHTML = `<img src="${message.novelAiImageUrl}" alt="${pvContent}" onclick="openImageViewer(this.src)" style="cursor: zoom-in; max-width: 280px; border-radius: 12px;">`;
             } else if (_imgEnabled && !isSent && _naiAutoGenNewMsgIds.has(message.id)) {
                 // 生图已启用，角色发的新照片消息，触发自动生成
                 bubbleElement = document.createElement('div');
-                bubbleElement.className = 'image-bubble nai-generating';
+                bubbleElement.className = 'image-bubble photo-bubble nai-generating';
                 bubbleElement.innerHTML = `
                     <div class="nai-loading-card" style="width: 200px; height: 280px; border-radius: 12px; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; overflow: hidden; position: relative;">
                         <div class="nai-loading-shimmer" style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); animation: nai-shimmer 1.5s infinite;"></div>
@@ -1215,7 +1215,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
                             }
                             
                             // 更新 DOM
-                            bubbleRef.className = 'image-bubble';
+                            bubbleRef.className = 'image-bubble photo-bubble';
                             bubbleRef.innerHTML = `<img src="${result.imageUrl}" alt="${_pvContent}" onclick="openImageViewer(this.src)" style="cursor: zoom-in; max-width: 280px; border-radius: 12px;">`;
                         }
                     } catch (err) {
@@ -1366,7 +1366,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
         bubbleElement.innerHTML = `<div class="overlay"></div><div class="location-content"><p class="location-title">${titleText}</p><p class="location-place">${DOMPurify.sanitize(place)}</p>${distanceHtml}<p class="location-status">位置分享</p></div>`;
     } else if (imageRecogMatch || urlRegex.test(content)) {
         bubbleElement = document.createElement('div');
-        bubbleElement.className = 'image-bubble';
+        bubbleElement.className = 'image-bubble photo-bubble';
         bubbleElement.innerHTML = `<img src="${content}" alt="图片消息" onclick="openImageViewer(this.src)" style="cursor: zoom-in;">`;
     } else if (textMatch) {
         bubbleElement = document.createElement('div');

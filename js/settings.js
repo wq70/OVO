@@ -6858,8 +6858,13 @@ function setupCustomizeApp() {
             const reader = new FileReader();
             reader.onload = async (evt) => {
                 const arrayBuffer = evt.target.result;
-                db.fontBuffer = arrayBuffer;
-                db.fontUrl = 'local';
+                
+                if (!db.fontBuffer || db.fontBuffer.constructor === ArrayBuffer) {
+                    db.fontBuffer = {};
+                }
+                db.fontBuffer[file.name] = arrayBuffer;
+                
+                db.fontUrl = 'local:' + file.name;
                 db.localFontName = file.name;
                 
                 const fontUrlInput = document.getElementById('customize-font-url');
@@ -6872,7 +6877,7 @@ function setupCustomizeApp() {
                 }
                 
                 await saveData();
-                applyGlobalFont('local');
+                applyGlobalFont(db.fontUrl);
                 showToast('本地字体已应用！');
             };
             reader.readAsArrayBuffer(file);

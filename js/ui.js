@@ -743,17 +743,33 @@ async function applyGlobalFont(fontUrl) {
         document.head.appendChild(styleElement);
     }
 
-    if (fontUrl === 'local' && db.fontBuffer) {
-        try {
-            const fontFace = new FontFace(fontName, db.fontBuffer);
-            const loadedFont = await fontFace.load();
-            document.fonts.add(loadedFont);
-            styleElement.innerHTML = `:root { --font-family: '${fontName}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }`;
-        } catch (error) {
-            console.error('Failed to load local font:', error);
+    if (fontUrl && fontUrl.startsWith('local')) {
+        let bufferToLoad = null;
+        if (db.fontBuffer) {
+            if (db.fontBuffer.constructor === ArrayBuffer) {
+                // 兼容旧版本单一文件
+                bufferToLoad = db.fontBuffer;
+            } else {
+                // 新版本字典形式存储，提取文件名
+                const targetName = fontUrl.substring(6) || db.localFontName;
+                bufferToLoad = db.fontBuffer[targetName];
+            }
+        }
+        
+        if (bufferToLoad) {
+            try {
+                const fontFace = new FontFace(fontName, bufferToLoad);
+                const loadedFont = await fontFace.load();
+                document.fonts.add(loadedFont);
+                styleElement.innerHTML = `:root { --font-family: '${fontName}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }`;
+            } catch (error) {
+                console.error('Failed to load local font:', error);
+                styleElement.innerHTML = `:root { --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }`;
+            }
+        } else {
             styleElement.innerHTML = `:root { --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }`;
         }
-    } else if (fontUrl && fontUrl !== 'local') {
+    } else if (fontUrl && !fontUrl.startsWith('local')) {
         styleElement.innerHTML = `@font-face { font-family: '${fontName}'; src: url('${fontUrl}'); } :root { --font-family: '${fontName}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }`;
     } else {
         styleElement.innerHTML = `:root { --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }`;
