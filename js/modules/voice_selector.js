@@ -4,22 +4,6 @@
 const VoiceSelector = {
     // 精选系统音色列表（来自官方文档）
     voices: [
-        // 火山引擎 (豆包) - 精选常用
-        { id: 'BV001_streaming', name: '灿烂男声 (豆包)', lang: '中文', gender: '男' },
-        { id: 'BV002_streaming', name: '亲切女声 (豆包)', lang: '中文', gender: '女' },
-        { id: 'BV004_streaming', name: '温柔女声 (豆包)', lang: '中文', gender: '女' },
-        { id: 'BV005_streaming', name: '知性女声 (豆包)', lang: '中文', gender: '女' },
-        { id: 'BV006_streaming', name: '清脆女声 (豆包)', lang: '中文', gender: '女' },
-        { id: 'BV007_streaming', name: '治愈男声 (豆包)', lang: '中文', gender: '男' },
-        { id: 'BV008_streaming', name: '沉稳男声 (豆包)', lang: '中文', gender: '男' },
-        { id: 'BV009_streaming', name: '慵懒女声 (豆包)', lang: '中文', gender: '女' },
-        { id: 'BV011_streaming', name: '阳光男声 (豆包)', lang: '中文', gender: '男' },
-        { id: 'BV012_streaming', name: '邻家女孩 (豆包)', lang: '中文', gender: '女' },
-        { id: 'BV018_streaming', name: '霸道总裁 (豆包)', lang: '中文', gender: '男' },
-        { id: 'BV021_streaming', name: '病娇弟弟 (豆包)', lang: '中文', gender: '男' },
-        { id: 'BV023_streaming', name: '活力小男孩 (豆包)', lang: '中文', gender: '男' },
-        { id: 'BV024_streaming', name: '软萌小女孩 (豆包)', lang: '中文', gender: '女' },
-        
         // Minimax (海螺) - 精选常用
         { id: 'male-qn-qingse', name: '青涩青年', lang: '中文', gender: '男' },
         { id: 'male-qn-jingying', name: '精英青年', lang: '中文', gender: '男' },

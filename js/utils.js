@@ -392,6 +392,98 @@ const showToast = (notification) => {
     processToastQueue();
 };
 
+function showAppConfirmDialog(options = {}) {
+    const {
+        title = '请确认',
+        message = '',
+        confirmText = '确定',
+        cancelText = '取消',
+        dismissText = '稍后再说',
+        allowBackdropClose = true
+    } = options;
+
+    return new Promise((resolve) => {
+        let overlay = document.getElementById('app-confirm-dialog');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'app-confirm-dialog';
+            overlay.className = 'modal-overlay app-confirm-dialog';
+            overlay.innerHTML = `
+                <div class="modal-window app-confirm-dialog-window" role="dialog" aria-modal="true" aria-labelledby="app-confirm-dialog-title">
+                    <h3 id="app-confirm-dialog-title" class="app-confirm-dialog-title"></h3>
+                    <div class="app-confirm-dialog-message"></div>
+                    <div class="app-confirm-dialog-actions">
+                        <button type="button" class="app-confirm-dialog-btn secondary" data-action="dismiss"></button>
+                        <button type="button" class="app-confirm-dialog-btn ghost" data-action="cancel"></button>
+                        <button type="button" class="app-confirm-dialog-btn primary" data-action="confirm"></button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        const titleEl = overlay.querySelector('.app-confirm-dialog-title');
+        const messageEl = overlay.querySelector('.app-confirm-dialog-message');
+        const confirmBtn = overlay.querySelector('[data-action="confirm"]');
+        const cancelBtn = overlay.querySelector('[data-action="cancel"]');
+        const dismissBtn = overlay.querySelector('[data-action="dismiss"]');
+        const dialogWindow = overlay.querySelector('.app-confirm-dialog-window');
+
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        confirmBtn.textContent = confirmText;
+        cancelBtn.textContent = cancelText;
+        dismissBtn.textContent = dismissText;
+        dismissBtn.style.display = dismissText ? '' : 'none';
+
+        let settled = false;
+
+        const cleanup = () => {
+            overlay.classList.remove('visible');
+            overlay.removeEventListener('click', handleOverlayClick);
+            confirmBtn.removeEventListener('click', onConfirm);
+            cancelBtn.removeEventListener('click', onCancel);
+            dismissBtn.removeEventListener('click', onDismiss);
+            document.removeEventListener('keydown', handleKeydown, true);
+        };
+
+        const finish = (result) => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            resolve(result);
+        };
+
+        const handleOverlayClick = (event) => {
+            if (event.target === overlay && allowBackdropClose) {
+                finish('dismiss');
+            }
+        };
+
+        const handleKeydown = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                finish(allowBackdropClose ? 'dismiss' : 'cancel');
+            }
+        };
+
+        const onConfirm = () => finish('confirm');
+        const onCancel = () => finish('cancel');
+        const onDismiss = () => finish('dismiss');
+
+        overlay.addEventListener('click', handleOverlayClick);
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        dismissBtn.addEventListener('click', onDismiss);
+        document.addEventListener('keydown', handleKeydown, true);
+
+        overlay.classList.add('visible');
+        requestAnimationFrame(() => {
+            (confirmBtn || dialogWindow).focus();
+        });
+    });
+}
+
 // 系统级通知（通过 Service Worker postMessage 触发，无需服务器，应用前/后台均有效）
 async function showSystemNotification({ title, body, icon }) {
     if (!('Notification' in window)) return;
@@ -1174,6 +1266,7 @@ function openImageViewer(src) {
     const modal = document.getElementById('full-image-modal');
     const img = document.getElementById('full-image-view');
     const closeBtn = document.getElementById('close-full-image-btn');
+    const downloadBtn = document.getElementById('download-full-image-btn');
     
     if (!modal || !img) return;
     
@@ -1187,10 +1280,45 @@ function openImageViewer(src) {
     };
     
     if (closeBtn) closeBtn.onclick = closeModal;
+    
+    if (downloadBtn) {
+        downloadBtn.onclick = async (e) => {
+            e.stopPropagation(); // 阻止事件冒泡到 modal 上导致关闭
+            try {
+                // 判断是不是 base64
+                if (src.startsWith('data:')) {
+                    const a = document.createElement('a');
+                    a.href = src;
+                    a.download = `OVO_Image_${Date.now()}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                } else {
+                    // 如果是普通 url，为了避免跨域问题和能在浏览器直接下载，使用 fetch
+                    const response = await fetch(src);
+                    const blob = await response.blob();
+                    const dlUrl = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = dlUrl;
+                    const extension = blob.type.split('/')[1] || 'png';
+                    a.download = `OVO_Image_${Date.now()}.${extension}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(dlUrl);
+                }
+                showToast('✅ 图片已下载');
+            } catch (err) {
+                console.error('下载图片失败:', err);
+                showToast('❌ 下载失败，可能是跨域问题，请长按图片保存');
+            }
+        };
+    }
+    
     modal.onclick = (e) => {
         if (e.target === modal || e.target.closest('.modal-window')) {
-            // 点击图片本身不关闭，点击背景关闭
-            if (e.target !== img) {
+            // 点击图片或下载按钮本身不关闭，点击背景或关闭按钮关闭
+            if (e.target !== img && e.target !== downloadBtn && !downloadBtn.contains(e.target) && e.target !== closeBtn) {
                 closeModal();
             }
         }
@@ -1260,6 +1388,94 @@ function _nai_resolveBase64Image(b64) {
 }
 
 /**
+ * 调用 GPT (DALL-E格式) 图像生成 API
+ * @param {string} prompt - 提示词
+ * @param {object} [overrideSettings] - 可选，覆盖 db.gptImageSettings 的参数
+ * @returns {Promise<{imageUrl: string}>} - 返回图片 URL 或 DataURL
+ */
+async function generateGptImage(prompt, overrideSettings = {}) {
+    const settings = Object.assign({}, db.gptImageSettings || {}, overrideSettings);
+    const url = settings.url;
+    const key = settings.key;
+    if (!url) throw new Error('GPT生图 API URL 未配置');
+    if (!key) throw new Error('GPT生图 API Key 未配置');
+    if (!prompt || !prompt.trim()) throw new Error('提示词不能为空');
+
+    const model = settings.model || 'dall-e-3';
+    const size = settings.size || '1024x1024';
+    const systemPrompt = settings.systemPrompt || '';
+    const negativePrompt = settings.negativePrompt || '';
+
+    // 智能拼接提示词
+    let finalPrompt = prompt.trim();
+    if (systemPrompt) finalPrompt = `${systemPrompt}, ${finalPrompt}`;
+    if (negativePrompt) finalPrompt = `${finalPrompt} --no ${negativePrompt}`;
+
+    const endpoint = url.endsWith('/') ? `${url}v1/images/generations` : `${url}/v1/images/generations`;
+
+    console.log('[GPT Image] 发送生图请求:', { endpoint, model, size, prompt: finalPrompt });
+
+    const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key.trim()}`
+        },
+        body: JSON.stringify({
+            model: model,
+            prompt: finalPrompt,
+            n: 1,
+            size: size
+        })
+    });
+
+    if (!response.ok) {
+        let errDetail = '';
+        try {
+            const errObj = await response.json();
+            errDetail = errObj.error?.message || JSON.stringify(errObj);
+        } catch (_) {
+            errDetail = await response.text();
+        }
+        console.error(`[GPT Image] API 错误 (${response.status}):`, errDetail);
+        throw new Error(`API 返回错误 (${response.status}): ${errDetail.substring(0, 100)}`);
+    }
+
+    const data = await response.json();
+    if (!data.data || !data.data[0]) {
+        throw new Error('响应格式错误，未找到图片数据');
+    }
+
+    // 支持 url 或 b64_json
+    let imageUrl = data.data[0].url;
+    if (!imageUrl && data.data[0].b64_json) {
+        imageUrl = _nai_resolveBase64Image(data.data[0].b64_json);
+    }
+
+    if (!imageUrl) {
+        throw new Error('响应数据中没有有效的图片链接或Base64数据');
+    }
+
+    console.log('[GPT Image] ✅ 生图成功');
+    return { imageUrl };
+}
+
+/**
+ * 统一的生图路由分发函数
+ * 根据用户在全局设置中选择的引擎，自动调用 NovelAI 或 GPT
+ * @param {string} prompt - 提示词
+ * @returns {Promise<{imageUrl: string}>} - 返回生成的图片 DataURL/URL
+ */
+async function generateImageDispatch(prompt) {
+    const engine = db.imageGenerationEngine || 'novelai';
+    if (engine === 'gpt') {
+        return generateGptImage(prompt);
+    } else {
+        return generateNovelAiImage(prompt);
+    }
+}
+
+/**
  * 调用 NovelAI 图像生成 API
  * @param {string} prompt - 正面提示词 (英文 tag)
  * @param {object} [overrideSettings] - 可选，覆盖 db.novelAiSettings 的参数
@@ -1273,6 +1489,9 @@ async function generateNovelAiImage(prompt, overrideSettings = {}) {
 
     // 清理 Token 中可能的特殊字符
     const cleanToken = token.trim().replace(/[^\x20-\x7E]/g, '');
+
+    const customUrlEnabled = settings.customUrlEnabled || false;
+    const customUrl = (settings.customUrl || '').trim();
 
     let model = settings.model || 'nai-diffusion-4-curated-preview';
     const resolution = settings.resolution || '832x1216';
@@ -1368,10 +1587,21 @@ async function generateNovelAiImage(prompt, overrideSettings = {}) {
         };
     }
 
-    // V4 使用 stream 端点，V3 使用普通端点
-    const apiUrl = isV4
-        ? 'https://image.novelai.net/ai/generate-image-stream'
-        : 'https://image.novelai.net/ai/generate-image';
+    // 确定 API 地址
+    let apiUrl = '';
+    if (customUrlEnabled && customUrl) {
+        apiUrl = customUrl;
+        // 智能拼接端点路径（如果用户只填了 Base URL）
+        if (!apiUrl.includes('/ai/generate-image')) {
+            apiUrl = apiUrl.replace(/\/$/, ''); // 移除末尾斜杠
+            apiUrl += isV4 ? '/ai/generate-image-stream' : '/ai/generate-image';
+        }
+    } else {
+        // V4 使用 stream 端点，V3 使用普通端点
+        apiUrl = isV4
+            ? 'https://image.novelai.net/ai/generate-image-stream'
+            : 'https://image.novelai.net/ai/generate-image';
+    }
 
     console.log('[NovelAI] 发送生图请求:', { apiUrl, model, isV4, width, height, steps, scale, sampler });
 
@@ -1507,7 +1737,10 @@ window.formatTimeGap = formatTimeGap;
 window.getLocalTimeInTimezone = getLocalTimeInTimezone;
 window.filterHistoryForAI = filterHistoryForAI;
 window.showToast = showToast;
+window.showAppConfirmDialog = showAppConfirmDialog;
 window.playSound = (typeof playSound !== 'undefined') ? playSound : null; // 防止循环依赖
+window.generateGptImage = generateGptImage;
+window.generateImageDispatch = generateImageDispatch;
 window.generateNovelAiImage = generateNovelAiImage;
 window.novelAiGenerate = novelAiGenerate;
 window.writeOvoPngMetadata = writeOvoPngMetadata;

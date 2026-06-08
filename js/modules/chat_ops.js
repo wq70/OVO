@@ -196,7 +196,7 @@ function handleMessageLongPress(messageWrapper, x, y) {
 
                 try {
                     showToast('🎨 正在重新生图...');
-                    const result = await generateNovelAiImage(naiPrompt);
+                    const result = await generateImageDispatch(naiPrompt);
                     if (result && result.imageUrl) {
                         // 保存旧图到版本历史
                         if (!message._imageVersions) message._imageVersions = [];

@@ -419,6 +419,13 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
 
         let systemPrompt;
         if (chatType === 'private') {
+            if (chat.memoryMode === 'vector' && typeof prepareVectorMemoryContext === 'function') {
+                try {
+                    await prepareVectorMemoryContext(chat);
+                } catch (error) {
+                    console.warn('[VectorMemory] failed to prepare prompt context:', error);
+                }
+            }
             systemPrompt = generatePrivateSystemPrompt(chat, { isPhoneControlRevokeAttempt, weatherText });
         } else {
             if (typeof generateGroupSystemPrompt === 'function') {
@@ -1804,6 +1811,12 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
         if (typeof checkAndTriggerAutoJournal === 'function') {
             setTimeout(() => checkAndTriggerAutoJournal(chat), 500);
         }
+        if (typeof checkAndTriggerAutoTableUpdate === 'function') {
+            setTimeout(() => checkAndTriggerAutoTableUpdate(chat), 650);
+        }
+        if (typeof checkAndTriggerVectorMemory === 'function') {
+            setTimeout(() => checkAndTriggerVectorMemory(chat), 800);
+        }
 
         // 角色主动生成小剧场（仅私聊，按概率触发）
         // 直接调用，无延迟——generateCharTheater 内部会立即推送通知气泡
@@ -2249,14 +2262,19 @@ function generatePrivateSystemPrompt(character, opts) {
     if (useCustomPrompt && template) {
         
         // 构建共同回忆字符串
-        let favoritedJournals = (character.memoryJournals || [])
-            .filter(j => j.isFavorited)
-            .map(j => `标题：${j.title}\n内容：${j.content}`)
-            .join('\n\n---\n\n');
-        
         let commonMemories = '';
-        if (favoritedJournals) {
-            commonMemories = `【共同回忆】\n这是你需要长期记住的、我们之间发生过的往事背景：\n${favoritedJournals}`;
+        if (character.memoryMode === 'table' && typeof getMemoryTableContextBlock === 'function') {
+            commonMemories = getMemoryTableContextBlock(character) || '';
+        } else if (character.memoryMode === 'vector' && typeof getVectorMemoryContextBlock === 'function') {
+            commonMemories = getVectorMemoryContextBlock(character) || '';
+        } else {
+            let favoritedJournals = (character.memoryJournals || [])
+                .filter(j => j.isFavorited)
+                .map(j => `标题：${j.title}\n内容：${j.content}`)
+                .join('\n\n---\n\n');
+            if (favoritedJournals) {
+                commonMemories = `【共同回忆】\n这是你需要长期记住的、我们之间发生过的往事背景：\n${favoritedJournals}`;
+            }
         }
         
         // 构建群聊记忆互通字符串
@@ -2441,86 +2459,95 @@ function generatePrivateSystemPrompt(character, opts) {
         
         if (activeNode.readMemory) {
             nodePrompt += `<memoir>\n`;
-            const favoritedJournals = (character.memoryJournals || [])
-                .filter(j => j.isFavorited)
-                .map(j => `标题：${j.title}\n内容：${j.content}`)
-                .join('\n\n---\n\n');
-            if (favoritedJournals) {
-                nodePrompt += `<journal_memories>\n【共同回忆】\n这是你需要长期记住的、我们之间发生过的往事背景：\n${favoritedJournals}\n</journal_memories>\n\n`;
-            }
-            
-            // 提取过往线上聊天记录
-            let startIndex = -1;
-            for (let i = character.history.length - 1; i >= 0; i--) {
-                const m = character.history[i];
-                if (m.isNodeBoundary && m.nodeAction === 'start' && m.nodeId === character.activeNodeId) {
-                    startIndex = i;
-                    break;
+            const tableMemoryText = character.memoryMode === 'table' && typeof getMemoryTableContextBlock === 'function'
+                ? getMemoryTableContextBlock(character)
+                : (character.memoryMode === 'vector' && typeof getVectorMemoryContextBlock === 'function'
+                    ? getVectorMemoryContextBlock(character)
+                    : '');
+            if (tableMemoryText) {
+                nodePrompt += `${tableMemoryText}\n`;
+            } else {
+                const favoritedJournals = (character.memoryJournals || [])
+                    .filter(j => j.isFavorited)
+                    .map(j => `标题：${j.title}\n内容：${j.content}`)
+                    .join('\n\n---\n\n');
+                if (favoritedJournals) {
+                    nodePrompt += `<journal_memories>\n【共同回忆】\n这是你需要长期记住的、我们之间发生过的往事背景：\n${favoritedJournals}\n</journal_memories>\n\n`;
                 }
-            }
-            if (startIndex !== -1) {
-                let pastOnlineMsgs = character.history.slice(0, startIndex);
-                if (typeof filterHistoryForAI === 'function') {
-                    pastOnlineMsgs = filterHistoryForAI(character, pastOnlineMsgs);
+                
+                // 提取过往线上聊天记录
+                let startIndex = -1;
+                for (let i = character.history.length - 1; i >= 0; i--) {
+                    const m = character.history[i];
+                    if (m.isNodeBoundary && m.nodeAction === 'start' && m.nodeId === character.activeNodeId) {
+                        startIndex = i;
+                        break;
+                    }
                 }
-                pastOnlineMsgs = pastOnlineMsgs.filter(m => !m.isContextDisabled && !m.isThinking);
-                
-                const maxMemory = character.maxMemory || 20;
-                pastOnlineMsgs = pastOnlineMsgs.slice(-maxMemory);
-                
-                if (pastOnlineMsgs.length > 0) {
-                    const pastOnlineText = pastOnlineMsgs.map(m => {
-                        let content = m.content;
-                        if (m.parts && m.parts.length > 0) content = m.parts.map(p => p.text || '[图片]').join('');
-                        const senderName = m.role === 'user' ? character.myName : character.realName;
-                        return `${senderName}: ${content}`;
-                    }).join('\n');
+                if (startIndex !== -1) {
+                    let pastOnlineMsgs = character.history.slice(0, startIndex);
+                    if (typeof filterHistoryForAI === 'function') {
+                        pastOnlineMsgs = filterHistoryForAI(character, pastOnlineMsgs);
+                    }
+                    pastOnlineMsgs = pastOnlineMsgs.filter(m => !m.isContextDisabled && !m.isThinking);
                     
-                    nodePrompt += `<past_online_chats>\n【过往线上聊天记录】\n以下是进入当前节点前，我们之间的线上聊天记录，作为背景参考：\n${pastOnlineText}\n</past_online_chats>\n\n`;
+                    const maxMemory = character.maxMemory || 20;
+                    pastOnlineMsgs = pastOnlineMsgs.slice(-maxMemory);
+                    
+                    if (pastOnlineMsgs.length > 0) {
+                        const pastOnlineText = pastOnlineMsgs.map(m => {
+                            let content = m.content;
+                            if (m.parts && m.parts.length > 0) content = m.parts.map(p => p.text || '[图片]').join('');
+                            const senderName = m.role === 'user' ? character.myName : character.realName;
+                            return `${senderName}: ${content}`;
+                        }).join('\n');
+                        
+                        nodePrompt += `<past_online_chats>\n【过往线上聊天记录】\n以下是进入当前节点前，我们之间的线上聊天记录，作为背景参考：\n${pastOnlineText}\n</past_online_chats>\n\n`;
+                    }
                 }
-            }
 
-            // 群聊记忆互通功能
-            if (character.syncGroupMemory) {
-                let groupsWithCharacter = db.groups.filter(group => 
-                    group.members && group.members.some(member => member.originalCharId === character.id)
-                );
-                if (character.syncGroupIds && Array.isArray(character.syncGroupIds) && character.syncGroupIds.length > 0) {
-                    groupsWithCharacter = groupsWithCharacter.filter(group => 
-                        character.syncGroupIds.includes(group.id)
+                // 群聊记忆互通功能
+                if (character.syncGroupMemory) {
+                    let groupsWithCharacter = db.groups.filter(group => 
+                        group.members && group.members.some(member => member.originalCharId === character.id)
                     );
-                }
-                if (groupsWithCharacter.length > 0) {
-                    let groupMemoryContext = '';
-                    groupsWithCharacter.forEach(group => {
-                        let groupFavoritedJournals = (group.memoryJournals || []).filter(j => j.isFavorited);
-                        const summaryCount = character.groupMemorySummaryCount || 0;
-                        if (summaryCount > 0 && groupFavoritedJournals.length > summaryCount) {
-                            groupFavoritedJournals = groupFavoritedJournals.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, summaryCount);
-                        }
-                        const groupFavoritedJournalsText = groupFavoritedJournals.map(j => `标题：${j.title}\n内容：${j.content}`).join('\n\n---\n\n');
-                        const maxGroupHistory = character.groupMemoryHistoryCount || 20;
-                        let recentGroupHistory = group.history.slice(-maxGroupHistory);
-                        if (typeof filterHistoryForAI === 'function') {
-                            recentGroupHistory = filterHistoryForAI(group, recentGroupHistory);
-                        }
-                        recentGroupHistory = recentGroupHistory.filter(m => !m.isContextDisabled);
-                        if (groupFavoritedJournalsText || recentGroupHistory.length > 0) {
-                            groupMemoryContext += `\n【群聊"${group.name}"的背景信息】\n`;
-                            if (groupFavoritedJournalsText) groupMemoryContext += `群聊总结：\n${groupFavoritedJournalsText}\n`;
-                            if (recentGroupHistory.length > 0) {
-                                const historyText = recentGroupHistory.map(m => {
-                                    let content = m.content;
-                                    if (m.parts && m.parts.length > 0) content = m.parts.map(p => p.text || '[图片]').join('');
-                                    const senderName = m.senderId ? (group.members.find(mem => mem.id === m.senderId)?.groupNickname || '未知') : (m.role === 'user' ? group.me.nickname : '系统');
-                                    return `${senderName}: ${content}`;
-                                }).join('\n');
-                                groupMemoryContext += `最近群聊记录：\n${historyText}\n`;
+                    if (character.syncGroupIds && Array.isArray(character.syncGroupIds) && character.syncGroupIds.length > 0) {
+                        groupsWithCharacter = groupsWithCharacter.filter(group => 
+                            character.syncGroupIds.includes(group.id)
+                        );
+                    }
+                    if (groupsWithCharacter.length > 0) {
+                        let groupMemoryContext = '';
+                        groupsWithCharacter.forEach(group => {
+                            let groupFavoritedJournals = (group.memoryJournals || []).filter(j => j.isFavorited);
+                            const summaryCount = character.groupMemorySummaryCount || 0;
+                            if (summaryCount > 0 && groupFavoritedJournals.length > summaryCount) {
+                                groupFavoritedJournals = groupFavoritedJournals.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, summaryCount);
                             }
+                            const groupFavoritedJournalsText = groupFavoritedJournals.map(j => `标题：${j.title}\n内容：${j.content}`).join('\n\n---\n\n');
+                            const maxGroupHistory = character.groupMemoryHistoryCount || 20;
+                            let recentGroupHistory = group.history.slice(-maxGroupHistory);
+                            if (typeof filterHistoryForAI === 'function') {
+                                recentGroupHistory = filterHistoryForAI(group, recentGroupHistory);
+                            }
+                            recentGroupHistory = recentGroupHistory.filter(m => !m.isContextDisabled);
+                            if (groupFavoritedJournalsText || recentGroupHistory.length > 0) {
+                                groupMemoryContext += `\n【群聊"${group.name}"的背景信息】\n`;
+                                if (groupFavoritedJournalsText) groupMemoryContext += `群聊总结：\n${groupFavoritedJournalsText}\n`;
+                                if (recentGroupHistory.length > 0) {
+                                    const historyText = recentGroupHistory.map(m => {
+                                        let content = m.content;
+                                        if (m.parts && m.parts.length > 0) content = m.parts.map(p => p.text || '[图片]').join('');
+                                        const senderName = m.senderId ? (group.members.find(mem => mem.id === m.senderId)?.groupNickname || '未知') : (m.role === 'user' ? group.me.nickname : '系统');
+                                        return `${senderName}: ${content}`;
+                                    }).join('\n');
+                                    groupMemoryContext += `最近群聊记录：\n${historyText}\n`;
+                                }
+                            }
+                        });
+                        if (groupMemoryContext) {
+                            nodePrompt += `<group_memories>\n【群聊记忆互通】\n以下是你所在群聊的相关背景信息，这些信息可以帮助你更好地理解我们之间的对话上下文：${groupMemoryContext}\n</group_memories>\n`;
                         }
-                    });
-                    if (groupMemoryContext) {
-                        nodePrompt += `<group_memories>\n【群聊记忆互通】\n以下是你所在群聊的相关背景信息，这些信息可以帮助你更好地理解我们之间的对话上下文：${groupMemoryContext}\n</group_memories>\n`;
                     }
                 }
             }
@@ -2910,86 +2937,95 @@ function generatePrivateSystemPrompt(character, opts) {
     }
 
     prompt += `<memoir>\n`
-    const favoritedJournals = (character.memoryJournals || [])
-        .filter(j => j.isFavorited)
-        .map(j => `标题：${j.title}\n内容：${j.content}`)
-        .join('\n\n---\n\n');
+    const tableMemoryText = character.memoryMode === 'table' && typeof getMemoryTableContextBlock === 'function'
+        ? getMemoryTableContextBlock(character)
+        : (character.memoryMode === 'vector' && typeof getVectorMemoryContextBlock === 'function'
+            ? getVectorMemoryContextBlock(character)
+            : '');
+    if (tableMemoryText) {
+        prompt += `${tableMemoryText}\n`;
+    } else {
+        const favoritedJournals = (character.memoryJournals || [])
+            .filter(j => j.isFavorited)
+            .map(j => `标题：${j.title}\n内容：${j.content}`)
+            .join('\n\n---\n\n');
 
-    if (favoritedJournals) {
-        prompt += `【共同回忆】\n这是你需要长期记住的、我们之间发生过的往事背景：\n${favoritedJournals}\n\n`;
-    }
-    
-    // 群聊记忆互通功能
-    if (character.syncGroupMemory) {
-        // 查找该角色所在的所有群聊
-        let groupsWithCharacter = db.groups.filter(group => 
-            group.members && group.members.some(member => member.originalCharId === character.id)
-        );
-        
-        // 如果设置了 syncGroupIds，则仅保留 ID 在该列表中的群聊
-        if (character.syncGroupIds && Array.isArray(character.syncGroupIds) && character.syncGroupIds.length > 0) {
-            groupsWithCharacter = groupsWithCharacter.filter(group => 
-                character.syncGroupIds.includes(group.id)
-            );
+        if (favoritedJournals) {
+            prompt += `【共同回忆】\n这是你需要长期记住的、我们之间发生过的往事背景：\n${favoritedJournals}\n\n`;
         }
         
-        if (groupsWithCharacter.length > 0) {
-            let groupMemoryContext = '';
+        // 群聊记忆互通功能
+        if (character.syncGroupMemory) {
+            // 查找该角色所在的所有群聊
+            let groupsWithCharacter = db.groups.filter(group => 
+                group.members && group.members.some(member => member.originalCharId === character.id)
+            );
             
-            groupsWithCharacter.forEach(group => {
-                // 获取群聊的收藏总结
-                let groupFavoritedJournals = (group.memoryJournals || [])
-                    .filter(j => j.isFavorited);
+            // 如果设置了 syncGroupIds，则仅保留 ID 在该列表中的群聊
+            if (character.syncGroupIds && Array.isArray(character.syncGroupIds) && character.syncGroupIds.length > 0) {
+                groupsWithCharacter = groupsWithCharacter.filter(group => 
+                    character.syncGroupIds.includes(group.id)
+                );
+            }
+            
+            if (groupsWithCharacter.length > 0) {
+                let groupMemoryContext = '';
                 
-                // 如果设置了总结数量限制，则只取最近的N条
-                const summaryCount = character.groupMemorySummaryCount || 0;
-                if (summaryCount > 0 && groupFavoritedJournals.length > summaryCount) {
-                    // 按创建时间排序，取最近的N条
-                    groupFavoritedJournals = groupFavoritedJournals
-                        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-                        .slice(0, summaryCount);
-                }
-                
-                const groupFavoritedJournalsText = groupFavoritedJournals
-                    .map(j => `标题：${j.title}\n内容：${j.content}`)
-                    .join('\n\n---\n\n');
-                
-                // 获取群聊的最近聊天记录（使用自定义数量）
-                const maxGroupHistory = character.groupMemoryHistoryCount || 20;
-                let recentGroupHistory = group.history.slice(-maxGroupHistory);
-                
-                // 过滤掉不应进入上下文的消息
-                if (typeof filterHistoryForAI === 'function') {
-                    recentGroupHistory = filterHistoryForAI(group, recentGroupHistory);
-                }
-                recentGroupHistory = recentGroupHistory.filter(m => !m.isContextDisabled);
-                
-                if (groupFavoritedJournalsText || recentGroupHistory.length > 0) {
-                    groupMemoryContext += `\n【群聊"${group.name}"的背景信息】\n`;
+                groupsWithCharacter.forEach(group => {
+                    // 获取群聊的收藏总结
+                    let groupFavoritedJournals = (group.memoryJournals || [])
+                        .filter(j => j.isFavorited);
                     
-                    if (groupFavoritedJournalsText) {
-                        groupMemoryContext += `群聊总结：\n${groupFavoritedJournalsText}\n`;
+                    // 如果设置了总结数量限制，则只取最近的N条
+                    const summaryCount = character.groupMemorySummaryCount || 0;
+                    if (summaryCount > 0 && groupFavoritedJournals.length > summaryCount) {
+                        // 按创建时间排序，取最近的N条
+                        groupFavoritedJournals = groupFavoritedJournals
+                            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+                            .slice(0, summaryCount);
                     }
                     
-                    if (recentGroupHistory.length > 0) {
-                        const historyText = recentGroupHistory.map(m => {
-                            let content = m.content;
-                            if (m.parts && m.parts.length > 0) {
-                                content = m.parts.map(p => p.text || '[图片]').join('');
-                            }
-                            // 简化消息格式，只保留关键信息
-                            const senderName = m.senderId ? 
-                                (group.members.find(mem => mem.id === m.senderId)?.groupNickname || '未知') : 
-                                (m.role === 'user' ? group.me.nickname : '系统');
-                            return `${senderName}: ${content}`;
-                        }).join('\n');
-                        groupMemoryContext += `最近群聊记录：\n${historyText}\n`;
+                    const groupFavoritedJournalsText = groupFavoritedJournals
+                        .map(j => `标题：${j.title}\n内容：${j.content}`)
+                        .join('\n\n---\n\n');
+                    
+                    // 获取群聊的最近聊天记录（使用自定义数量）
+                    const maxGroupHistory = character.groupMemoryHistoryCount || 20;
+                    let recentGroupHistory = group.history.slice(-maxGroupHistory);
+                    
+                    // 过滤掉不应进入上下文的消息
+                    if (typeof filterHistoryForAI === 'function') {
+                        recentGroupHistory = filterHistoryForAI(group, recentGroupHistory);
                     }
+                    recentGroupHistory = recentGroupHistory.filter(m => !m.isContextDisabled);
+                    
+                    if (groupFavoritedJournalsText || recentGroupHistory.length > 0) {
+                        groupMemoryContext += `\n【群聊"${group.name}"的背景信息】\n`;
+                        
+                        if (groupFavoritedJournalsText) {
+                            groupMemoryContext += `群聊总结：\n${groupFavoritedJournalsText}\n`;
+                        }
+                        
+                        if (recentGroupHistory.length > 0) {
+                            const historyText = recentGroupHistory.map(m => {
+                                let content = m.content;
+                                if (m.parts && m.parts.length > 0) {
+                                    content = m.parts.map(p => p.text || '[图片]').join('');
+                                }
+                                // 简化消息格式，只保留关键信息
+                                const senderName = m.senderId ? 
+                                    (group.members.find(mem => mem.id === m.senderId)?.groupNickname || '未知') : 
+                                    (m.role === 'user' ? group.me.nickname : '系统');
+                                return `${senderName}: ${content}`;
+                            }).join('\n');
+                            groupMemoryContext += `最近群聊记录：\n${historyText}\n`;
+                        }
+                    }
+                });
+                
+                if (groupMemoryContext) {
+                    prompt += `【群聊记忆互通】\n以下是你所在群聊的相关背景信息，这些信息可以帮助你更好地理解我们之间的对话上下文：${groupMemoryContext}\n`;
                 }
-            });
-            
-            if (groupMemoryContext) {
-                prompt += `【群聊记忆互通】\n以下是你所在群聊的相关背景信息，这些信息可以帮助你更好地理解我们之间的对话上下文：${groupMemoryContext}\n`;
             }
         }
     }
@@ -3443,13 +3479,22 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate) {
     }
 
     systemPrompt += `<memoir>\n`
+    const tableMemoryText = chat.memoryMode === 'table' && typeof getMemoryTableContextBlock === 'function'
+        ? getMemoryTableContextBlock(chat)
+        : (chat.memoryMode === 'vector' && typeof getVectorMemoryContextBlock === 'function'
+            ? getVectorMemoryContextBlock(chat)
+            : '');
+    if (tableMemoryText) {
+        systemPrompt += `${tableMemoryText}\n`;
+    } else {
         const favoritedJournals = (chat.memoryJournals || [])
-        .filter(j => j.isFavorited)
-        .map(j => `标题：${j.title}\n内容：${j.content}`)
-        .join('\n\n---\n\n');
+            .filter(j => j.isFavorited)
+            .map(j => `标题：${j.title}\n内容：${j.content}`)
+            .join('\n\n---\n\n');
 
-    if (favoritedJournals) {
-        systemPrompt += `【共同回忆】\n这是你需要长期记住的、我们之间发生过的往事背景：\n${favoritedJournals}\n\n`;
+        if (favoritedJournals) {
+            systemPrompt += `【共同回忆】\n这是你需要长期记住的、我们之间发生过的往事背景：\n${favoritedJournals}\n\n`;
+        }
     }
     systemPrompt += `</memoir>\n\n`
 

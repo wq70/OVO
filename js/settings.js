@@ -1040,11 +1040,108 @@ function setupChatSettings() {
 
     const autoJournalSwitch = document.getElementById('setting-auto-journal-enabled');
     if (autoJournalSwitch) {
-        autoJournalSwitch.addEventListener('change', (e) => {
+        autoJournalSwitch.addEventListener('change', async (e) => {
             triggerHapticFeedback('light');
             const container = document.getElementById('setting-auto-journal-interval-container');
             if (container) {
                 container.style.display = e.target.checked ? 'flex' : 'none';
+            }
+
+            const chat = db.characters.find(character => character.id === currentChatId);
+            if (!chat) return;
+
+            const intervalInput = parseInt(document.getElementById('setting-auto-journal-interval').value, 10);
+            chat.autoJournalInterval = (isNaN(intervalInput) || intervalInput < 10) ? 100 : intervalInput;
+
+            if (typeof applyAutoJournalToggleDecision === 'function') {
+                await applyAutoJournalToggleDecision(chat, e.target.checked, { chatType: 'private' });
+            } else {
+                chat.autoJournalEnabled = e.target.checked;
+            }
+
+            if (typeof saveCharacter === 'function') {
+                await saveCharacter(currentChatId);
+            } else {
+                await saveData();
+            }
+        });
+    }
+
+    const autoJournalRetryBtn = document.getElementById('setting-auto-journal-retry-btn');
+    if (autoJournalRetryBtn) {
+        autoJournalRetryBtn.addEventListener('click', async () => {
+            const chat = db.characters.find(character => character.id === currentChatId);
+            if (!chat) return;
+
+            const intervalInput = parseInt(document.getElementById('setting-auto-journal-interval').value, 10);
+            chat.autoJournalInterval = (isNaN(intervalInput) || intervalInput < 10) ? 100 : intervalInput;
+
+            if (typeof retryAutoJournalForChat === 'function') {
+                await retryAutoJournalForChat(chat, { chatType: 'private' });
+            }
+
+            if (typeof saveCharacter === 'function') {
+                await saveCharacter(currentChatId);
+            } else {
+                await saveData();
+            }
+        });
+    }
+
+    const summarizeLatestBtn = document.getElementById('setting-summarize-latest-btn');
+    if (summarizeLatestBtn) {
+        summarizeLatestBtn.addEventListener('click', async () => {
+            const chat = db.characters.find(character => character.id === currentChatId);
+            if (!chat) return;
+
+            const intervalInput = parseInt(document.getElementById('setting-auto-journal-interval').value, 10);
+            chat.autoJournalInterval = (isNaN(intervalInput) || intervalInput < 10) ? 100 : intervalInput;
+
+            if (typeof getAutoJournalCursorInfo !== 'function' || typeof askSummarizeLatestOptions !== 'function' || typeof summarizeUntilLatest !== 'function') {
+                return;
+            }
+
+            const info = getAutoJournalCursorInfo(chat);
+            if (info.unsummarizedCount <= 0) {
+                showToast('当前没有新增消息需要总结');
+                return;
+            }
+
+            const choice = await askSummarizeLatestOptions(info);
+            if (!choice) return;
+
+            await summarizeUntilLatest(chat, {
+                chatType: 'private',
+                mode: choice.mode,
+                splitSize: choice.splitSize,
+                includeRemainder: choice.includeRemainder
+            });
+
+            if (typeof saveCharacter === 'function') {
+                await saveCharacter(currentChatId);
+            } else {
+                await saveData();
+            }
+        });
+    }
+
+    const autoJournalIntervalInputEl = document.getElementById('setting-auto-journal-interval');
+    if (autoJournalIntervalInputEl) {
+        autoJournalIntervalInputEl.addEventListener('blur', async () => {
+            const chat = db.characters.find(character => character.id === currentChatId);
+            if (!chat) return;
+
+            const intervalInput = parseInt(autoJournalIntervalInputEl.value, 10);
+            chat.autoJournalInterval = (isNaN(intervalInput) || intervalInput < 10) ? 100 : intervalInput;
+
+            if (typeof refreshAutoJournalButton === 'function') {
+                refreshAutoJournalButton(chat, 'private');
+            }
+
+            if (typeof saveCharacter === 'function') {
+                await saveCharacter(currentChatId);
+            } else {
+                await saveData();
             }
         });
     }
@@ -1457,11 +1554,19 @@ function loadSettingsToSidebar() {
         if (stickerSmartMatchEl) stickerSmartMatchEl.checked = e.stickerSmartMatchEnabled || false;
 
         document.getElementById('setting-auto-journal-enabled').checked = e.autoJournalEnabled || false;
+        const memoryModeEl = document.getElementById('setting-memory-mode');
+        if (memoryModeEl) memoryModeEl.value = e.memoryMode || 'journal';
         const autoJournalIntervalContainer = document.getElementById('setting-auto-journal-interval-container');
         if (autoJournalIntervalContainer) {
             autoJournalIntervalContainer.style.display = e.autoJournalEnabled ? 'flex' : 'none';
         }
         document.getElementById('setting-auto-journal-interval').value = e.autoJournalInterval || 100;
+        if (typeof ensureAutoJournalState === 'function') {
+            ensureAutoJournalState(e);
+        }
+        if (typeof refreshAutoJournalButton === 'function') {
+            refreshAutoJournalButton(e, 'private');
+        }
 
         const charAutoFavEl = document.getElementById('setting-char-auto-favorite');
         if (charAutoFavEl) charAutoFavEl.checked = e.characterAutoFavoriteEnabled || false;
@@ -1839,6 +1944,22 @@ function loadSettingsToSidebar() {
                 char.messages = [];
                 char.chatContext = '';
                 char.chatSummary = '';
+                if (char.memoryTables && typeof char.memoryTables === 'object') {
+                    char.memoryTables.data = {};
+                    char.memoryTables.history = [];
+                    char.memoryTables.lastChangedFieldPaths = [];
+                }
+                if (char.vectorMemory && typeof char.vectorMemory === 'object') {
+                    char.vectorMemory.entries = [];
+                    char.vectorMemory.history = [];
+                    char.vectorMemory.lastSummarizedMsgId = null;
+                    char.vectorMemory.lastSummarizedMsgTimestamp = null;
+                    char.vectorMemory.lastContextBlock = '';
+                    char.vectorMemory.lastRetrievedEntryIds = [];
+                    char.vectorMemory.lastQueryText = '';
+                    char.vectorMemory.autoSummaryState = 'idle';
+                    char.vectorMemory.autoSummaryPending = false;
+                }
                 
                 // 同步清空拉黑和好友申请相关记忆
                 char.blockHistory = [];
@@ -2254,7 +2375,12 @@ async function saveSettingsFromSidebar() {
         const stickerSmartMatchCb = document.getElementById('setting-sticker-smart-match');
         e.stickerSmartMatchEnabled = stickerSmartMatchCb ? stickerSmartMatchCb.checked : false;
 
+        if (typeof ensureAutoJournalState === 'function') {
+            ensureAutoJournalState(e);
+        }
         e.autoJournalEnabled = document.getElementById('setting-auto-journal-enabled').checked;
+        const memoryModeElSave = document.getElementById('setting-memory-mode');
+        e.memoryMode = memoryModeElSave ? memoryModeElSave.value : 'journal';
         const autoJournalIntervalInput = parseInt(document.getElementById('setting-auto-journal-interval').value, 10);
         e.autoJournalInterval = (isNaN(autoJournalIntervalInput) || autoJournalIntervalInput < 10) ? 100 : autoJournalIntervalInput;
         const charAutoFavEl = document.getElementById('setting-char-auto-favorite');
@@ -2776,6 +2902,8 @@ B. 纯线上互动：这是一个完全虚拟的线上聊天。你扮演的角�
         db.magicRoom.sysNotifEnabled      = sysnotifEnabled ? sysnotifEnabled.checked : false;
         db.magicRoom.sysNotifSenderName   = sysnotifSenderName ? sysnotifSenderName.value.trim() : '';
         db.magicRoom.sysNotifShowAvatar   = sysnotifShowAvatar ? sysnotifShowAvatar.checked : true;
+        const sysNotifInChatEnabledEl = document.getElementById('sysnotif-in-chat-enabled');
+        db.magicRoom.sysNotifInChatEnabled = sysNotifInChatEnabledEl ? sysNotifInChatEnabledEl.checked : false;
         db.magicRoom.sysNotifShowContent  = sysnotifShowContent ? sysnotifShowContent.checked : true;
         db.magicRoom.sysNotifCustomServer = sysnotifCustomSrv ? sysnotifCustomSrv.checked : false;
         db.magicRoom.sysNotifServerUrl    = sysnotifSrvUrl ? sysnotifSrvUrl.value.trim() : '';
@@ -2804,6 +2932,8 @@ B. 纯线上互动：这是一个完全虚拟的线上聊天。你扮演的角�
         sysnotifOptions.style.display       = mr.sysNotifEnabled ? 'block' : 'none';
         sysnotifSenderName.value            = mr.sysNotifSenderName || '';
         sysnotifShowAvatar.checked          = mr.sysNotifShowAvatar !== false;
+        const sysNotifInChatEnabledEl = document.getElementById('sysnotif-in-chat-enabled');
+        if (sysNotifInChatEnabledEl) sysNotifInChatEnabledEl.checked = !!mr.sysNotifInChatEnabled;
         sysnotifShowContent.checked         = mr.sysNotifShowContent !== false;
         sysnotifCustomSrv.checked           = !!mr.sysNotifCustomServer;
         sysnotifSrvOptions.style.display    = mr.sysNotifCustomServer ? 'block' : 'none';
@@ -3027,6 +3157,9 @@ function setupApiSettingsApp() {
     
     // === 副API设置：后台活动API ===
     setupSubApiSettings('background', 'backgroundApiSettings', 'backgroundApiPresets');
+
+    // === 副API设置：向量记忆 Embedding API ===
+    setupSubApiSettings('vector', 'vectorApiSettings', 'vectorApiPresets');
     
     // === 副API设置：补齐人设API ===
     setupSubApiSettings('supplementPersona', 'supplementPersonaApiSettings', 'supplementPersonaApiPresets');
@@ -3083,6 +3216,9 @@ function setupApiSettingsApp() {
 
     // === NovelAI 生图 API 设置 ===
     setupNovelAiSettings();
+
+    // === GPT 生图 API 设置 ===
+    setupGptImageSettings();
 }
 
 // --- 预设管理 ---
@@ -3235,7 +3371,7 @@ function importApiPresets() {
 }
 
     // === 副API通用设置函数 ===
-    var subApiDisplayNames = { summary: '总结', background: '后台活动', supplementPersona: '补齐人设', peek: '偷看手机', imageRecognition: '自动识图', stickerRecognition: '表情包识图' };
+    var subApiDisplayNames = { summary: '总结', background: '后台活动', vector: '向量记忆', supplementPersona: '补齐人设', peek: '偷看手机', imageRecognition: '自动识图', stickerRecognition: '表情包识图' };
 function setupSubApiSettings(prefix, dbKey, presetsKey) {
     const displayName = subApiDisplayNames[prefix] || prefix;
     const providerEl = document.getElementById(`${prefix}-api-provider`);
@@ -3556,9 +3692,376 @@ function setupSubApiPresets(prefix, dbKey, presetsKey) {
 }
 
 // === NovelAI 生图 API 设置 ===
+// === GPT 生图 API 设置 ===
+function setupGptImageSettings() {
+    const engineEl = document.getElementById('image-generation-engine');
+    const urlEl = document.getElementById('gpt-image-url');
+    const keyEl = document.getElementById('gpt-image-key');
+    const modelEl = document.getElementById('gpt-image-model');
+    const modelSelectEl = document.getElementById('gpt-image-model-select');
+    const fetchModelsBtn = document.getElementById('gpt-image-fetch-models-btn');
+    const sizeEl = document.getElementById('gpt-image-size');
+    const sysPromptEl = document.getElementById('gpt-image-system-prompt');
+    const negPromptEl = document.getElementById('gpt-image-negative-prompt');
+    const saveBtn = document.getElementById('gpt-image-save-btn');
+    const testBtn = document.getElementById('gpt-image-test-btn');
+
+    // 预设管理DOM
+    const presetSelect = document.getElementById('gpt-image-preset-select');
+    const applyPresetBtn = document.getElementById('gpt-image-apply-preset');
+    const savePresetBtn = document.getElementById('gpt-image-save-preset');
+    const managePresetBtn = document.getElementById('gpt-image-manage-presets');
+    const importPresetBtn = document.getElementById('gpt-image-import-presets');
+    const exportPresetBtn = document.getElementById('gpt-image-export-presets');
+    const manageModal = document.getElementById('gpt-image-presets-modal');
+    const closeModalBtn = document.getElementById('gpt-image-close-modal');
+    const presetListContainer = document.getElementById('gpt-image-presets-list');
+
+    // 引擎选择
+    if (engineEl) {
+        engineEl.value = db.imageGenerationEngine || 'novelai';
+        engineEl.addEventListener('change', async () => {
+            db.imageGenerationEngine = engineEl.value;
+            await saveData();
+            showToast(`生图引擎已切换至：${engineEl.value}`);
+        });
+    }
+
+    // 加载设置
+    if (db.gptImageSettings) {
+        const s = db.gptImageSettings;
+        if (urlEl) urlEl.value = s.url || '';
+        if (keyEl) keyEl.value = s.key || '';
+        if (modelEl) modelEl.value = s.model || 'dall-e-3';
+        if (sizeEl) sizeEl.value = s.size || '1024x1024';
+        if (sysPromptEl) sysPromptEl.value = s.systemPrompt || '';
+        if (negPromptEl) negPromptEl.value = s.negativePrompt || '';
+    }
+
+    // 保存设置
+    if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+            db.gptImageSettings = {
+                url: urlEl ? urlEl.value.trim() : '',
+                key: keyEl ? keyEl.value.trim() : '',
+                model: modelEl ? modelEl.value.trim() : 'dall-e-3',
+                size: sizeEl ? sizeEl.value : '1024x1024',
+                systemPrompt: sysPromptEl ? sysPromptEl.value.trim() : '',
+                negativePrompt: negPromptEl ? negPromptEl.value.trim() : ''
+            };
+            await saveData();
+            showToast('GPT 生图设置已保存！');
+        });
+    }
+
+    // 拉取模型
+    if (fetchModelsBtn) {
+        fetchModelsBtn.addEventListener('click', async () => {
+            const apiUrl = urlEl ? urlEl.value.trim() : '';
+            const apiKey = keyEl ? keyEl.value.trim() : '';
+
+            if (!apiUrl || !apiKey) {
+                showToast('请先填写 GPT API 地址和 Key');
+                return;
+            }
+
+            const blockedDomains = (typeof BLOCKED_API_DOMAINS !== 'undefined') ? BLOCKED_API_DOMAINS : [];
+            if (blockedDomains.some(d => apiUrl.includes(d))) {
+                showToast('该API站点已被屏蔽');
+                return;
+            }
+
+            const endpoint = `${apiUrl.replace(/\/$/, '')}/v1/models`;
+            fetchModelsBtn.disabled = true;
+            const origText = fetchModelsBtn.textContent;
+            fetchModelsBtn.textContent = '拉取中…';
+
+            try {
+                const resp = await fetch(endpoint, { headers: { 'Authorization': `Bearer ${apiKey}` } });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                const models = (json.data || []).map(m => m.id).filter(Boolean).sort();
+                
+                if (!models.length) {
+                    showToast('未找到可用模型');
+                    if (modelSelectEl) modelSelectEl.innerHTML = '<option value="">未找到任何模型</option>';
+                    return;
+                }
+
+                const cur = modelEl ? modelEl.value : '';
+                if (modelSelectEl) {
+                    modelSelectEl.innerHTML = '<option value="">— 请选择 —</option>';
+                    models.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        opt.textContent = m;
+                        modelSelectEl.appendChild(opt);
+                    });
+                    if (models.includes(cur)) modelSelectEl.value = cur;
+                }
+                showToast(`成功拉取 ${models.length} 个模型`);
+            } catch (err) {
+                console.error('[GPT Image] 拉取模型失败:', err);
+                showToast('拉取模型失败：' + (err.message || '未知错误'));
+                if (modelSelectEl) modelSelectEl.innerHTML = '<option value="">拉取失败</option>';
+            } finally {
+                fetchModelsBtn.disabled = false;
+                fetchModelsBtn.textContent = origText;
+            }
+        });
+    }
+
+    if (modelSelectEl) {
+        modelSelectEl.addEventListener('change', () => {
+            if (modelSelectEl.value && modelEl) {
+                modelEl.value = modelSelectEl.value;
+            }
+        });
+    }
+
+    // 测试生图
+    if (testBtn) {
+        testBtn.addEventListener('click', async () => {
+            const url = urlEl ? urlEl.value.trim() : '';
+            const key = keyEl ? keyEl.value.trim() : '';
+            if (!url || !key) {
+                showToast('请先填写 GPT API 地址和 Key');
+                return;
+            }
+
+            testBtn.disabled = true;
+            testBtn.querySelector('.btn-text').textContent = '⏳ 生成中...';
+
+            try {
+                // 如果 window.generateGptImage 还没有加载出来，做个安全检查
+                if (typeof generateGptImage !== 'function') {
+                    throw new Error('生图功能尚未就绪，请刷新重试');
+                }
+
+                const result = await generateGptImage('1girl, beautiful, masterpiece', {
+                    url: url,
+                    key: key,
+                    model: modelEl ? modelEl.value.trim() : 'dall-e-3',
+                    size: sizeEl ? sizeEl.value : '1024x1024',
+                    systemPrompt: sysPromptEl ? sysPromptEl.value.trim() : '',
+                    negativePrompt: negPromptEl ? negPromptEl.value.trim() : ''
+                });
+
+                if (result && result.imageUrl) {
+                    const preview = document.getElementById('gpt-image-test-preview');
+                    const img = document.getElementById('gpt-image-test-image');
+                    if (preview && img) {
+                        img.src = result.imageUrl;
+                        preview.style.display = 'block';
+                        img.onclick = () => {
+                            if (typeof openImageViewer === 'function') {
+                                openImageViewer(result.imageUrl);
+                            }
+                        };
+                        img.style.cursor = 'zoom-in';
+                    }
+                    showToast('✅ GPT 测试生图成功！');
+                }
+            } catch (err) {
+                console.error('[GPT Image] 测试生图失败:', err);
+                showToast('❌ 生图失败: ' + (err.message || '未知错误'));
+            } finally {
+                testBtn.disabled = false;
+                testBtn.querySelector('.btn-text').textContent = '🎨 测试 GPT 生图';
+            }
+        });
+    }
+
+    // 预设管理逻辑
+    function _getGptPresets() {
+        return db.gptImagePresets || [];
+    }
+    
+    function _saveGptPresets(arr) {
+        db.gptImagePresets = arr || [];
+        saveData();
+    }
+
+    function populateGptPresets() {
+        if (!presetSelect) return;
+        const presets = _getGptPresets();
+        presetSelect.innerHTML = '<option value="">— 选择 —</option>';
+        presets.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.name;
+            opt.textContent = p.name;
+            presetSelect.appendChild(opt);
+        });
+    }
+
+    populateGptPresets();
+
+    if (applyPresetBtn) {
+        applyPresetBtn.addEventListener('click', () => {
+            const name = presetSelect.value;
+            if (!name) return showToast('请先选择预设');
+            const p = _getGptPresets().find(x => x.name === name);
+            if (!p) return showToast('未找到该预设');
+
+            if (urlEl && p.data.url !== undefined) urlEl.value = p.data.url;
+            if (keyEl && p.data.key !== undefined) keyEl.value = p.data.key;
+            if (modelEl && p.data.model !== undefined) {
+                modelEl.value = p.data.model;
+                if (modelSelectEl && Array.from(modelSelectEl.options).some(o => o.value === p.data.model)) {
+                    modelSelectEl.value = p.data.model;
+                }
+            }
+            if (sizeEl && p.data.size !== undefined) sizeEl.value = p.data.size;
+            if (sysPromptEl && p.data.systemPrompt !== undefined) sysPromptEl.value = p.data.systemPrompt;
+            if (negPromptEl && p.data.negativePrompt !== undefined) negPromptEl.value = p.data.negativePrompt;
+            
+            showToast(`已加载 GPT 预设：${name}`);
+        });
+    }
+
+    if (savePresetBtn) {
+        savePresetBtn.addEventListener('click', () => {
+            const data = {
+                url: urlEl ? urlEl.value.trim() : '',
+                key: keyEl ? keyEl.value.trim() : '',
+                model: modelEl ? modelEl.value.trim() : 'dall-e-3',
+                size: sizeEl ? sizeEl.value : '1024x1024',
+                systemPrompt: sysPromptEl ? sysPromptEl.value.trim() : '',
+                negativePrompt: negPromptEl ? negPromptEl.value.trim() : ''
+            };
+            
+            const name = prompt('请输入预设名称（将覆盖同名预设）：');
+            if (!name || !name.trim()) return;
+            
+            const presets = _getGptPresets();
+            const idx = presets.findIndex(p => p.name === name.trim());
+            const presetObj = { name: name.trim(), data: data };
+            
+            if (idx >= 0) presets[idx] = presetObj;
+            else presets.push(presetObj);
+            
+            _saveGptPresets(presets);
+            populateGptPresets();
+            showToast('GPT 生图预设已保存');
+        });
+    }
+
+    function renderGptPresetsList() {
+        if (!presetListContainer) return;
+        presetListContainer.innerHTML = '';
+        const presets = _getGptPresets();
+        if (presets.length === 0) {
+            presetListContainer.innerHTML = '<p style="text-align:center;color:#999;padding:10px;">暂无预设</p>';
+            return;
+        }
+        presets.forEach((p, idx) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid #f0f0f0;';
+            
+            const nameDiv = document.createElement('div');
+            nameDiv.style.cssText = 'flex:1;font-weight:500;';
+            nameDiv.textContent = p.name;
+            
+            const btnWrap = document.createElement('div');
+            btnWrap.style.cssText = 'display:flex;gap:6px;';
+            
+            const renameBtn = document.createElement('button');
+            renameBtn.className = 'btn btn-small';
+            renameBtn.textContent = '重命名';
+            renameBtn.onclick = () => {
+                const newName = prompt('输入新名称：', p.name);
+                if (!newName || !newName.trim() || newName.trim() === p.name) return;
+                const all = _getGptPresets();
+                all[idx].name = newName.trim();
+                _saveGptPresets(all);
+                populateGptPresets();
+                renderGptPresetsList();
+            };
+            
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn btn-danger btn-small';
+            delBtn.textContent = '删除';
+            delBtn.onclick = () => {
+                if (!confirm('确定删除预设：' + p.name + '？')) return;
+                const all = _getGptPresets();
+                all.splice(idx, 1);
+                _saveGptPresets(all);
+                populateGptPresets();
+                renderGptPresetsList();
+            };
+            
+            btnWrap.appendChild(renameBtn);
+            btnWrap.appendChild(delBtn);
+            row.appendChild(nameDiv);
+            row.appendChild(btnWrap);
+            presetListContainer.appendChild(row);
+        });
+    }
+
+    if (managePresetBtn) managePresetBtn.addEventListener('click', () => {
+        if (!manageModal) return;
+        renderGptPresetsList();
+        manageModal.style.display = 'flex';
+    });
+
+    if (closeModalBtn) closeModalBtn.addEventListener('click', () => {
+        if (manageModal) manageModal.style.display = 'none';
+    });
+    
+    if (exportPresetBtn) exportPresetBtn.addEventListener('click', () => {
+        const presets = _getGptPresets();
+        if (presets.length === 0) return showToast('暂无预设可导出');
+        const blob = new Blob([JSON.stringify(presets, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `GPT_Image_Presets_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('GPT 生图预设已导出');
+    });
+
+    if (importPresetBtn) importPresetBtn.addEventListener('click', () => {
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = '.json';
+        inp.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            try {
+                const text = await file.text();
+                const imported = JSON.parse(text);
+                if (!Array.isArray(imported)) {
+                    showToast('格式不正确：需要预设数组');
+                    return;
+                }
+                const presets = _getGptPresets();
+                imported.forEach(p => {
+                    if (p.name && p.data) {
+                        const idx = presets.findIndex(exist => exist.name === p.name);
+                        if (idx >= 0) presets[idx] = p;
+                        else presets.push(p);
+                    }
+                });
+                _saveGptPresets(presets);
+                populateGptPresets();
+                showToast(`成功导入 ${imported.length} 个 GPT 预设`);
+            } catch (err) {
+                showToast('导入失败：' + err.message);
+            }
+        };
+        inp.click();
+    });
+}
+
 function setupNovelAiSettings() {
     const enabledEl = document.getElementById('novelai-enabled');
     const tokenEl = document.getElementById('novelai-token');
+    const customUrlEnabledEl = document.getElementById('novelai-custom-url-enabled');
+    const customUrlContainer = document.getElementById('novelai-custom-url-container');
+    const customUrlEl = document.getElementById('novelai-custom-url');
     const modelEl = document.getElementById('novelai-model');
     const resolutionEl = document.getElementById('novelai-resolution');
     const samplerEl = document.getElementById('novelai-sampler');
@@ -3572,11 +4075,27 @@ function setupNovelAiSettings() {
     const saveBtn = document.getElementById('novelai-save-btn');
     const testBtn = document.getElementById('novelai-test-btn');
 
+    // === NovelAI 预设管理相关 DOM ===
+    const presetSelect = document.getElementById('novelai-preset-select');
+    const applyPresetBtn = document.getElementById('novelai-apply-preset');
+    const savePresetBtn = document.getElementById('novelai-save-preset');
+    const managePresetBtn = document.getElementById('novelai-manage-presets');
+    const importPresetBtn = document.getElementById('novelai-import-presets');
+    const exportPresetBtn = document.getElementById('novelai-export-presets');
+    const manageModal = document.getElementById('novelai-presets-modal');
+    const closeModalBtn = document.getElementById('novelai-close-modal');
+    const presetListContainer = document.getElementById('novelai-presets-list');
+
     // 加载已保存的设置
     if (db.novelAiSettings) {
         const s = db.novelAiSettings;
         if (enabledEl) enabledEl.checked = !!s.enabled;
         if (tokenEl) tokenEl.value = s.token || '';
+        if (customUrlEnabledEl) {
+            customUrlEnabledEl.checked = !!s.customUrlEnabled;
+            if (customUrlContainer) customUrlContainer.style.display = s.customUrlEnabled ? 'flex' : 'none';
+        }
+        if (customUrlEl) customUrlEl.value = s.customUrl || '';
         if (modelEl && s.model) modelEl.value = s.model;
         if (resolutionEl && s.resolution) resolutionEl.value = s.resolution;
         if (samplerEl && s.sampler) samplerEl.value = s.sampler;
@@ -3610,6 +4129,12 @@ function setupNovelAiSettings() {
             scaleValue.textContent = e.target.value;
         });
     }
+    
+    if (customUrlEnabledEl && customUrlContainer) {
+        customUrlEnabledEl.addEventListener('change', (e) => {
+            customUrlContainer.style.display = e.target.checked ? 'flex' : 'none';
+        });
+    }
 
     // 保存设置
     if (saveBtn) {
@@ -3617,6 +4142,8 @@ function setupNovelAiSettings() {
             db.novelAiSettings = {
                 enabled: enabledEl ? enabledEl.checked : false,
                 token: tokenEl ? tokenEl.value.trim() : '',
+                customUrlEnabled: customUrlEnabledEl ? customUrlEnabledEl.checked : false,
+                customUrl: customUrlEl ? customUrlEl.value.trim() : '',
                 model: modelEl ? modelEl.value : 'nai-diffusion-4-curated-preview',
                 resolution: resolutionEl ? resolutionEl.value : '832x1216',
                 sampler: samplerEl ? samplerEl.value : 'k_euler',
@@ -3646,6 +4173,8 @@ function setupNovelAiSettings() {
             try {
                 const result = await generateNovelAiImage('1girl, upper body, beautiful', {
                     token: token,
+                    customUrlEnabled: customUrlEnabledEl ? customUrlEnabledEl.checked : false,
+                    customUrl: customUrlEl ? customUrlEl.value.trim() : '',
                     model: modelEl ? modelEl.value : 'nai-diffusion-4-curated-preview',
                     resolution: resolutionEl ? resolutionEl.value : '832x1216',
                     sampler: samplerEl ? samplerEl.value : 'k_euler',
@@ -3662,6 +4191,12 @@ function setupNovelAiSettings() {
                     if (preview && img) {
                         img.src = result.imageUrl;
                         preview.style.display = 'block';
+                        img.onclick = () => {
+                            if (typeof openImageViewer === 'function') {
+                                openImageViewer(result.imageUrl);
+                            }
+                        };
+                        img.style.cursor = 'zoom-in';
                     }
                     showToast('✅ 测试生图成功！');
                 }
@@ -3672,6 +4207,217 @@ function setupNovelAiSettings() {
                 testBtn.disabled = false;
                 testBtn.querySelector('.btn-text').textContent = '🎨 测试生图';
             }
+        });
+    }
+
+    // === NovelAI 预设管理逻辑 ===
+
+    function _getNovelAiPresets() {
+        return db.novelAiPresets || [];
+    }
+    
+    function _saveNovelAiPresets(arr) {
+        db.novelAiPresets = arr || [];
+        saveData();
+    }
+
+    function populateNovelAiPresets() {
+        if (!presetSelect) return;
+        const presets = _getNovelAiPresets();
+        presetSelect.innerHTML = '<option value="">— 选择 —</option>';
+        presets.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.name;
+            opt.textContent = p.name;
+            presetSelect.appendChild(opt);
+        });
+    }
+
+    // 初始渲染
+    populateNovelAiPresets();
+
+    if (applyPresetBtn) {
+        applyPresetBtn.addEventListener('click', () => {
+            const selectedName = presetSelect.value;
+            if (!selectedName) return showToast('请先选择预设');
+            const presets = _getNovelAiPresets();
+            const p = presets.find(x => x.name === selectedName);
+            if (!p) return showToast('未找到该预设');
+
+            if (tokenEl && p.data.token !== undefined) tokenEl.value = p.data.token;
+            if (customUrlEnabledEl && p.data.customUrlEnabled !== undefined) {
+                customUrlEnabledEl.checked = !!p.data.customUrlEnabled;
+                if (customUrlContainer) customUrlContainer.style.display = p.data.customUrlEnabled ? 'flex' : 'none';
+            }
+            if (customUrlEl && p.data.customUrl !== undefined) customUrlEl.value = p.data.customUrl;
+            if (modelEl && p.data.model) modelEl.value = p.data.model;
+            if (resolutionEl && p.data.resolution) resolutionEl.value = p.data.resolution;
+            if (samplerEl && p.data.sampler) samplerEl.value = p.data.sampler;
+            if (stepsSlider && p.data.steps !== undefined) {
+                stepsSlider.value = p.data.steps;
+                if (stepsValue) stepsValue.textContent = p.data.steps;
+            }
+            if (scaleSlider && p.data.scale !== undefined) {
+                scaleSlider.value = p.data.scale;
+                if (scaleValue) scaleValue.textContent = p.data.scale;
+            }
+            if (systemPromptEl && p.data.systemPrompt !== undefined) systemPromptEl.value = p.data.systemPrompt;
+            if (artistTagsEl && p.data.artistTags !== undefined) artistTagsEl.value = p.data.artistTags;
+            if (negativePromptEl && p.data.negativePrompt !== undefined) negativePromptEl.value = p.data.negativePrompt;
+            
+            showToast(`已加载 NovelAI 预设：${selectedName}`);
+        });
+    }
+
+    if (savePresetBtn) {
+        savePresetBtn.addEventListener('click', () => {
+            const data = {
+                token: tokenEl ? tokenEl.value.trim() : '',
+                customUrlEnabled: customUrlEnabledEl ? customUrlEnabledEl.checked : false,
+                customUrl: customUrlEl ? customUrlEl.value.trim() : '',
+                model: modelEl ? modelEl.value : 'nai-diffusion-4-curated-preview',
+                resolution: resolutionEl ? resolutionEl.value : '832x1216',
+                sampler: samplerEl ? samplerEl.value : 'k_euler',
+                steps: stepsSlider ? parseInt(stepsSlider.value) : 28,
+                scale: scaleSlider ? parseFloat(scaleSlider.value) : 5,
+                systemPrompt: systemPromptEl ? systemPromptEl.value.trim() : '',
+                artistTags: artistTagsEl ? artistTagsEl.value.trim() : '',
+                negativePrompt: negativePromptEl ? negativePromptEl.value : ''
+            };
+            
+            const name = prompt('请输入预设名称（将覆盖同名预设）：');
+            if (!name || !name.trim()) return;
+            
+            const presets = _getNovelAiPresets();
+            const idx = presets.findIndex(p => p.name === name.trim());
+            const presetObj = { name: name.trim(), data: data };
+            
+            if (idx >= 0) {
+                presets[idx] = presetObj;
+            } else {
+                presets.push(presetObj);
+            }
+            
+            _saveNovelAiPresets(presets);
+            populateNovelAiPresets();
+            showToast('NovelAI 预设已保存');
+        });
+    }
+
+    function renderPresetsList() {
+        if (!presetListContainer) return;
+        presetListContainer.innerHTML = '';
+        const presets = _getNovelAiPresets();
+        if (presets.length === 0) {
+            presetListContainer.innerHTML = '<p style="text-align:center;color:#999;padding:10px;">暂无预设</p>';
+            return;
+        }
+        presets.forEach((p, idx) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid #f0f0f0;';
+            
+            const nameDiv = document.createElement('div');
+            nameDiv.style.cssText = 'flex:1;font-weight:500;';
+            nameDiv.textContent = p.name;
+            
+            const btnWrap = document.createElement('div');
+            btnWrap.style.cssText = 'display:flex;gap:6px;';
+            
+            const renameBtn = document.createElement('button');
+            renameBtn.className = 'btn btn-small';
+            renameBtn.textContent = '重命名';
+            renameBtn.onclick = () => {
+                const newName = prompt('输入新名称：', p.name);
+                if (!newName || !newName.trim() || newName.trim() === p.name) return;
+                const all = _getNovelAiPresets();
+                all[idx].name = newName.trim();
+                _saveNovelAiPresets(all);
+                populateNovelAiPresets();
+                renderPresetsList();
+            };
+            
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn btn-danger btn-small';
+            delBtn.textContent = '删除';
+            delBtn.onclick = () => {
+                if (!confirm('确定删除预设：' + p.name + '？')) return;
+                const all = _getNovelAiPresets();
+                all.splice(idx, 1);
+                _saveNovelAiPresets(all);
+                populateNovelAiPresets();
+                renderPresetsList();
+            };
+            
+            btnWrap.appendChild(renameBtn);
+            btnWrap.appendChild(delBtn);
+            row.appendChild(nameDiv);
+            row.appendChild(btnWrap);
+            presetListContainer.appendChild(row);
+        });
+    }
+
+    if (managePresetBtn) {
+        managePresetBtn.addEventListener('click', () => {
+            if (!manageModal) return;
+            renderPresetsList();
+            manageModal.style.display = 'flex';
+        });
+    }
+
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', () => {
+            if (manageModal) manageModal.style.display = 'none';
+        });
+    }
+    
+    if (exportPresetBtn) {
+        exportPresetBtn.addEventListener('click', () => {
+            const presets = _getNovelAiPresets();
+            if (presets.length === 0) return showToast('暂无预设可导出');
+            const blob = new Blob([JSON.stringify(presets, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `NovelAI_Presets_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('NovelAI 预设已导出');
+        });
+    }
+
+    if (importPresetBtn) {
+        importPresetBtn.addEventListener('click', () => {
+            const inp = document.createElement('input');
+            inp.type = 'file';
+            inp.accept = '.json';
+            inp.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                    const text = await file.text();
+                    const imported = JSON.parse(text);
+                    if (!Array.isArray(imported)) {
+                        showToast('格式不正确：需要预设数组');
+                        return;
+                    }
+                    const presets = _getNovelAiPresets();
+                    imported.forEach(p => {
+                        if (p.name && p.data) {
+                            const idx = presets.findIndex(exist => exist.name === p.name);
+                            if (idx >= 0) presets[idx] = p;
+                            else presets.push(p);
+                        }
+                    });
+                    _saveNovelAiPresets(presets);
+                    populateNovelAiPresets();
+                    showToast(`成功导入 ${imported.length} 个 NovelAI 预设`);
+                } catch (err) {
+                    showToast('导入失败：' + err.message);
+                }
+            };
+            inp.click();
         });
     }
 }
@@ -4384,9 +5130,6 @@ function setupWallpaperApp() {
     
     // 全局通话壁纸（在壁纸APP中管理）
     setupGlobalCallWallpaperInWallpaperScreen();
-
-    // 音乐播放器壁纸（在壁纸APP中管理）
-    setupMusicWallpaperInWallpaperScreen();
 }
 
 function setupGlobalChatWallpaperInWallpaperScreen() {
@@ -4534,96 +5277,6 @@ function setupGlobalCallWallpaperInWallpaperScreen() {
             await saveData();
             refreshPreview();
             showToast('已恢复默认全局通话壁纸');
-        });
-    }
-}
-
-function setupMusicWallpaperInWallpaperScreen() {
-    const MUSIC_BG_KEY = 'music_player_bg';
-    const MUSIC_BG_COVER_KEY = 'music_player_bg_cover_vinyl';
-    const preview = document.getElementById('music-wallpaper-preview');
-    const previewText = document.getElementById('music-wallpaper-preview-text');
-    const localBtn = document.getElementById('music-wallpaper-local-btn');
-    const urlBtn = document.getElementById('music-wallpaper-url-btn');
-    const resetBtn = document.getElementById('music-wallpaper-reset-btn');
-    const urlRow = document.getElementById('music-wallpaper-url-row');
-    const urlInput = document.getElementById('music-wallpaper-url-input');
-    const urlApply = document.getElementById('music-wallpaper-url-apply');
-    const fileInput = document.getElementById('music-wallpaper-file-input');
-    const coverVinylCheck = document.getElementById('music-wallpaper-cover-vinyl');
-
-    function loadMBg() { try { return localStorage.getItem(MUSIC_BG_KEY) || ''; } catch (_) { return ''; } }
-    function saveMBg(v) { try { localStorage.setItem(MUSIC_BG_KEY, v || ''); } catch (_) {} }
-    function loadCover() { try { return localStorage.getItem(MUSIC_BG_COVER_KEY) === 'true'; } catch (_) { return false; } }
-    function saveCover(v) { try { localStorage.setItem(MUSIC_BG_COVER_KEY, v ? 'true' : 'false'); } catch (_) {} }
-
-    function refreshPreview() {
-        var url = loadMBg();
-        if (preview) {
-            if (url) {
-                preview.style.backgroundImage = 'url(' + url + ')';
-                if (previewText) previewText.style.display = 'none';
-            } else {
-                preview.style.backgroundImage = '';
-                if (previewText) previewText.style.display = '';
-            }
-        }
-        if (coverVinylCheck) coverVinylCheck.checked = loadCover();
-        // 同步到音乐播放器
-        if (typeof window.applyMusicBgFromWallpaper === 'function') window.applyMusicBgFromWallpaper();
-    }
-
-    refreshPreview();
-
-    if (localBtn && fileInput) {
-        localBtn.addEventListener('click', function () { fileInput.click(); });
-        fileInput.addEventListener('change', async function () {
-            var file = this.files && this.files[0];
-            if (!file) return;
-            try {
-                var dataUrl = await compressImage(file, { quality: 0.85, maxWidth: 1080, maxHeight: 1920 });
-                saveMBg(dataUrl);
-                refreshPreview();
-                showToast('音乐壁纸已更新');
-            } catch (_) {
-                showToast('图片压缩失败');
-            }
-            this.value = '';
-        });
-    }
-
-    if (urlBtn) {
-        urlBtn.addEventListener('click', function () {
-            if (urlRow) urlRow.style.display = urlRow.style.display === 'none' ? 'flex' : 'none';
-            if (urlRow && urlRow.style.display === 'flex' && urlInput) urlInput.focus();
-        });
-    }
-
-    if (urlApply && urlInput) {
-        urlApply.addEventListener('click', function () {
-            var url = urlInput.value.trim();
-            if (!url) return;
-            if (!url.startsWith('http')) { showToast('请输入有效的 http/https 链接'); return; }
-            saveMBg(url);
-            refreshPreview();
-            if (urlRow) urlRow.style.display = 'none';
-            showToast('音乐壁纸已更新');
-        });
-    }
-
-    if (resetBtn) {
-        resetBtn.addEventListener('click', function () {
-            saveMBg('');
-            saveCover(false);
-            refreshPreview();
-            showToast('已恢复默认音乐背景');
-        });
-    }
-
-    if (coverVinylCheck) {
-        coverVinylCheck.addEventListener('change', function () {
-            saveCover(this.checked);
-            refreshPreview();
         });
     }
 }
@@ -6189,35 +6842,28 @@ function setupCustomizeApp() {
         if (e.target.id === 'local-font-upload') {
             const file = e.target.files[0];
             if (!file) return;
-            const maxSize = 5 * 1024 * 1024; // 5MB
-            if (file.size > maxSize) {
-                showToast('字体文件过大（超过 5MB），请选择较小的文件或使用 URL 链接');
-                e.target.value = null;
-                return;
-            }
-            if (file.size > 2 * 1024 * 1024) {
-                if (!confirm('该字体文件较大（' + (file.size / 1024 / 1024).toFixed(1) + 'MB），可能导致应用卡顿或闪退。是否继续？')) {
-                    e.target.value = null;
-                    return;
-                }
-            }
+            
             const reader = new FileReader();
             reader.onload = async (evt) => {
-                const base64 = evt.target.result;
-                db.fontUrl = base64;
+                const arrayBuffer = evt.target.result;
+                db.fontBuffer = arrayBuffer;
+                db.fontUrl = 'local';
                 db.localFontName = file.name;
+                
                 const fontUrlInput = document.getElementById('customize-font-url');
                 if (fontUrlInput) fontUrlInput.value = '';
+                
                 const nameEl = document.getElementById('local-font-name');
                 if (nameEl) {
                     nameEl.textContent = '已加载本地字体：' + file.name;
                     nameEl.style.display = 'block';
                 }
+                
                 await saveData();
-                applyGlobalFont(base64);
+                applyGlobalFont('local');
                 showToast('本地字体已应用！');
             };
-            reader.readAsDataURL(file);
+            reader.readAsArrayBuffer(file);
             e.target.value = null;
         }
     });

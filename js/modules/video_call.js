@@ -1112,8 +1112,8 @@ const VideoCallModule = {
         if (loadingEl) loadingEl.style.display = 'flex';
 
         try {
-            console.log('[VC-NovelAI] 生成视频通话画面, tags:', tags);
-            const result = await generateNovelAiImage(tags);
+            console.log('[VC-ImageGen] 生成视频通话画面, tags:', tags);
+            const result = await generateImageDispatch(tags);
             if (result && result.imageUrl) {
                 // 等待图片加载完成后再显示（返回 Promise）
                 await new Promise((resolve) => {

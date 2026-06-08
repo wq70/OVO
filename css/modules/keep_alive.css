@@ -1,0 +1,39 @@
+/* 毛玻璃保活弹窗样式 */
+.glass-modal {
+    background: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+}
+
+#keep-alive-status-indicator {
+    cursor: pointer;
+}
+
+#keep-alive-status-indicator:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+#keep-alive-status-indicator:active {
+    transform: scale(0.95);
+}
+
+/* 播放状态的呼吸动画 */
+@keyframes breathingPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(var(--primary-color-rgb, 0, 122, 255), 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 15px rgba(var(--primary-color-rgb, 0, 122, 255), 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(var(--primary-color-rgb, 0, 122, 255), 0);
+    }
+}
+
+.keep-alive-playing {
+    animation: breathingPulse 2s infinite;
+    background: rgba(var(--primary-color-rgb, 0, 122, 255), 0.1) !important;
+}

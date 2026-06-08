@@ -162,18 +162,18 @@ const DEFAULT_COT_PRESETS = [
 ];
 
 const globalSettingKeys = [
-    'apiSettings', 'summaryApiSettings', 'backgroundApiSettings', 'supplementPersonaApiSettings', 'peekApiSettings', 'imageRecognitionEnabled', 'imageRecognitionApiSettings', 'stickerRecognitionApiSettings', 'wallpaper', 'globalChatWallpaper', 'globalCallWallpaper', 'homeScreenMode', 'fontUrl', 'localFontName', 'customIcons', 'customAppNames', 'namePresets',
-    'apiPresets', 'summaryApiPresets', 'backgroundApiPresets', 'supplementPersonaApiPresets', 'peekApiPresets', 'imageRecognitionApiPresets', 'stickerRecognitionApiPresets', 'bubbleCssPresets', 'myPersonaPresets', 'globalCss',
+    'apiSettings', 'summaryApiSettings', 'backgroundApiSettings', 'supplementPersonaApiSettings', 'peekApiSettings', 'vectorApiSettings', 'imageRecognitionEnabled', 'imageRecognitionApiSettings', 'stickerRecognitionApiSettings', 'wallpaper', 'globalChatWallpaper', 'globalCallWallpaper', 'homeScreenMode', 'fontUrl', 'localFontName', 'customIcons', 'customAppNames', 'namePresets',
+    'apiPresets', 'summaryApiPresets', 'backgroundApiPresets', 'supplementPersonaApiPresets', 'peekApiPresets', 'vectorApiPresets', 'imageRecognitionApiPresets', 'stickerRecognitionApiPresets', 'bubbleCssPresets', 'myPersonaPresets', 'globalCss',
     'globalCssPresets', 'fontPresets', 'homeSignature', 'forumPosts', 'forumBindings', 'forumUserProfile', 'forumSettings', 'forumApiSettings', 'forumMessages', 'forumStrangerProfiles', 'forumFriendRequests', 'forumPendingRequestFromUser', 'forumAltAccounts', 'forumActiveAccountId', 'pomodoroTasks', 'pomodoroSettings', 'insWidgetSettings', 'homeWidgetSettings',
     'chatFolders', 'fontSizeScale', 'activePersonaId', 'moreProfileCardBg', 'statusBarPresets', 'regexFilterPresets', 'themeSettings', 'themePresets', 'savedKeyboardHeight',
-    'globalSendSound', 'globalReceiveSound', 'globalMessageSentSound', 'globalIncomingCallSound', 'multiMsgSoundEnabled', 'soundPresets', 'galleryPresets', 'iconPresets', 'homeWidgetPresets', 'widgetWallpaperPresets', 'voicePresets',
+    'globalSendSound', 'globalReceiveSound', 'globalMessageSentSound', 'globalIncomingCallSound', 'multiMsgSoundEnabled', 'soundPresets', 'galleryPresets', 'iconPresets', 'homeWidgetPresets', 'widgetWallpaperPresets', 'voicePresets', 'fontBuffer',
     'cotSettings', 'cotPresets', 'hasSeenVideoCallDisclaimer', 'hasSeenVideoCallAvatarHint',
     'favorites', 'piggyBank',
     'theaterScenarios', 'theaterPromptPresets',
     'theaterHtmlScenarios', 'theaterHtmlPromptPresets', 'theaterMode',
     'theaterApiSettings', 'theaterFontSize', 'theaterFontPreset',
     'novelAiSettings', 'avatarRecognitionDetailLevel',
-    'phoneControlRecycleBin', 'nodeTemplates', 'nodeSummaryText',
+    'phoneControlRecycleBin', 'nodeTemplates', 'nodeSummaryText', 'memoryTableTemplates', 'vectorMemoryTemplates',
     'nightModeSettings', 'homeStatusBarSettings', 'stickerCategories', 'magicRoom'
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
@@ -663,6 +663,7 @@ var db = {
     backgroundApiSettings: {},
     supplementPersonaApiSettings: {},
     peekApiSettings: {},
+    vectorApiSettings: {},
     wallpaper: 'https://i.postimg.cc/W4Z9R9x4/ins-1.jpg',
     globalChatWallpaper: '',
     globalCallWallpaper: '',
@@ -678,6 +679,7 @@ var db = {
     backgroundApiPresets: [],
     supplementPersonaApiPresets: [],
     peekApiPresets: [],
+    vectorApiPresets: [],
     bubbleCssPresets: [],
     myPersonaPresets: [],
     fontPresets: [],
@@ -758,7 +760,9 @@ var db = {
     cotPresets: JSON.parse(JSON.stringify(DEFAULT_COT_PRESETS)),
     archives: [],
     favorites: [],  // 消息收藏：{ id, messageId, chatId, chatType, chatName, content, timestamp, favoriteTime, note, sender }
-    phoneControlRecycleBin: []  // 角色掌控模式：被角色“删除”的角色移入回收站，可恢复
+    phoneControlRecycleBin: [],  // 角色掌控模式：被角色“删除”的角色移入回收站，可恢复
+    memoryTableTemplates: [],
+    vectorMemoryTemplates: []
 };
 
 var currentChatId = null;
@@ -827,15 +831,18 @@ function initDatabase() {
                 apiSettings: data.apiSettings || {},
                 summaryApiSettings: data.summaryApiSettings || {},
                 backgroundApiSettings: data.backgroundApiSettings || {},
+                vectorApiSettings: data.vectorApiSettings || {},
                 wallpaper: data.wallpaper || 'https://i.postimg.cc/W4Z9R9x4/ins-1.jpg',
                 globalChatWallpaper: data.globalChatWallpaper || '',
-                homeScreenMode: data.homeScreenMode || 'night',
-                fontUrl: data.fontUrl || '',
-                localFontName: data.localFontName || '',
+            homeScreenMode: data.homeScreenMode || 'night',
+            fontUrl: data.fontUrl || '',
+            localFontName: data.localFontName || '',
+            fontBuffer: data.fontBuffer || null,
                 customIcons: data.customIcons || {},
                 apiPresets: data.apiPresets || [],
                 summaryApiPresets: data.summaryApiPresets || [],
                 backgroundApiPresets: data.backgroundApiPresets || [],
+                vectorApiPresets: data.vectorApiPresets || [],
                 bubbleCssPresets: data.bubbleCssPresets || [],
                 myPersonaPresets: data.myPersonaPresets || [],
                 globalCss: data.globalCss || '',
@@ -847,6 +854,8 @@ function initDatabase() {
                 pomodoroSettings: data.pomodoroSettings || { boundCharId: null, userPersona: '', focusBackground: '', taskCardBackground: '', encouragementMinutes: 25, pokeLimit: 5, globalWorldBookIds: [] },
                 insWidgetSettings: data.insWidgetSettings || { avatar1: 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg', bubble1: 'love u.', avatar2: 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg', bubble2: 'miss u.' },
                 homeWidgetSettings: data.homeWidgetSettings || defaultWidgetSettings,
+                memoryTableTemplates: data.memoryTableTemplates || [],
+                vectorMemoryTemplates: data.vectorMemoryTemplates || [],
             moreProfileCardBg: data.moreProfileCardBg || 'https://i.postimg.cc/XvFDdTKY/Smart-Select-20251013-023208.jpg',
             cotSettings: data.cotSettings || { enabled: false, activePresetId: 'default' },
             cotPresets: data.cotPresets || JSON.parse(JSON.stringify(DEFAULT_COT_PRESETS)),
@@ -1014,6 +1023,7 @@ const loadData = async () => {
             backgroundApiSettings: {},
             supplementPersonaApiSettings: {},
             peekApiSettings: {},
+            vectorApiSettings: {},
             imageRecognitionEnabled: false,
             imageRecognitionApiSettings: {},
             stickerRecognitionApiSettings: {},
@@ -1023,6 +1033,7 @@ const loadData = async () => {
             homeScreenMode: 'night',
             fontUrl: '',
             localFontName: '',
+            fontBuffer: null,
             customIcons: {},
             customAppNames: {},
             apiPresets: [],
@@ -1030,6 +1041,7 @@ const loadData = async () => {
             backgroundApiPresets: [],
             supplementPersonaApiPresets: [],
             peekApiPresets: [],
+            vectorApiPresets: [],
             imageRecognitionApiPresets: [],
             stickerRecognitionApiPresets: [],
             bubbleCssPresets: [],
@@ -1051,6 +1063,8 @@ const loadData = async () => {
             pomodoroSettings: { boundCharId: null, userPersona: '', focusBackground: '', taskCardBackground: '', encouragementMinutes: 25, pokeLimit: 5, globalWorldBookIds: [] },
             insWidgetSettings: { avatar1: 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg', bubble1: 'love u.', avatar2: 'https://i.postimg.cc/GtbTnxhP/o-o-1.jpg', bubble2: 'miss u.' },
             homeWidgetSettings: defaultWidgetSettings,
+            memoryTableTemplates: [],
+            vectorMemoryTemplates: [],
             activePersonaId: null,
             moreProfileCardBg: 'https://i.postimg.cc/XvFDdTKY/Smart-Select-20251013-023208.jpg',
             globalSendSound: '',
@@ -1087,6 +1101,7 @@ const loadData = async () => {
             sysNotifEnabled: false,
             sysNotifSenderName: '',
             sysNotifShowAvatar: true,
+            sysNotifInChatEnabled: false,
             sysNotifShowContent: true,
             sysNotifCustomServer: false,
             sysNotifServerUrl: '',
@@ -1097,6 +1112,8 @@ const loadData = async () => {
 });
 
     if (!Array.isArray(db.stickerCategories)) db.stickerCategories = [];
+    if (!Array.isArray(db.vectorMemoryTemplates)) db.vectorMemoryTemplates = [];
+    if (!Array.isArray(db.vectorApiPresets)) db.vectorApiPresets = [];
     if (!db.piggyBank) db.piggyBank = { balance: 520, transactions: [], familyCards: [], receivedFamilyCards: [] };
     if (typeof db.piggyBank.balance !== 'number') db.piggyBank.balance = 520;
     if (!Array.isArray(db.piggyBank.transactions)) db.piggyBank.transactions = [];
@@ -1138,6 +1155,51 @@ const loadData = async () => {
                 history: []
             };
         }
+        if (!['journal', 'table', 'vector'].includes(c.memoryMode)) c.memoryMode = 'journal';
+        if (!c.memoryTables || typeof c.memoryTables !== 'object') {
+            c.memoryTables = {
+                enabled: true,
+                boundTemplateIds: [],
+                data: {},
+                lockedFields: {},
+                history: [],
+                lastChangedFieldPaths: []
+            };
+        }
+        if (!Array.isArray(c.memoryTables.boundTemplateIds)) c.memoryTables.boundTemplateIds = [];
+        if (!c.memoryTables.data || typeof c.memoryTables.data !== 'object') c.memoryTables.data = {};
+        if (!c.memoryTables.lockedFields || typeof c.memoryTables.lockedFields !== 'object') c.memoryTables.lockedFields = {};
+        if (!Array.isArray(c.memoryTables.history)) c.memoryTables.history = [];
+        if (!Array.isArray(c.memoryTables.lastChangedFieldPaths)) c.memoryTables.lastChangedFieldPaths = [];
+        if (!c.vectorMemory || typeof c.vectorMemory !== 'object') {
+            c.vectorMemory = {
+                enabled: true,
+                boundTemplateId: null,
+                entries: [],
+                history: [],
+                topK: 5,
+                threshold: 0.28,
+                autoSummaryEnabled: false,
+                autoSummaryInterval: 200,
+                autoSummaryState: 'idle',
+                autoSummaryPending: false,
+                lastSummarizedMsgId: null,
+                lastSummarizedMsgTimestamp: null,
+                lastContextBlock: '',
+                lastRetrievedEntryIds: [],
+                lastQueryText: '',
+                lastPreparedAt: null
+            };
+        }
+        if (!Array.isArray(c.vectorMemory.entries)) c.vectorMemory.entries = [];
+        if (!Array.isArray(c.vectorMemory.history)) c.vectorMemory.history = [];
+        if (c.vectorMemory.topK === undefined) c.vectorMemory.topK = 5;
+        if (c.vectorMemory.threshold === undefined) c.vectorMemory.threshold = 0.28;
+        if (c.vectorMemory.autoSummaryEnabled === undefined) c.vectorMemory.autoSummaryEnabled = false;
+        if (!Number.isFinite(parseInt(c.vectorMemory.autoSummaryInterval, 10))) c.vectorMemory.autoSummaryInterval = 200;
+        if (!c.vectorMemory.autoSummaryState) c.vectorMemory.autoSummaryState = 'idle';
+        if (c.vectorMemory.autoSummaryPending === undefined) c.vectorMemory.autoSummaryPending = false;
+        if (!Array.isArray(c.vectorMemory.lastRetrievedEntryIds)) c.vectorMemory.lastRetrievedEntryIds = [];
         if (!c.regexFilter) {
             c.regexFilter = {
                 enabled: false,
@@ -1280,6 +1342,7 @@ const dataStorage = {
         categorizedSizes.personalization += stringify(db.homeScreenMode);
         categorizedSizes.personalization += stringify(db.fontUrl);
         categorizedSizes.personalization += stringify(db.localFontName);
+        categorizedSizes.personalization += stringify(db.fontBuffer);
         categorizedSizes.personalization += stringify(db.customIcons);
         categorizedSizes.personalization += stringify(db.bubbleCssPresets);
         categorizedSizes.personalization += stringify(db.myPersonaPresets);

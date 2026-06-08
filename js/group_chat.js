@@ -1010,6 +1010,8 @@ function loadGroupSettingsToSidebar() {
     const autoJournalIntervalContainer = document.getElementById('setting-group-auto-journal-interval-container');
     const autoJournalIntervalInput = document.getElementById('setting-group-auto-journal-interval');
     let autoJournalSwitch = document.getElementById('setting-group-auto-journal-enabled');
+    const autoJournalRetryBtn = document.getElementById('setting-group-auto-journal-retry-btn');
+    const autoJournalLatestBtn = document.getElementById('setting-group-summarize-latest-btn');
     if (autoJournalSwitch) {
         autoJournalSwitch.checked = group.autoJournalEnabled || false;
         const parent = autoJournalSwitch.parentNode;
@@ -1018,13 +1020,84 @@ function loadGroupSettingsToSidebar() {
         autoJournalSwitch = clone;
         if (autoJournalIntervalContainer) {
             autoJournalIntervalContainer.style.display = group.autoJournalEnabled ? 'flex' : 'none';
-            autoJournalSwitch.addEventListener('change', (e) => {
+            autoJournalSwitch.addEventListener('change', async (e) => {
                 autoJournalIntervalContainer.style.display = e.target.checked ? 'flex' : 'none';
-                saveGroupSettingsFromSidebar(false);
+                const intervalValue = parseInt(autoJournalIntervalInput ? autoJournalIntervalInput.value : '', 10);
+                group.autoJournalInterval = (isNaN(intervalValue) || intervalValue < 10) ? 100 : intervalValue;
+
+                if (typeof applyAutoJournalToggleDecision === 'function') {
+                    await applyAutoJournalToggleDecision(group, e.target.checked, { chatType: 'group' });
+                } else {
+                    group.autoJournalEnabled = e.target.checked;
+                }
+
+                await saveGroupSettingsFromSidebar(false);
             });
         }
     }
-    if (autoJournalIntervalInput) autoJournalIntervalInput.value = group.autoJournalInterval || 100;
+    if (autoJournalIntervalInput) {
+        autoJournalIntervalInput.value = group.autoJournalInterval || 100;
+        autoJournalIntervalInput.onblur = async () => {
+            const intervalValue = parseInt(autoJournalIntervalInput.value, 10);
+            group.autoJournalInterval = (isNaN(intervalValue) || intervalValue < 10) ? 100 : intervalValue;
+            if (typeof refreshAutoJournalButton === 'function') {
+                refreshAutoJournalButton(group, 'group');
+            }
+            await saveGroupSettingsFromSidebar(false);
+        };
+    }
+    if (typeof ensureAutoJournalState === 'function') {
+        ensureAutoJournalState(group);
+    }
+    if (autoJournalRetryBtn) {
+        const parent = autoJournalRetryBtn.parentNode;
+        const clone = autoJournalRetryBtn.cloneNode(true);
+        parent.replaceChild(clone, autoJournalRetryBtn);
+        clone.addEventListener('click', async () => {
+            const intervalValue = parseInt(autoJournalIntervalInput ? autoJournalIntervalInput.value : '', 10);
+            group.autoJournalInterval = (isNaN(intervalValue) || intervalValue < 10) ? 100 : intervalValue;
+
+            if (typeof retryAutoJournalForChat === 'function') {
+                await retryAutoJournalForChat(group, { chatType: 'group' });
+            }
+
+            await saveGroupSettingsFromSidebar(false);
+        });
+    }
+    if (autoJournalLatestBtn) {
+        const parent = autoJournalLatestBtn.parentNode;
+        const clone = autoJournalLatestBtn.cloneNode(true);
+        parent.replaceChild(clone, autoJournalLatestBtn);
+        clone.addEventListener('click', async () => {
+            const intervalValue = parseInt(autoJournalIntervalInput ? autoJournalIntervalInput.value : '', 10);
+            group.autoJournalInterval = (isNaN(intervalValue) || intervalValue < 10) ? 100 : intervalValue;
+
+            if (typeof getAutoJournalCursorInfo !== 'function' || typeof askSummarizeLatestOptions !== 'function' || typeof summarizeUntilLatest !== 'function') {
+                return;
+            }
+
+            const info = getAutoJournalCursorInfo(group);
+            if (info.unsummarizedCount <= 0) {
+                showToast('当前没有新增消息需要总结');
+                return;
+            }
+
+            const choice = await askSummarizeLatestOptions(info);
+            if (!choice) return;
+
+            await summarizeUntilLatest(group, {
+                chatType: 'group',
+                mode: choice.mode,
+                splitSize: choice.splitSize,
+                includeRemainder: choice.includeRemainder
+            });
+
+            await saveGroupSettingsFromSidebar(false);
+        });
+    }
+    if (typeof refreshAutoJournalButton === 'function') {
+        refreshAutoJournalButton(group, 'group');
+    }
 
     document.getElementById('setting-group-title-layout').value = group.titleLayout || 'left';
     document.getElementById('setting-group-show-timestamp').checked = group.showTimestamp || false;
@@ -1344,6 +1417,9 @@ async function saveGroupSettingsFromSidebar(showToastFlag = true) {
     const privateSummaryCountInput = parseInt(privateSummaryEl ? privateSummaryEl.value : '', 10);
     group.privateMemorySummaryCount = (isNaN(privateSummaryCountInput) || privateSummaryCountInput < 0) ? 0 : privateSummaryCountInput;
 
+    if (typeof ensureAutoJournalState === 'function') {
+        ensureAutoJournalState(group);
+    }
     group.autoJournalEnabled = document.getElementById('setting-group-auto-journal-enabled').checked;
     const autoJournalIntervalInput = parseInt(document.getElementById('setting-group-auto-journal-interval').value, 10);
     group.autoJournalInterval = (isNaN(autoJournalIntervalInput) || autoJournalIntervalInput < 10) ? 100 : autoJournalIntervalInput;

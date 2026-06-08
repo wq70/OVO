@@ -83,10 +83,6 @@ const switchScreen = (targetId) => {
     if (targetId === 'family-card-list-screen' && typeof renderFamilyCardList === 'function') {
         renderFamilyCardList();
     }
-    if (targetId === 'music-screen') {
-        if (typeof initMusicPlayer === 'function') initMusicPlayer();
-        if (typeof onShowMusicScreen === 'function') onShowMusicScreen();
-    }
     if (targetId === 'contacts-screen') {
         if (typeof renderContactList === 'function') renderContactList();
         if (typeof renderMyProfile === 'function') renderMyProfile();
@@ -526,8 +522,6 @@ function setupHomeScreen() {
     // 主屏 app-icon 入口：拦截 main.js 全局委托中对 piggy-bank / music 的"开发中"拦截
     const piggyIcon = homeScreen.querySelector('.app-icon[data-target="piggy-bank-screen"]');
     if (piggyIcon) piggyIcon.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); switchScreen('piggy-bank-screen'); });
-    const musicIcon = homeScreen.querySelector('.app-icon[data-target="music-screen"]');
-    if (musicIcon) musicIcon.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); switchScreen('music-screen'); });
 
     updateBatteryStatus();
 
@@ -732,7 +726,15 @@ async function applyHomeScreenMode(mode) {
     await saveData();
 }
 
-function applyGlobalFont(fontUrl) {
+async function applyGlobalFont(fontUrl) {
+    const fontName = 'CustomGlobalFont';
+    
+    document.fonts.forEach(font => {
+        if (font.family === fontName) {
+            document.fonts.delete(font);
+        }
+    });
+
     const styleId = 'global-font-style';
     let styleElement = document.getElementById(styleId);
     if (!styleElement) {
@@ -740,8 +742,18 @@ function applyGlobalFont(fontUrl) {
         styleElement.id = styleId;
         document.head.appendChild(styleElement);
     }
-    if (fontUrl) {
-        const fontName = 'CustomGlobalFont';
+
+    if (fontUrl === 'local' && db.fontBuffer) {
+        try {
+            const fontFace = new FontFace(fontName, db.fontBuffer);
+            const loadedFont = await fontFace.load();
+            document.fonts.add(loadedFont);
+            styleElement.innerHTML = `:root { --font-family: '${fontName}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }`;
+        } catch (error) {
+            console.error('Failed to load local font:', error);
+            styleElement.innerHTML = `:root { --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }`;
+        }
+    } else if (fontUrl && fontUrl !== 'local') {
         styleElement.innerHTML = `@font-face { font-family: '${fontName}'; src: url('${fontUrl}'); } :root { --font-family: '${fontName}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }`;
     } else {
         styleElement.innerHTML = `:root { --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }`;

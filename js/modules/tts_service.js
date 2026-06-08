@@ -28,16 +28,12 @@ const MinimaxTTSService = {
     // 角色 TTS 配置（从 localStorage 加载）
     config: {
         enabled: false,
-        provider: 'minimax', // 'minimax' or 'volcengine'
+        provider: 'minimax',
         // Minimax
         groupId: '',
         apiKey: '',
         domain: 'api.minimaxi.chat',
-        model: 'speech-2.8-hd',
-        // Volcengine
-        volcengineAppId: '',
-        volcengineAccessToken: '',
-        volcengineCluster: 'volcano_tts'
+        model: 'speech-2.8-hd'
     },
 
     // 用户 TTS 配置（独立存储）
@@ -48,11 +44,7 @@ const MinimaxTTSService = {
         groupId: '',
         apiKey: '',
         domain: 'api.minimaxi.chat',
-        model: 'speech-2.8-hd',
-        // Volcengine
-        volcengineAppId: '',
-        volcengineAccessToken: '',
-        volcengineCluster: 'volcano_tts'
+        model: 'speech-2.8-hd'
     },
 
     // 音频缓存 (文本+音色ID作为key，用户缓存加 user_ 前缀)
@@ -171,18 +163,12 @@ const MinimaxTTSService = {
     // 检查角色 TTS 配置是否完整
     isConfigured: function() {
         if (!this.config.enabled) return false;
-        if (this.config.provider === 'volcengine') {
-            return !!(this.config.volcengineAppId && this.config.volcengineAccessToken);
-        }
         return !!(this.config.groupId && this.config.apiKey);
     },
 
     // 检查用户 TTS 配置是否完整（仅当启用时要求配置）
     isUserConfigured: function() {
         if (!this.userConfig.enabled) return false;
-        if (this.userConfig.provider === 'volcengine') {
-            return !!(this.userConfig.volcengineAppId && this.userConfig.volcengineAccessToken);
-        }
         return !!(this.userConfig.groupId && this.userConfig.apiKey);
     },
 
@@ -222,20 +208,8 @@ const MinimaxTTSService = {
         try {
             let audioUrl;
             
-            if (provider === 'volcengine') {
-                // 调用豆包 TTS 服务
-                if (typeof window.VolcengineTTSService === 'undefined') {
-                    throw new Error('Volcengine TTS 服务未加载');
-                }
-                const volcengineConfig = {
-                    appId: cfg.volcengineAppId,
-                    accessToken: cfg.volcengineAccessToken,
-                    cluster: cfg.volcengineCluster
-                };
-                audioUrl = await window.VolcengineTTSService.synthesize(text, voiceId, volcengineConfig, { speed });
-            } else {
-                // 默认使用 Minimax TTS 服务
-                const url = `https://${cfg.domain}/v1/t2a_v2?GroupId=${encodeURIComponent(cfg.groupId)}`;
+            // 默认使用 Minimax TTS 服务
+            const url = `https://${cfg.domain}/v1/t2a_v2?GroupId=${encodeURIComponent(cfg.groupId)}`;
                 const requestBody = {
                     model: cfg.model,
                     text: cleanText,
@@ -289,7 +263,6 @@ const MinimaxTTSService = {
                 const audioData = result.data.audio;
                 const blob = this.hexToBlob(audioData, 'audio/mpeg');
                 audioUrl = URL.createObjectURL(blob);
-            }
 
             // 存入缓存
             this.audioCache.set(cacheKey, audioUrl);

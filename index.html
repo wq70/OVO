@@ -44,6 +44,7 @@
     <link rel="stylesheet" href="css/modules/theater.css">
     <link rel="stylesheet" href="css/modules/worldbook.css">
     <link rel="stylesheet" href="css/modules/journal.css">
+    <link rel="stylesheet" href="css/modules/vector_memory.css">
     <link rel="stylesheet" href="css/modules/reminder.css">
     <link rel="stylesheet" href="css/modules/piggy_bank.css">
     <link rel="stylesheet" href="css/modules/steps.css">
@@ -56,11 +57,11 @@
     <link rel="stylesheet" href="css/modules/video_call.css">
     <link rel="stylesheet" href="css/modules/archive.css">
     <link rel="stylesheet" href="css/modules/favorites.css">
-    <link rel="stylesheet" href="css/modules/music_player.css">
     <link rel="stylesheet" href="css/modules/appearance_settings.css">
     <link rel="stylesheet" href="css/modules/avatar_recognition.css">
     <link rel="stylesheet" href="css/modules/node_system.css">
     <link rel="stylesheet" href="css/modules/msg_version.css">
+    <link rel="stylesheet" href="css/modules/keep_alive.css">
 
     <!-- Other Styles -->
     <link rel="stylesheet" href="contacts.css">
@@ -511,6 +512,22 @@
                                 </svg>
                             </div>
                             <span class="expansion-item-name">日记</span>
+                        </div>
+                        <div class="expansion-item" id="memory-table-btn">
+                            <div class="expansion-item-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 3v3h16V7H4zm0 5v5h5v-5H4zm7 0v5h9v-5h-9z"></path>
+                                </svg>
+                            </div>
+                            <span class="expansion-item-name">档案</span>
+                        </div>
+                        <div class="expansion-item" id="vector-memory-btn">
+                            <div class="expansion-item-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2 3 7v10l9 5 9-5V7l-9-5zm0 2.18 6.5 3.61L12 11.41 5.5 7.79 12 4.18zm-7 5.34 6 3.33v6.88l-6-3.34V9.52zm8 10.21v-6.88l6-3.33v6.87l-6 3.34z"></path>
+                                </svg>
+                            </div>
+                            <span class="expansion-item-name">向量</span>
                         </div>
                         <div class="expansion-item" id="delete-history-btn">
                             <div class="expansion-item-icon">
@@ -1039,301 +1056,6 @@
             </div>
         </div>
 
-        <!-- 后台保活 · 音乐播放器（黑胶深色主题） -->
-        <div id="music-screen" class="screen music-screen-theme">
-            <div class="music-bg-layer" id="music-bg-layer"></div>
-            <header class="app-header music-header">
-                <button class="back-btn" data-target="home-screen" type="button" aria-label="返回">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                </button>
-                <div class="title-container">
-                    <h1 class="title" id="music-header-title">未选择音频</h1>
-                </div>
-                <div class="music-header-actions">
-                    <button type="button" class="music-theme-toggle" id="music-theme-toggle" aria-label="切换日间/夜间" title="日间/夜间">
-                        <svg class="music-theme-icon music-theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22" style="display:none;"><path d="M12 3v2.25M12 18.75v2.25M4.5 12h-2.25M21 12h-2.25M18.364 5.636l-1.59 1.59M7.227 16.773l-1.59 1.59M18.364 18.364l-1.59-1.59M7.227 7.227L5.636 5.636M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                        <svg class="music-theme-icon music-theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-                    </button>
-                    <button type="button" class="music-header-upload-btn" id="music-header-upload-btn" aria-label="添加音频" title="添加音频">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M12 5v14M5 12h14"/></svg>
-                    </button>
-                </div>
-            </header>
-            <div class="music-tonearm" aria-hidden="true">
-                <svg class="tonearm-svg" viewBox="0 0 120 140" fill="currentColor" stroke="currentColor" stroke-width="10" stroke-linecap="round">
-                    <path class="tonearm-line" d="M90 8 L90 28 Q90 75 55 95 L48 98" fill="none"/>
-                    <circle class="tonearm-pivot" cx="90" cy="8" r="6"/>
-                    <ellipse class="tonearm-cartridge" cx="48" cy="98" rx="7" ry="5"/>
-                </svg>
-            </div>
-            <main class="content music-player-content">
-                <div class="music-hero">
-                    <div class="music-vinyl" id="music-vinyl-wrap">
-                        <button type="button" class="music-cover-wrap" id="music-cover-wrap">
-                            <div class="music-cover-placeholder" id="music-cover-placeholder">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13M9 9l12-2"/></svg>
-                                <span class="music-cover-hint">点击选择音频</span>
-                            </div>
-                            <img class="music-cover-img" id="music-cover-img" src="" alt="" style="display:none;">
-                        </button>
-                    </div>
-                    <div class="music-lyrics-view" id="music-lyrics-view" style="display:none;">
-                        <div class="music-lyrics-view-inner" id="music-lyrics-view-inner">
-                            <p class="music-lyrics-view-empty" id="music-lyrics-view-empty">暂无歌词</p>
-                            <ul class="music-lyrics-view-list" id="music-lyrics-view-list"></ul>
-                        </div>
-                    </div>
-                    <div class="music-info">
-                        <div class="music-info-text">
-                            <h2 class="music-title" id="music-title">未选择音频</h2>
-                            <p class="music-meta" id="music-meta">循环播放 · 后台保活</p>
-                        </div>
-                        <div class="music-stats">
-                            <span class="music-stat"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>100w+</span>
-                            <span class="music-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>5w+</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="music-source-btns" hidden>
-                    <button type="button" class="music-source-btn" id="music-btn-local"><span>本地上传</span></button>
-                    <button type="button" class="music-source-btn" id="music-btn-url"><span>URL</span></button>
-                </div>
-                <input type="file" id="music-file-input" accept="audio/*" hidden>
-                <div class="music-url-row" id="music-url-row">
-                    <input type="text" id="music-url-input" class="music-url-input" placeholder="输入音频链接 (http/https)">
-                    <button type="button" class="music-url-apply-btn" id="music-url-apply-btn">使用</button>
-                </div>
-                <div class="music-controls">
-                    <div class="music-progress-wrap">
-                        <div class="music-progress-row">
-                            <span class="music-time-current" id="music-time-current">0:00</span>
-                            <input type="range" class="music-progress" id="music-progress" min="0" max="100" value="0" step="0.1">
-                            <span class="music-time-total" id="music-time-total">0:00</span>
-                        </div>
-                        <span class="music-quality-label">标准</span>
-                    </div>
-                    <div class="music-buttons">
-                        <button type="button" class="music-btn music-btn-loop" id="music-btn-loop" title="单曲循环">
-                            <svg class="loop-icon loop-icon-single" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/><text x="12" y="14.5" text-anchor="middle" font-size="8" fill="currentColor" stroke="none" font-weight="bold">1</text></svg>
-                            <svg class="loop-icon loop-icon-order" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>
-                            <svg class="loop-icon loop-icon-shuffle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
-                        </button>
-                        <button type="button" class="music-btn music-btn-prev" id="music-btn-prev" title="上一首" disabled><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
-                        <button type="button" class="music-btn music-btn-play" id="music-btn-play" title="播放"><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg></button>
-                        <button type="button" class="music-btn music-btn-next" id="music-btn-next" title="下一首" disabled><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 18V6l-8.5 6L18 18zm-12 0V6h2v12H6z"/></svg></button>
-                        <button type="button" class="music-btn music-btn-queue" id="music-btn-queue" title="播放列表"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
-                    </div>
-                    <input type="checkbox" id="music-loop-check" checked hidden>
-                </div>
-            </main>
-        </div>
-        <!-- 封面点击：选择音频来源 -->
-        <div id="music-source-sheet" class="action-sheet-overlay">
-            <div class="action-sheet music-source-sheet">
-                <div class="action-sheet-title">选择音频来源</div>
-                <button type="button" class="action-sheet-button" id="music-sheet-upload">上传音乐</button>
-                <button type="button" class="action-sheet-button" id="music-sheet-search">在线搜索</button>
-                <button type="button" class="action-sheet-button" id="music-sheet-import-lyrics">导入歌词</button>
-                <button type="button" class="action-sheet-button music-sheet-cancel" id="music-sheet-cancel">取消</button>
-            </div>
-        </div>
-
-        <!-- 批量上传音乐弹窗（本地 + URL） -->
-        <div id="music-upload-modal" class="music-modal-overlay" style="display:none;">
-            <div class="music-modal-window">
-                <div class="music-modal-header">
-                    <h3 class="music-modal-title">上传音乐</h3>
-                    <button type="button" class="music-modal-close" id="music-upload-close-btn">&times;</button>
-                </div>
-                <div class="music-upload-tabs">
-                    <button type="button" class="music-upload-tab active" data-tab="local">本地上传</button>
-                    <button type="button" class="music-upload-tab" data-tab="url">URL 上传</button>
-                </div>
-                <!-- 本地上传 -->
-                <div class="music-upload-tab-content" id="music-upload-local-tab">
-                    <div class="music-upload-field">
-                        <label class="music-upload-label">选择音频文件（支持批量）</label>
-                        <label class="music-upload-file-btn" for="music-upload-local-files">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            <span>选择音频文件</span>
-                        </label>
-                        <input type="file" id="music-upload-local-files" accept="audio/*" multiple hidden>
-                    </div>
-                    <div class="music-upload-field">
-                        <label class="music-upload-label">选择歌词文件（.lrc / .txt，可选）</label>
-                        <label class="music-upload-file-btn music-upload-file-btn-secondary" for="music-upload-local-lyrics">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                            <span>选择歌词文件</span>
-                        </label>
-                        <input type="file" id="music-upload-local-lyrics" accept=".lrc,.txt" multiple hidden>
-                    </div>
-                    <p class="music-upload-hint">歌词将按文件名自动匹配对应歌曲；未匹配的可手动绑定。</p>
-                    <div id="music-upload-local-preview" class="music-upload-preview-list"></div>
-                </div>
-                <!-- URL 上传 -->
-                <div class="music-upload-tab-content" id="music-upload-url-tab" style="display:none;">
-                    <div class="music-upload-field">
-                        <label class="music-upload-label">音频 URL（每行一个，支持批量）</label>
-                        <textarea id="music-upload-url-list" rows="4" class="music-upload-textarea" placeholder="https://example.com/song1.mp3&#10;https://example.com/song2.mp3"></textarea>
-                    </div>
-                    <div class="music-upload-field">
-                        <label class="music-upload-label">选择歌词文件（.lrc / .txt，可选）</label>
-                        <label class="music-upload-file-btn music-upload-file-btn-secondary" for="music-upload-url-lyrics">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                            <span>选择歌词文件</span>
-                        </label>
-                        <input type="file" id="music-upload-url-lyrics" accept=".lrc,.txt" multiple hidden>
-                    </div>
-                    <p class="music-upload-hint">歌词将按顺序依次绑定对应 URL；也可上传后在歌单中手动绑定。</p>
-                    <div id="music-upload-url-preview" class="music-upload-preview-list"></div>
-                </div>
-                <div class="music-modal-footer">
-                    <button type="button" class="music-modal-btn music-modal-btn-cancel" id="music-upload-cancel-btn">取消</button>
-                    <button type="button" class="music-modal-btn music-modal-btn-primary" id="music-upload-confirm-btn">添加到歌单</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 批量导入歌词弹窗 -->
-        <div id="music-lyrics-import-modal" class="music-modal-overlay" style="display:none;">
-            <div class="music-modal-window">
-                <div class="music-modal-header">
-                    <h3 class="music-modal-title">导入歌词</h3>
-                    <button type="button" class="music-modal-close" id="music-lyrics-import-close-btn">&times;</button>
-                </div>
-                <div class="music-upload-field">
-                    <label class="music-upload-label">选择歌词文件（支持批量，.lrc / .txt，混合格式）</label>
-                    <label class="music-upload-file-btn" for="music-lyrics-import-files">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                        <span>选择歌词文件</span>
-                    </label>
-                    <input type="file" id="music-lyrics-import-files" accept=".lrc,.txt" multiple hidden>
-                </div>
-                <div id="music-lyrics-import-list" class="music-upload-preview-list"></div>
-                <div class="music-modal-footer">
-                    <button type="button" class="music-modal-btn music-modal-btn-cancel" id="music-lyrics-import-cancel">取消</button>
-                    <button type="button" class="music-modal-btn music-modal-btn-primary" id="music-lyrics-import-confirm">确认导入</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 音乐播放器背景设置面板 -->
-        <div id="music-bg-panel" class="music-bg-panel" aria-hidden="true">
-            <div class="music-bg-panel-header">
-                <button type="button" class="music-search-back" id="music-bg-panel-back" aria-label="返回">‹</button>
-                <h2 class="music-search-title">更换背景</h2>
-            </div>
-            <div class="music-bg-panel-body">
-                <div class="music-bg-preview" id="music-bg-preview">
-                    <span class="music-bg-preview-text" id="music-bg-preview-text">当前背景预览</span>
-                </div>
-                <div class="music-bg-actions">
-                    <button type="button" class="music-bg-action-btn" id="music-bg-local-btn">本地上传</button>
-                    <button type="button" class="music-bg-action-btn" id="music-bg-url-btn">输入 URL</button>
-                    <button type="button" class="music-bg-action-btn music-bg-reset-btn" id="music-bg-reset-btn">恢复默认</button>
-                </div>
-                <div class="music-bg-url-row" id="music-bg-url-row">
-                    <input type="text" class="music-url-input" id="music-bg-url-input" placeholder="输入背景图片链接 (http/https)">
-                    <button type="button" class="music-url-apply-btn" id="music-bg-url-apply">使用</button>
-                </div>
-                <input type="file" id="music-bg-file-input" accept="image/*" hidden>
-                <div class="music-bg-option">
-                    <label class="music-bg-option-label">
-                        <span>覆盖胶片（隐藏黑胶外圈，只保留封面）</span>
-                        <input type="checkbox" id="music-bg-cover-vinyl">
-                        <span class="music-bg-toggle-slider"></span>
-                    </label>
-                </div>
-            </div>
-        </div>
-        <div id="music-bg-backdrop" class="music-queue-backdrop" aria-hidden="true"></div>
-
-        <!-- 在线搜索音乐（由选择音频来源 -> 在线搜索 进入） -->
-        <div id="music-search-panel" class="music-search-panel" aria-hidden="true">
-            <div class="music-search-header">
-                <button type="button" class="music-search-back" id="music-search-back" aria-label="返回">‹</button>
-                <h2 class="music-search-title">在线搜索</h2>
-            </div>
-            <div class="music-search-form">
-                <input type="text" id="music-search-input" class="music-search-input" placeholder="歌曲名、歌手名">
-                <select id="music-search-api" class="music-search-api">
-                    <option value="meting1">多平台 · 推荐</option>
-                    <option value="meting2">多平台 · 备用</option>
-                    <option value="meting3">网易 & QQ</option>
-                </select>
-                <button type="button" id="music-search-btn" class="music-search-btn">搜索</button>
-                <button type="button" id="music-search-multiselect-btn" class="music-search-btn music-search-multiselect-btn" style="display:none;">多选</button>
-            </div>
-            <div class="music-search-result-toolbar" id="music-search-result-toolbar" style="display:none;">
-                <button type="button" class="music-queue-multiselect-btn" id="music-search-batch-add-btn">批量添加</button>
-                <button type="button" class="music-queue-cancel-select" id="music-search-cancel-select">取消多选</button>
-            </div>
-            <div id="music-search-loading" class="music-search-loading" style="display:none;">正在搜索…</div>
-            <ul id="music-search-results" class="music-search-results"></ul>
-        </div>
-        <div id="music-search-backdrop" class="music-queue-backdrop" aria-hidden="true"></div>
-
-        <!-- 播放列表面板（歌单分类 + 多选移动） -->
-        <div id="music-queue-panel" class="music-queue-panel" aria-hidden="true">
-            <div class="music-queue-header">
-                <h2 class="music-queue-title">播放列表</h2>
-                <button type="button" class="music-queue-close" id="music-queue-close" aria-label="关闭">×</button>
-            </div>
-            <div class="music-queue-tabs-wrap">
-                <div class="music-queue-tabs" id="music-queue-tabs"></div>
-                <button type="button" class="music-queue-add-cat" id="music-queue-add-cat" title="添加分类">+ 分类</button>
-            </div>
-            <div class="music-queue-toolbar">
-                <button type="button" class="music-queue-multiselect-btn" id="music-queue-multiselect-btn">多选</button>
-                <button type="button" class="music-queue-move-btn" id="music-queue-move-btn" style="display:none;">移动到...</button>
-                <button type="button" class="music-queue-delete-btn" id="music-queue-delete-btn" style="display:none;">删除</button>
-                <button type="button" class="music-queue-clean-btn" id="music-queue-clean-btn" title="清理无法播放的歌曲">清理无效</button>
-                <button type="button" class="music-queue-cancel-select" id="music-queue-cancel-select" style="display:none;">取消</button>
-            </div>
-            <div class="music-queue-list-wrap">
-                <ul class="music-queue-list" id="music-queue-list"></ul>
-                <p class="music-queue-empty" id="music-queue-empty">暂无歌曲，从「点击选择音频」添加</p>
-            </div>
-        </div>
-        <div id="music-queue-backdrop" class="music-queue-backdrop" aria-hidden="true"></div>
-
-        <!-- 清理无效歌曲弹窗 -->
-        <div id="music-clean-modal" class="music-clean-modal-overlay">
-            <div class="music-clean-modal">
-                <div class="music-clean-modal-header">
-                    <h3 class="music-clean-modal-title">清理结果</h3>
-                    <button type="button" class="music-clean-modal-close" id="music-clean-modal-close">×</button>
-                </div>
-                <div class="music-clean-modal-body" id="music-clean-modal-body"></div>
-                <div class="music-clean-modal-footer">
-                    <button type="button" class="music-clean-cancel-btn" id="music-clean-close-btn">关闭</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 移动到分类弹窗 -->
-        <div id="music-move-sheet" class="action-sheet-overlay" style="display:none;">
-            <div class="action-sheet music-source-sheet">
-                <div class="action-sheet-title">移动到分类</div>
-                <div id="music-move-category-list" class="music-move-category-list"></div>
-                <button type="button" class="action-sheet-button music-sheet-cancel" id="music-move-cancel">取消</button>
-            </div>
-        </div>
-        <!-- 添加分类弹窗 -->
-        <div id="music-add-category-modal" class="modal-overlay" style="display:none;">
-            <div class="modal-window">
-                <h3>新建歌单分类</h3>
-                <div class="form-group">
-                    <label>分类名称</label>
-                    <input type="text" id="music-new-category-name" placeholder="例如：收藏、学习">
-                </div>
-                <div style="display:flex;gap:10px;margin-top:16px;">
-                    <button type="button" class="btn btn-primary" id="music-add-category-confirm">确定</button>
-                    <button type="button" class="btn btn-neutral" id="music-add-category-cancel">取消</button>
-                </div>
-            </div>
-        </div>
-
         <!-- 新增：管理菜单 (点击右上角菜单键出现) -->
         <div id="sticker-menu-actionsheet" class="action-sheet-overlay">
             <div class="action-sheet">
@@ -1843,7 +1565,118 @@
                         </div>
                     </div>
 
-                    <!-- 副API 2: 后台活动专用 -->
+                    <!-- 副API 2: 向量记忆 Embedding -->
+                    <div class="kkt-group collapsible-section" style="margin-top: 30px; padding-top: 0; border-top: 2px solid #eee;">
+                        <div class="collapsible-header" style="padding: 15px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="this.parentElement.classList.toggle('open')">
+                            <div>
+                                <h3 style="margin: 0; font-size: 16px; color: var(--primary-color);">向量记忆 API（可选）</h3>
+                                <p style="font-size: 12px; color: #999; margin: 5px 0 0;">用于向量化记忆和语义检索。留空则回退到总结 API 或主 API。</p>
+                            </div>
+                            <span class="collapsible-arrow">▼</span>
+                        </div>
+                        
+                        <div class="collapsible-content">
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">服务商</div>
+                                <div class="kkt-item-control">
+                                    <select id="vector-api-provider"
+                                        style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                        <option value="newapi">NewAPI (自定义)</option>
+                                        <option value="deepseek">DeepSeek</option>
+                                        <option value="claude">Claude</option>
+                                        <option value="gemini">Gemini</option>
+                                    </select>
+                                    <span class="kkt-arrow">›</span>
+                                </div>
+                            </div>
+                            
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">API 地址</div>
+                                <div class="kkt-item-control">
+                                    <input type="text" id="vector-api-url" autocomplete="off"
+                                        placeholder="https://..."
+                                        style="text-align:right; border:none; background:transparent; width: 100%;">
+                                </div>
+                            </div>
+                            
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">密钥 (Key)</div>
+                                <div class="kkt-item-control">
+                                    <input type="password" id="vector-api-key" autocomplete="new-password"
+                                        placeholder="sk-..."
+                                        style="text-align:right; border:none; background:transparent; width: 100%;">
+                                </div>
+                            </div>
+                            
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">模型列表</div>
+                                <div class="kkt-item-control">
+                                    <button type="button" class="btn btn-small btn-secondary" id="vector-fetch-models-btn"
+                                        style="margin:0; padding: 4px 8px;">
+                                        <span class="btn-text">拉取</span>
+                                        <div class="spinner"></div>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">选择模型</div>
+                                <div class="kkt-item-control">
+                                    <select id="vector-api-model"
+                                        style="border:none; background:transparent; text-align:right; direction: rtl; max-width: 180px; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                        <option value="">请先拉取</option>
+                                    </select>
+                                    <span class="kkt-arrow">›</span>
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary" id="vector-api-save-btn"
+                                style="margin-top: 15px; width: 100%;">
+                                <span class="btn-text">保存向量记忆API设置</span>
+                                <div class="spinner"></div>
+                            </button>
+                            
+                            <div class="api-presets-embedded" style="margin-top:20px;">
+                                <div style="margin-bottom: 10px;">
+                                    <h3 style="margin: 0; font-size: 14px; color: var(--primary-color);">向量记忆API预设管理</h3>
+                                    <p style="font-size: 11px; color: #999; margin: 3px 0 0;">管理 Embedding API 配置预设</p>
+                                </div>
+                                <div id="vector-api-presets-control"
+                                    style="padding:12px; border-radius:8px; background: #f5f5f5; border: 1px solid #eee;">
+                                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                        <label style="min-width:40px; color:#666; font-size: 14px;">预设</label>
+                                        <select id="vector-api-preset-select"
+                                            style="flex:1; padding:6px; border-radius:6px; border:1px solid #ddd;">
+                                            <option value="">— 选择 —</option>
+                                        </select>
+                                        <button id="vector-api-apply-preset" class="btn btn-primary btn-small"
+                                            style="padding: 6px 12px;">应用</button>
+                                    </div>
+                                    <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
+                                        <button id="vector-api-save-preset" class="btn btn-small" style="flex: 1;">另存为</button>
+                                        <button id="vector-api-manage-presets" class="btn btn-small" style="flex: 1;">管理</button>
+                                        <button id="vector-api-import-presets" class="btn btn-small" style="flex: 1;">导入</button>
+                                        <button id="vector-api-export-presets" class="btn btn-small" style="flex: 1;">导出</button>
+                                    </div>
+                                </div>
+                                <div id="vector-api-presets-modal"
+                                    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:9999;align-items:center;justify-content:center;">
+                                    <div
+                                        style="width:640px;max-width:94%;background:var(--panel-bg,#fff);padding:16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);">
+                                        <h3 style="margin:0 0 12px 0;">向量记忆API预设管理</h3>
+                                        <div id="vector-api-presets-list"
+                                            style="max-height:360px;overflow:auto;border:1px solid #f0f0f0;padding:8px;border-radius:6px;">
+                                        </div>
+                                        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+                                            <button id="vector-api-close-modal" class="btn btn-primary">关闭</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 副API 3: 后台活动专用 -->
                     <div class="kkt-group collapsible-section" style="margin-top: 30px; padding-top: 0; border-top: 2px solid #eee;">
                         <div class="collapsible-header" style="padding: 15px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="this.parentElement.classList.toggle('open')">
                             <div>
@@ -2450,6 +2283,168 @@
                         </div>
                     </div>
 
+                    <!-- 生图引擎选择 -->
+                    <div class="kkt-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
+                        <div style="margin-bottom: 15px;">
+                            <h3 style="margin: 0; font-size: 16px; color: var(--primary-color);">生图引擎选择</h3>
+                            <p style="font-size: 12px; color: #999; margin: 5px 0 0;">选择全局使用的 AI 图像生成引擎</p>
+                        </div>
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">当前生图引擎</div>
+                            <div class="kkt-item-control">
+                                <select id="image-generation-engine"
+                                    style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                    <option value="novelai" selected>NovelAI</option>
+                                    <option value="gpt">GPT (DALL-E等格式)</option>
+                                </select>
+                                <span class="kkt-arrow">›</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GPT 生图 API 配置 -->
+                    <div class="kkt-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
+                        <div style="margin-bottom: 15px;">
+                            <h3 style="margin: 0; font-size: 16px; color: var(--primary-color);">GPT 生图 API</h3>
+                            <p style="font-size: 12px; color: #999; margin: 5px 0 0;">兼容 DALL-E 3 格式及各种第三方生图接口</p>
+                        </div>
+
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">API 地址 (Base URL)</div>
+                            <div class="kkt-item-control">
+                                <input type="text" id="gpt-image-url" autocomplete="off"
+                                    placeholder="https://api.example.com"
+                                    style="text-align:right; border:none; background:transparent; width: 100%;">
+                            </div>
+                        </div>
+
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">密钥 (Key)</div>
+                            <div class="kkt-item-control">
+                                <input type="password" id="gpt-image-key" autocomplete="new-password"
+                                    placeholder="sk-..."
+                                    style="text-align:right; border:none; background:transparent; width: 100%;">
+                            </div>
+                        </div>
+
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">模型列表</div>
+                            <div class="kkt-item-control">
+                                <button type="button" class="btn btn-small btn-secondary" id="gpt-image-fetch-models-btn"
+                                    style="margin:0; padding: 4px 8px;">
+                                    <span class="btn-text">拉取</span>
+                                    <div class="spinner"></div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">选择模型</div>
+                            <div class="kkt-item-control" style="flex:1;">
+                                <select id="gpt-image-model-select"
+                                    style="width:100%; border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                    <option value="">请先拉取</option>
+                                </select>
+                                <span class="kkt-arrow">›</span>
+                            </div>
+                        </div>
+
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">模型名</div>
+                            <div class="kkt-item-control">
+                                <input type="text" id="gpt-image-model" autocomplete="off"
+                                    placeholder="如 dall-e-3 (可手动输入)"
+                                    style="text-align:right; border:none; background:transparent; width: 100%;">
+                            </div>
+                        </div>
+
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">图片尺寸</div>
+                            <div class="kkt-item-control">
+                                <select id="gpt-image-size"
+                                    style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
+                                    <option value="1024x1024">1024x1024</option>
+                                    <option value="1024x1792">1024x1792 (竖版)</option>
+                                    <option value="1792x1024">1792x1024 (横版)</option>
+                                    <option value="512x512">512x512</option>
+                                </select>
+                                <span class="kkt-arrow">›</span>
+                            </div>
+                        </div>
+
+                        <div class="kkt-item" style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <div class="kkt-item-label">系统附加词（正向风格）</div>
+                            </div>
+                            <textarea id="gpt-image-system-prompt" rows="2" placeholder="会自动添加到提示词前，如：anime style, masterpiece"
+                                style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 8px; resize: vertical; font-size: 13px; box-sizing: border-box;"></textarea>
+                        </div>
+
+                        <div class="kkt-item" style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <div class="kkt-item-label">负面提示词</div>
+                            </div>
+                            <textarea id="gpt-image-negative-prompt" rows="2" placeholder="如接口支持，则通过 --no 拼接在末尾，如：ugly, bad anatomy"
+                                style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 8px; resize: vertical; font-size: 13px; box-sizing: border-box;"></textarea>
+                        </div>
+
+                        <button type="button" class="btn btn-primary" id="gpt-image-save-btn"
+                            style="margin-top: 10px; width: 100%;">
+                            <span class="btn-text">保存 GPT 生图设置</span>
+                            <div class="spinner"></div>
+                        </button>
+
+                        <button type="button" class="btn btn-secondary" id="gpt-image-test-btn"
+                            style="margin-top: 8px; width: 100%;">
+                            <span class="btn-text">🎨 测试 GPT 生图</span>
+                            <div class="spinner"></div>
+                        </button>
+
+                        <!-- GPT 测试结果预览 -->
+                        <div id="gpt-image-test-preview" style="display:none; margin-top: 15px; text-align: center;">
+                            <img id="gpt-image-test-image" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);" />
+                        </div>
+
+                        <!-- GPT 生图预设管理 -->
+                        <div class="api-presets-embedded" style="margin-top:20px;">
+                            <div style="margin-bottom: 10px;">
+                                <h3 style="margin: 0; font-size: 14px; color: var(--primary-color);">GPT 生图预设管理</h3>
+                                <p style="font-size: 11px; color: #999; margin: 3px 0 0;">管理 GPT 生图配置预设</p>
+                            </div>
+                            <div id="gpt-image-presets-control"
+                                style="padding:12px; border-radius:8px; background: #f5f5f5; border: 1px solid #eee;">
+                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                    <label style="min-width:40px; color:#666; font-size: 14px;">预设</label>
+                                    <select id="gpt-image-preset-select"
+                                        style="flex:1; padding:6px; border-radius:6px; border:1px solid #ddd;">
+                                        <option value="">— 选择 —</option>
+                                    </select>
+                                    <button type="button" id="gpt-image-apply-preset" class="btn btn-primary btn-small"
+                                        style="padding: 6px 12px;">应用</button>
+                                </div>
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
+                                    <button type="button" id="gpt-image-save-preset" class="btn btn-small" style="flex: 1;">另存为</button>
+                                    <button type="button" id="gpt-image-manage-presets" class="btn btn-small" style="flex: 1;">管理</button>
+                                    <button type="button" id="gpt-image-import-presets" class="btn btn-small" style="flex: 1;">导入</button>
+                                    <button type="button" id="gpt-image-export-presets" class="btn btn-small" style="flex: 1;">导出</button>
+                                </div>
+                            </div>
+                            <div id="gpt-image-presets-modal"
+                                style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:9999;align-items:center;justify-content:center;">
+                                <div
+                                    style="width:640px;max-width:94%;background:var(--panel-bg,#fff);padding:16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);">
+                                    <h3 style="margin:0 0 12px 0;">GPT 生图预设管理</h3>
+                                    <div id="gpt-image-presets-list"
+                                        style="max-height:360px;overflow:auto;border:1px solid #f0f0f0;padding:8px;border-radius:6px;">
+                                    </div>
+                                    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+                                        <button type="button" id="gpt-image-close-modal" class="btn btn-primary">关闭</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- NovelAI 生图 API 配置 -->
                     <div class="kkt-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
                         <div style="margin-bottom: 15px;">
@@ -2472,6 +2467,25 @@
                             <div class="kkt-item-control">
                                 <input type="password" id="novelai-token" autocomplete="new-password"
                                     placeholder="pst-..."
+                                    style="text-align:right; border:none; background:transparent; width: 100%;">
+                            </div>
+                        </div>
+
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">自定义 API 地址</div>
+                            <div class="kkt-item-control">
+                                <label class="kkt-switch">
+                                    <input type="checkbox" id="novelai-custom-url-enabled">
+                                    <span class="kkt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="kkt-item" id="novelai-custom-url-container" style="display: none;">
+                            <div class="kkt-item-label">API 地址</div>
+                            <div class="kkt-item-control">
+                                <input type="text" id="novelai-custom-url" autocomplete="off"
+                                    placeholder="https://..."
                                     style="text-align:right; border:none; background:transparent; width: 100%;">
                             </div>
                         </div>
@@ -2530,6 +2544,45 @@
                         <div id="novelai-test-preview" style="display:none; margin-top: 15px; text-align: center;">
                             <img id="novelai-test-image" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);" />
                         </div>
+
+                        <!-- NovelAI 生图预设管理 -->
+                        <div class="api-presets-embedded" style="margin-top:20px;">
+                            <div style="margin-bottom: 10px;">
+                                <h3 style="margin: 0; font-size: 14px; color: var(--primary-color);">NovelAI 生图预设管理</h3>
+                                <p style="font-size: 11px; color: #999; margin: 3px 0 0;">管理 NovelAI 接口及参数预设</p>
+                            </div>
+                            <div id="novelai-presets-control"
+                                style="padding:12px; border-radius:8px; background: #f5f5f5; border: 1px solid #eee;">
+                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                    <label style="min-width:40px; color:#666; font-size: 14px;">预设</label>
+                                    <select id="novelai-preset-select"
+                                        style="flex:1; padding:6px; border-radius:6px; border:1px solid #ddd;">
+                                        <option value="">— 选择 —</option>
+                                    </select>
+                                    <button type="button" id="novelai-apply-preset" class="btn btn-primary btn-small"
+                                        style="padding: 6px 12px;">应用</button>
+                                </div>
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
+                                    <button type="button" id="novelai-save-preset" class="btn btn-small" style="flex: 1;">另存为</button>
+                                    <button type="button" id="novelai-manage-presets" class="btn btn-small" style="flex: 1;">管理</button>
+                                    <button type="button" id="novelai-import-presets" class="btn btn-small" style="flex: 1;">导入</button>
+                                    <button type="button" id="novelai-export-presets" class="btn btn-small" style="flex: 1;">导出</button>
+                                </div>
+                            </div>
+                            <div id="novelai-presets-modal"
+                                style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:9999;align-items:center;justify-content:center;">
+                                <div
+                                    style="width:640px;max-width:94%;background:var(--panel-bg,#fff);padding:16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);">
+                                    <h3 style="margin:0 0 12px 0;">NovelAI 生图预设管理</h3>
+                                    <div id="novelai-presets-list"
+                                        style="max-height:360px;overflow:auto;border:1px solid #f0f0f0;padding:8px;border-radius:6px;">
+                                    </div>
+                                    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+                                        <button type="button" id="novelai-close-modal" class="btn btn-primary">关闭</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- 角色 TTS 配置 (独立保存) -->
@@ -2555,7 +2608,6 @@
                                 <select id="tts-provider"
                                     style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
                                     <option value="minimax" selected>Minimax (海螺)</option>
-                                    <option value="volcengine">Volcengine (豆包)</option>
                                 </select>
                                 <span class="kkt-arrow">›</span>
                             </div>
@@ -2612,43 +2664,6 @@
                             </div>
                         </div>
 
-                        <!-- Volcengine TTS 专属配置 -->
-                        <div id="volcengine-tts-config-wrap" style="display: none;">
-                            <div style="padding: 10px 15px; margin-bottom: 10px; background: #fff3e0; border-radius: 8px; border: 1px solid #ffe0b2; display: flex; justify-content: space-between; align-items: center;">
-                                <div style="font-size: 13px; color: #e65100;">配置遇到问题？</div>
-                                <button type="button" id="volcengine-tts-tutorial-btn" style="background: none; border: none; color: #f57c00; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 0;">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
-                                    查看接入教程
-                                </button>
-                            </div>
-                            <div class="kkt-item">
-                                <div class="kkt-item-label">App ID</div>
-                                <div class="kkt-item-control">
-                                    <input type="text" id="volcengine-app-id" autocomplete="off"
-                                        placeholder="输入 App ID"
-                                        style="text-align:right; border:none; background:transparent; width: 100%;">
-                                </div>
-                            </div>
-                            
-                            <div class="kkt-item">
-                                <div class="kkt-item-label">Access Token</div>
-                                <div class="kkt-item-control">
-                                    <input type="password" id="volcengine-access-token" autocomplete="new-password"
-                                        placeholder="输入 Access Token (Bearer)"
-                                        style="text-align:right; border:none; background:transparent; width: 100%;">
-                                </div>
-                            </div>
-                            
-                            <div class="kkt-item">
-                                <div class="kkt-item-label">Cluster (集群)</div>
-                                <div class="kkt-item-control">
-                                    <input type="text" id="volcengine-cluster" autocomplete="off"
-                                        placeholder="如 volcano_tts" value="volcano_tts"
-                                        style="text-align:right; border:none; background:transparent; width: 100%;">
-                                </div>
-                            </div>
-                        </div>
-                        
                         <div style="display: flex; gap: 10px; margin-top: 15px;">
                             <button type="button" class="btn btn-primary" id="save-minimax-tts-btn"
                                 style="flex: 1;">
@@ -2697,13 +2712,17 @@
                     </div>
 
                     <!-- 用户 TTS 配置 (独立于角色) -->
-                    <div class="kkt-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
-                        <div style="margin-bottom: 15px;">
-                            <h3 style="margin: 0; font-size: 16px; color: var(--primary-color);">用户 TTS 配置</h3>
-                            <p style="font-size: 12px; color: #999; margin: 5px 0 0;">用户语音合成，用于播放用户消息；不启用则不显示聊天中的用户音色设置</p>
+                    <div class="kkt-group collapsible-section" style="margin-top: 30px; padding-top: 0; border-top: 2px solid #eee;">
+                        <div class="collapsible-header" style="padding: 15px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="this.parentElement.classList.toggle('open')">
+                            <div>
+                                <h3 style="margin: 0; font-size: 16px; color: var(--primary-color);">用户 TTS 配置</h3>
+                                <p style="font-size: 12px; color: #999; margin: 5px 0 0;">用户语音合成，用于播放用户消息；不启用则不显示聊天中的用户音色设置</p>
+                            </div>
+                            <span class="collapsible-arrow">▼</span>
                         </div>
-                        <div class="kkt-item">
-                            <div class="kkt-item-label">启用用户 TTS</div>
+                        <div class="collapsible-content">
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">启用用户 TTS</div>
                             <div class="kkt-item-control">
                                 <label class="kkt-switch">
                                     <input type="checkbox" id="minimax-user-tts-enabled">
@@ -2717,7 +2736,6 @@
                                     <select id="user-tts-provider"
                                         style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
                                         <option value="minimax" selected>Minimax (海螺)</option>
-                                        <option value="volcengine">Volcengine (豆包)</option>
                                     </select>
                                     <span class="kkt-arrow">›</span>
                                 </div>
@@ -2770,42 +2788,8 @@
                                 </div>
                             </div>
                             
-                            <div id="volcengine-user-tts-config-wrap" style="display: none;">
-                                <div style="padding: 10px 15px; margin-bottom: 10px; background: #fff3e0; border-radius: 8px; border: 1px solid #ffe0b2; display: flex; justify-content: space-between; align-items: center;">
-                                    <div style="font-size: 13px; color: #e65100;">配置遇到问题？</div>
-                                    <button type="button" id="volcengine-user-tts-tutorial-btn" style="background: none; border: none; color: #f57c00; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 0;">
-                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
-                                        查看接入教程
-                                    </button>
-                                </div>
-                                <div class="kkt-item">
-                                    <div class="kkt-item-label">App ID</div>
-                                    <div class="kkt-item-control">
-                                        <input type="text" id="volcengine-user-app-id" autocomplete="off"
-                                            placeholder="输入 App ID"
-                                            style="text-align:right; border:none; background:transparent; width: 100%;">
-                                    </div>
-                                </div>
-                                
-                                <div class="kkt-item">
-                                    <div class="kkt-item-label">Access Token</div>
-                                    <div class="kkt-item-control">
-                                        <input type="password" id="volcengine-user-access-token" autocomplete="new-password"
-                                            placeholder="输入 Access Token (Bearer)"
-                                            style="text-align:right; border:none; background:transparent; width: 100%;">
-                                    </div>
-                                </div>
-                                
-                                <div class="kkt-item">
-                                    <div class="kkt-item-label">Cluster (集群)</div>
-                                    <div class="kkt-item-control">
-                                        <input type="text" id="volcengine-user-cluster" autocomplete="off"
-                                            placeholder="如 volcano_tts" value="volcano_tts"
-                                            style="text-align:right; border:none; background:transparent; width: 100%;">
-                                    </div>
-                                </div>
-                            </div>
-                        <p style="font-size: 12px; color: #999; margin-top: 10px;">保存请点击上方「保存 TTS 配置」按钮</p>
+                            <p style="font-size: 12px; color: #999; margin-top: 10px;">保存请点击上方「保存 TTS 配置」按钮</p>
+                        </div>
                     </div>
                 </div>
             </main>
@@ -2854,25 +2838,6 @@
                 </div>
                 <input type="file" id="global-call-wallpaper-file-input" accept="image/*" hidden>
 
-                <!-- 音乐播放器壁纸 -->
-                <div class="wallpaper-section-label" style="margin-top:28px;">音乐播放器壁纸</div>
-                <div class="wallpaper-preview" id="music-wallpaper-preview"><span id="music-wallpaper-preview-text">当前音乐壁纸预览</span></div>
-                <div class="wallpaper-music-actions">
-                    <button type="button" id="music-wallpaper-local-btn" class="btn btn-primary">本地上传</button>
-                    <button type="button" id="music-wallpaper-url-btn" class="btn btn-secondary">输入 URL</button>
-                    <button type="button" id="music-wallpaper-reset-btn" class="btn btn-secondary">恢复默认</button>
-                </div>
-                <div class="music-wallpaper-url-row" id="music-wallpaper-url-row" style="display:none;">
-                    <input type="text" id="music-wallpaper-url-input" class="form-group" placeholder="输入背景图片链接 (http/https)" style="flex:1;margin:0;">
-                    <button type="button" id="music-wallpaper-url-apply" class="btn btn-primary btn-small">使用</button>
-                </div>
-                <input type="file" id="music-wallpaper-file-input" accept="image/*" hidden>
-                <div class="wallpaper-music-option">
-                    <label class="wallpaper-music-option-label">
-                        <span>覆盖胶片（隐藏黑胶外圈，只保留封面）</span>
-                        <input type="checkbox" id="music-wallpaper-cover-vinyl">
-                    </label>
-                </div>
             </main>
         </div>
         <div id="customize-screen" class="screen">
@@ -4327,7 +4292,7 @@
                                     <div class="kkt-item-label">人设预设</div>
                                     <div class="kkt-item-control">
                                         <select id="mypersona-preset-select"
-                                            style="border:none; bg:transparent; width:100px;">
+                                            style="border:none; background:transparent; width:100px;">
                                             <option value="">选择</option>
                                         </select>
                                         <button type="button" id="mypersona-apply-btn" class="btn btn-small btn-primary"
@@ -4438,11 +4403,46 @@
                                         </label>
                                     </div>
                                 </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">长期记忆模式</div>
+                                    <div class="kkt-item-control">
+                                        <select id="setting-memory-mode" style="border:none; background:transparent; text-align:right;">
+                                            <option value="journal">日记模式</option>
+                                            <option value="table">表格模式</option>
+                                            <option value="vector">向量模式</option>
+                                        </select>
+                                        <span class="kkt-arrow">›</span>
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">向量记忆面板</div>
+                                    <div class="kkt-item-control">
+                                        <button type="button" id="setting-open-vector-memory-btn" class="btn btn-small btn-secondary" style="min-width: 132px;">打开向量记忆</button>
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">结构化记忆面板</div>
+                                    <div class="kkt-item-control">
+                                        <button type="button" id="setting-open-memory-table-btn" class="btn btn-small btn-secondary" style="min-width: 132px;">打开结构记忆</button>
+                                    </div>
+                                </div>
                                 <div class="kkt-item" id="setting-auto-journal-interval-container" style="display: none;">
                                     <div class="kkt-item-label">自动总结间隔(条)</div>
                                     <div class="kkt-item-control">
                                         <input type="number" id="setting-auto-journal-interval" value="100" min="10"
                                             style="width:60px; text-align:right; border:none; background: rgba(0,0,0,0.05); border-radius: 4px;">
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">自动总结补救</div>
+                                    <div class="kkt-item-control">
+                                        <button type="button" id="setting-auto-journal-retry-btn" class="btn btn-small btn-secondary" style="min-width: 132px;">重试自动总结</button>
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">总结到最新</div>
+                                    <div class="kkt-item-control">
+                                        <button type="button" id="setting-summarize-latest-btn" class="btn btn-small btn-secondary" style="min-width: 132px;">总结到最新</button>
                                     </div>
                                 </div>
 
@@ -6477,6 +6477,18 @@
                                 </div>
                             </div>
                             <div class="kkt-item">
+                                <div class="kkt-item-label">自动总结补救</div>
+                                <div class="kkt-item-control">
+                                    <button type="button" id="setting-group-auto-journal-retry-btn" class="btn btn-small btn-secondary" style="min-width: 132px;">重试自动总结</button>
+                                </div>
+                            </div>
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">总结到最新</div>
+                                <div class="kkt-item-control">
+                                    <button type="button" id="setting-group-summarize-latest-btn" class="btn btn-small btn-secondary" style="min-width: 132px;">总结到最新</button>
+                                </div>
+                            </div>
+                            <div class="kkt-item">
                                 <div class="kkt-item-label">关联世界书</div>
                                 <div class="kkt-item-control">
                                     <button type="button" id="link-group-world-book-btn"
@@ -6716,6 +6728,233 @@
                     <button class="btn btn-danger btn-small" id="journal-batch-delete-btn">删除</button>
                     <button class="btn btn-secondary btn-small" id="journal-batch-export-btn">导出</button>
                     <button class="btn btn-primary btn-small" id="journal-merge-btn">合并精简</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="memory-table-screen" class="screen">
+            <header class="app-header">
+                <button class="back-btn" data-target="chat-room-screen">‹</button>
+                <div class="title-container">
+                    <h1 class="title">结构记忆</h1>
+                </div>
+                <div class="action-btn-group">
+                    <button class="action-btn" id="memory-table-update-btn" title="更新表格">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
+                            <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+                            <polyline points="21 3 21 9 15 9"></polyline>
+                        </svg>
+                    </button>
+                    <button class="action-btn" id="memory-table-create-template-btn" title="新建模板">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </button>
+                </div>
+            </header>
+            <main class="content" style="padding-top: 14px;">
+                <div style="padding: 0 15px 14px;">
+                    <div style="background:#fff; border-radius:18px; padding:14px; box-shadow:0 6px 20px rgba(0,0,0,0.04); border:1px solid #f1f1f1;">
+                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+                            <div>
+                                <div id="memory-table-chat-summary" style="font-size:15px; font-weight:700; color:#333;">未选择角色</div>
+                                <div id="memory-table-mode-pill" style="display:inline-flex; margin-top:8px; padding:5px 10px; border-radius:999px; font-size:12px;">日记模式</div>
+                            </div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+                                <button type="button" class="btn btn-small btn-secondary" data-memory-mode-switch="journal">用日记</button>
+                                <button type="button" class="btn btn-small btn-primary" data-memory-mode-switch="table">用表格</button>
+                                <button type="button" class="btn btn-small btn-secondary" data-memory-mode-switch="vector">用向量</button>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:170px;">
+                                <input type="text" id="memory-table-search-input" placeholder="搜索字段、值、模板..." style="width:100%; border:1px solid #ececec; border-radius:12px; padding:10px 12px; font-size:14px;">
+                            </div>
+                            <select id="memory-table-sort-select" style="border:1px solid #ececec; border-radius:12px; padding:10px 12px; font-size:14px; background:#fff;">
+                                <option value="default">默认排序</option>
+                                <option value="name">按字段名</option>
+                                <option value="changed">最近变更优先</option>
+                                <option value="locked">已锁定优先</option>
+                            </select>
+                            <button type="button" id="memory-table-import-btn" class="btn btn-small btn-secondary">导入模板/记忆包</button>
+                            <button type="button" id="memory-table-export-all-btn" class="btn btn-small btn-secondary">导出模板</button>
+                            <button type="button" id="memory-table-export-package-btn" class="btn btn-small btn-secondary">导出记忆包</button>
+                            <input type="file" id="memory-table-import-input" accept=".json,application/json" style="display:none;">
+                        </div>
+                        <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                            <button type="button" id="memory-table-from-journal-btn" class="btn btn-small btn-secondary">日记转表格</button>
+                            <button type="button" id="memory-table-to-journal-btn" class="btn btn-small btn-secondary">表格转日记</button>
+                        </div>
+                        <div style="margin-top:12px; padding:12px; border:1px solid #ececec; border-radius:14px; background:#fafafa;">
+                            <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
+                                <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:#444;">
+                                    <span>表格自动更新</span>
+                                    <label class="kkt-switch">
+                                        <input type="checkbox" id="memory-table-auto-update-toggle">
+                                        <span class="kkt-slider"></span>
+                                    </label>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                    <span style="font-size:12px; color:#666;">每</span>
+                                    <input type="number" id="memory-table-auto-update-interval" min="10" step="1" value="100" style="width:88px; border:1px solid #ececec; border-radius:10px; padding:8px 10px; font-size:13px;">
+                                    <span style="font-size:12px; color:#666;">条消息自动更新一次</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                                <button type="button" id="memory-table-update-latest-btn" class="btn btn-small btn-secondary">更新到最新</button>
+                                <button type="button" id="memory-table-retry-btn" class="btn btn-small btn-secondary">重试补救</button>
+                            </div>
+                            <div id="memory-table-auto-update-status" style="font-size:12px; color:#888; margin-top:8px;">独立自动更新：未开启</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 0 15px 14px;">
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" class="memory-table-tab-btn btn btn-small btn-primary" data-tab="tables">当前表格</button>
+                        <button type="button" class="memory-table-tab-btn btn btn-small btn-secondary" data-tab="templates">模板库</button>
+                        <button type="button" class="memory-table-tab-btn btn btn-small btn-secondary" data-tab="history">历史</button>
+                    </div>
+                </div>
+                <div id="memory-table-content" style="padding: 0 15px 24px;"></div>
+                <div class="placeholder-text" id="memory-table-empty-state" style="display:none;">
+                    <p>还没有内容哦~</p>
+                </div>
+            </main>
+        </div>
+
+        <div id="vector-memory-screen" class="screen">
+            <header class="app-header">
+                <button class="back-btn" data-target="chat-room-screen">‹</button>
+                <div class="title-container">
+                    <h1 class="title">向量记忆</h1>
+                </div>
+                <div class="action-btn-group">
+                    <button class="action-btn" id="vector-memory-manual-btn" title="手动总结 / 手动录入">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                        </svg>
+                    </button>
+                    <button class="action-btn" id="vector-memory-create-template-btn" title="新建模板">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </button>
+                </div>
+            </header>
+            <main class="content" style="padding-top: 14px;">
+                <div style="padding: 0 15px 14px;">
+                    <div class="vector-memory-panel">
+                        <div class="vector-memory-panel-head">
+                            <div>
+                                <div id="vector-memory-chat-summary" style="font-size:15px; font-weight:700; color:#333;">未选择角色</div>
+                                <div id="vector-memory-mode-pill" class="vector-memory-pill">未选择角色</div>
+                            </div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+                                <button type="button" class="btn btn-small btn-secondary" data-vector-memory-mode-switch="journal">用日记</button>
+                                <button type="button" class="btn btn-small btn-secondary" data-vector-memory-mode-switch="table">用表格</button>
+                                <button type="button" class="btn btn-small btn-primary" data-vector-memory-mode-switch="vector">用向量</button>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+                            <button type="button" id="vector-memory-import-btn" class="btn btn-small btn-secondary">导入模板/记忆包</button>
+                            <button type="button" id="vector-memory-export-all-btn" class="btn btn-small btn-secondary">导出模板</button>
+                            <button type="button" id="vector-memory-export-package-btn" class="btn btn-small btn-secondary">导出记忆包</button>
+                            <input type="file" id="vector-memory-import-input" accept=".json,application/json" style="display:none;">
+                        </div>
+                        <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                            <button type="button" id="vector-memory-from-journal-btn" class="btn btn-small btn-secondary">日记转向量</button>
+                            <button type="button" id="vector-memory-from-table-btn" class="btn btn-small btn-secondary">表格转向量</button>
+                            <button type="button" id="vector-memory-to-journal-btn" class="btn btn-small btn-secondary">向量转日记</button>
+                            <button type="button" id="vector-memory-to-table-btn" class="btn btn-small btn-secondary">向量转表格</button>
+                        </div>
+                        <div class="vector-memory-auto-box">
+                            <div class="vector-memory-auto-row">
+                                <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:#444;">
+                                    <span>向量自动总结</span>
+                                    <label class="kkt-switch">
+                                        <input type="checkbox" id="vector-memory-auto-toggle">
+                                        <span class="kkt-slider"></span>
+                                    </label>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                    <span style="font-size:12px; color:#666;">每</span>
+                                    <input type="number" id="vector-memory-auto-interval" min="10" step="1" value="200" style="width:88px; border:1px solid #ececec; border-radius:10px; padding:8px 10px; font-size:13px;">
+                                    <span style="font-size:12px; color:#666;">条消息自动生成 1 条向量记忆</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                                <button type="button" id="vector-memory-latest-btn" class="btn btn-small btn-secondary">总结到最新</button>
+                                <button type="button" id="vector-memory-retry-btn" class="btn btn-small btn-secondary">重试补救</button>
+                            </div>
+                            <div id="vector-memory-auto-status" style="font-size:12px; color:#888; margin-top:8px;">独立自动总结：未启用</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 0 15px 14px;">
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" class="vector-memory-tab-btn btn btn-small btn-primary" data-tab="entries">当前记忆</button>
+                        <button type="button" class="vector-memory-tab-btn btn btn-small btn-secondary" data-tab="templates">模板库</button>
+                        <button type="button" class="vector-memory-tab-btn btn btn-small btn-secondary" data-tab="history">历史</button>
+                    </div>
+                </div>
+                <div id="vector-memory-content" style="padding: 0 15px 24px;"></div>
+            </main>
+        </div>
+
+        <div id="vector-manual-modal" class="modal-overlay">
+            <div class="modal-window" style="max-width: 680px;">
+                <h3>手动生成向量记忆</h3>
+                <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
+                    <label class="vector-memory-radio">
+                        <input type="radio" name="vector-manual-mode" value="recent" checked>
+                        <span>总结最近 <input type="number" id="vector-manual-recent-count" min="1" step="1" value="20" style="width:72px; margin:0 6px;"> 条消息</span>
+                    </label>
+                    <label class="vector-memory-radio">
+                        <input type="radio" name="vector-manual-mode" value="range">
+                        <span>总结指定范围：第 <input type="number" id="vector-manual-range-start" min="1" step="1" value="1" style="width:72px; margin:0 6px;"> 到 <input type="number" id="vector-manual-range-end" min="1" step="1" value="20" style="width:72px; margin:0 6px;"> 条</span>
+                    </label>
+                    <label class="vector-memory-radio" style="align-items:flex-start;">
+                        <input type="radio" name="vector-manual-mode" value="text" style="margin-top:5px;">
+                        <span style="flex:1;">
+                            手动录入
+                            <input type="text" id="vector-manual-title" placeholder="记忆标题（可选）" style="width:100%; margin-top:8px; border:1px solid #ececec; border-radius:10px; padding:10px 12px;">
+                            <textarea id="vector-manual-text" rows="6" placeholder="输入一条可长期检索的记忆内容..." style="width:100%; margin-top:8px; border:1px solid #ececec; border-radius:10px; padding:10px 12px; resize:vertical;"></textarea>
+                        </span>
+                    </label>
+                </div>
+                <div style="display:flex; gap:10px; margin-top: 16px;">
+                    <button type="button" id="vector-manual-cancel-btn" class="btn btn-secondary" style="flex:1;">取消</button>
+                    <button type="button" id="vector-manual-save-btn" class="btn btn-primary" style="flex:1;">生成</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="vector-template-modal" class="modal-overlay">
+            <div class="modal-window" style="max-width: 760px;">
+                <h3>编辑向量模板</h3>
+                <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
+                    <input type="text" id="vector-template-name" placeholder="模板名称" style="border:1px solid #ececec; border-radius:10px; padding:10px 12px;">
+                    <textarea id="vector-template-description" rows="2" placeholder="模板说明" style="border:1px solid #ececec; border-radius:10px; padding:10px 12px; resize:vertical;"></textarea>
+                    <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:10px;">
+                        <input type="number" id="vector-template-topk" min="1" step="1" value="5" placeholder="TopK" style="border:1px solid #ececec; border-radius:10px; padding:10px 12px;">
+                        <input type="number" id="vector-template-threshold" min="0" max="1" step="0.01" value="0.28" placeholder="相似度阈值" style="border:1px solid #ececec; border-radius:10px; padding:10px 12px;">
+                        <input type="number" id="vector-template-max-length" min="200" step="50" value="1200" placeholder="记忆最大长度" style="border:1px solid #ececec; border-radius:10px; padding:10px 12px;">
+                    </div>
+                    <div>
+                        <div style="font-size:13px; color:#666; margin-bottom:6px;">总结提示词</div>
+                        <textarea id="vector-template-summary-prompt" rows="10" style="width:100%; border:1px solid #ececec; border-radius:10px; padding:10px 12px; resize:vertical;"></textarea>
+                    </div>
+                    <div>
+                        <div style="font-size:13px; color:#666; margin-bottom:6px;">注入提示词</div>
+                        <textarea id="vector-template-inject-prompt" rows="8" style="width:100%; border:1px solid #ececec; border-radius:10px; padding:10px 12px; resize:vertical;"></textarea>
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px; margin-top: 16px;">
+                    <button type="button" id="vector-template-cancel-btn" class="btn btn-secondary" style="flex:1;">取消</button>
+                    <button type="button" id="vector-template-save-btn" class="btn btn-primary" style="flex:1;">保存模板</button>
                 </div>
             </div>
         </div>
@@ -7478,6 +7717,39 @@
                         </div>
                     </div>
 
+                    <!-- ===== 后台保活设置 ===== -->
+                    <div style="margin: 20px 0 15px; padding-top: 18px; border-top: 2px solid #f0f0f0; padding-left: 8px;">
+                        <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">后台保活设置</div>
+                        <p style="font-size: 11px; color: #999; margin: 5px 0 0;">维持应用在后台活跃，防止被系统挂起清理。</p>
+                    </div>
+
+                    <div class="kkt-group">
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">代码级保活 (WakeLock)</div>
+                            <div class="kkt-item-control">
+                                <label class="kkt-switch">
+                                    <input type="checkbox" id="keep-alive-code-enabled">
+                                    <span class="kkt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">音频播放保活</div>
+                            <div class="kkt-item-control">
+                                <label class="kkt-switch">
+                                    <input type="checkbox" id="keep-alive-audio-enabled">
+                                    <span class="kkt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">配置保活音频</div>
+                            <div class="kkt-item-control">
+                                <button type="button" id="open-keep-alive-audio-btn" class="btn btn-secondary btn-small" style="padding:6px 12px;">配置</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- ===== 系统通知设置 ===== -->
                     <div style="margin: 20px 0 15px; padding-top: 18px; border-top: 2px solid #f0f0f0; padding-left: 8px;">
                         <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">系统级通知</div>
@@ -7513,6 +7785,15 @@
                                 <div class="kkt-item-control">
                                     <label class="kkt-switch">
                                         <input type="checkbox" id="sysnotif-show-avatar">
+                                        <span class="kkt-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">当前聊天页内通知<p style="font-size:12px;color:#999;margin:4px 0 0;">开启后，即使在聊天详情页内也能收到系统通知</p></div>
+                                <div class="kkt-item-control">
+                                    <label class="kkt-switch">
+                                        <input type="checkbox" id="sysnotif-in-chat-enabled">
                                         <span class="kkt-slider"></span>
                                     </label>
                                 </div>
@@ -7627,6 +7908,8 @@
                         <div class="storage-console-panel-header">
                             <span class="storage-console-filter-label">全部</span>
                             <div style="display: flex; gap: 5px;">
+                                <button type="button" id="storage-console-zoom-in" class="storage-console-clear-btn" title="放大字体">A+</button>
+                                <button type="button" id="storage-console-zoom-out" class="storage-console-clear-btn" title="缩小字体">A-</button>
                                 <button type="button" id="storage-console-export-btn" class="storage-console-clear-btn">导出</button>
                                 <button type="button" id="storage-console-clear-btn" class="storage-console-clear-btn">清空</button>
                             </div>
@@ -8697,38 +8980,6 @@
 
         <!-- 节点系统相关弹窗与界面 -->
     <!-- 1. 节点系统入口选择弹窗 -->
-    <!-- 豆包 TTS 接入教程弹窗 -->
-    <div id="volcengine-tts-tutorial-modal" class="modal-overlay">
-        <div class="modal-window" style="max-height: 85vh; overflow-y: auto;">
-            <h3 style="margin-bottom: 15px; color: var(--primary-color);">豆包(火山引擎) 语音接入教程</h3>
-            <div style="font-size: 13px; color: #444; line-height: 1.6;">
-                <p style="margin-bottom: 10px;">目前火山引擎对于<b>语音合成(TTS)</b>有“旧版语音控制台”和“新版大模型控制台(方舟)”两种不同的接入方式。本APP目前使用的是<b>标准长文本/短文本在线语音合成</b>（非端到端大模型）。</p>
-                <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--primary-color);">
-                    <div style="font-weight: bold; margin-bottom: 5px;">步骤 1：开通服务并获取 App ID</div>
-                    <ol style="padding-left: 15px; margin: 0;">
-                        <li>访问火山引擎官网，进入 <a href="https://console.volcengine.com/speech/app" target="_blank" style="color: var(--primary-color); text-decoration: underline;">语音技术控制台 -> 应用管理</a></li>
-                        <li>点击“创建应用”，在应用详情页可找到 <b>AppID</b>。</li>
-                        <li>在“语音合成”能力中，选择并开通你需要的音色服务（例如：在线语音合成）。注意：必须<b>开通服务</b>否则会报鉴权错误！</li>
-                    </ol>
-                </div>
-                <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--primary-color);">
-                    <div style="font-weight: bold; margin-bottom: 5px;">步骤 2：获取 Access Token (API Key)</div>
-                    <ol style="padding-left: 15px; margin: 0;">
-                        <li>不要使用旧版的 Authorization Token 逻辑。</li>
-                        <li>进入右上角个人头像 -> <b>API Key 管理</b>。</li>
-                        <li>新建一个 API Key，将其复制填入设置页面的 <b>Access Token</b> 框中。</li>
-                    </ol>
-                </div>
-                <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary-color);">
-                    <div style="font-weight: bold; margin-bottom: 5px;">步骤 3：集群 (Cluster) 选择</div>
-                    <p style="margin: 0;">通常填写 <code>volcano_tts</code>。如果你使用的是特定的复刻音色，请在官方文档中查找你所用音色对应的特定 Cluster 名称填入。</p>
-                </div>
-            </div>
-            <button type="button" class="btn btn-primary" id="close-volcengine-tts-tutorial-btn" style="width: 100%; margin-top: 20px;">我知道了</button>
-        </div>
-    </div>
-
-    <!-- 1. 节点系统入口选择弹窗 -->
     <div id="node-system-entry-modal" class="modal-overlay">
         <div class="modal-window" style="max-width: 320px; padding: 24px 20px;">
             <h3 style="margin-top: 0; margin-bottom: 20px; text-align: center;">节点系统</h3>
@@ -9052,6 +9303,44 @@
         </div>
     </div>
 
+    <!-- 极简毛玻璃音频保活弹窗 -->
+    <div id="keep-alive-audio-modal" class="modal-overlay">
+        <div class="modal-window glass-modal" style="max-width: 320px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                <h3 style="margin:0;color:#333;">保活音频配置</h3>
+                <button type="button" id="close-keep-alive-audio-btn" style="background:none;border:none;font-size:20px;color:#999;cursor:pointer;">×</button>
+            </div>
+            
+            <div style="display:flex;flex-direction:column;gap:15px;">
+                <div style="text-align:center;">
+                    <div id="keep-alive-status-indicator" style="width:80px;height:80px;border-radius:50%;background:#f0f0f0;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 2px 5px rgba(0,0,0,0.05);transition:all 0.3s ease;">
+                        <svg id="keep-alive-icon-play" viewBox="0 0 24 24" width="40" height="40" fill="var(--primary-color)"><path d="M8 5v14l11-7z"/></svg>
+                        <svg id="keep-alive-icon-pause" viewBox="0 0 24 24" width="40" height="40" fill="var(--primary-color)" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </div>
+                    <div id="keep-alive-current-name" style="font-size:14px;color:#666;font-weight:600;min-height:20px;">未选择音频</div>
+                    <div style="font-size:11px;color:#aaa;margin-top:4px;">默认单曲循环播放</div>
+                </div>
+
+                <div class="form-group" style="margin:0;">
+                    <label style="font-size:12px;color:#888;">URL 链接上传</label>
+                    <div style="display:flex;gap:5px;">
+                        <input type="url" id="keep-alive-url-input" placeholder="输入音频链接(mp3/wav...)" style="flex:1;padding:8px;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;outline:none;background:rgba(255,255,255,0.7);">
+                        <button type="button" id="keep-alive-url-apply-btn" class="btn btn-primary btn-small">应用</button>
+                    </div>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <hr style="flex:1;border:none;border-top:1px dashed #ddd;">
+                    <span style="font-size:12px;color:#aaa;">或</span>
+                    <hr style="flex:1;border:none;border-top:1px dashed #ddd;">
+                </div>
+
+                <input type="file" id="keep-alive-file-input" accept="audio/*" style="display:none;">
+                <button type="button" id="keep-alive-local-upload-btn" class="btn btn-secondary" style="width:100%;">从本地选择文件</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 6. 节点记录查看 Screen -->
     <div id="node-record-screen" class="screen">
         <header class="app-header">
@@ -9080,6 +9369,10 @@
             style="background: transparent; box-shadow: none; width: 100%; height: 100%; max-width: none; padding: 0; display: flex; align-items: center; justify-content: center; position: relative;">
             <img id="full-image-view" src=""
                 style="max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.3s ease;">
+            <button id="download-full-image-btn"
+                style="position: absolute; bottom: 40px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);" title="下载图片">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </button>
             <button id="close-full-image-btn"
                 style="position: absolute; top: 40px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);">×</button>
         </div>
@@ -9188,6 +9481,49 @@
                 </div>
                 <button type="submit" class="btn btn-primary">生成</button>
             </form>
+        </div>
+    </div>
+
+    <div id="memory-template-editor-modal" class="modal-overlay">
+        <div class="modal-window" style="width:min(92vw, 720px); max-height:80vh; overflow:hidden; display:flex; flex-direction:column;">
+            <h3 style="margin:0 0 10px 0;">模板 JSON 编辑器</h3>
+            <p style="font-size:12px; color:#888; margin:0 0 12px 0; line-height:1.5;">
+                这里支持 100% 自定义模板。你可以直接编辑 JSON，字段类型支持 text / longtext / number / enum / tags / progress / date / boolean。
+            </p>
+            <textarea id="memory-template-json" style="width:100%; min-height:340px; flex:1; border:1px solid #ececec; border-radius:12px; padding:12px; font-size:13px; line-height:1.6; font-family:Consolas, monospace; resize:vertical;"></textarea>
+            <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+                <button type="button" id="memory-template-editor-starter-btn" class="btn btn-secondary">填入骨架模板</button>
+                <button type="button" id="memory-template-editor-cancel-btn" class="btn btn-neutral">取消</button>
+                <button type="button" id="memory-template-editor-save-btn" class="btn btn-primary">保存模板</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="memory-template-designer-modal" class="modal-overlay">
+        <div class="modal-window" style="width:min(94vw, 860px); max-height:84vh; overflow:hidden; display:flex; flex-direction:column;">
+            <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:12px;">
+                <div>
+                    <h3 id="memory-template-designer-title" style="margin:0;">模板设计器</h3>
+                    <p style="font-size:12px; color:#888; margin:6px 0 0; line-height:1.5;">这里是第二版可视化编辑器。你可以直接增删表格、字段、选项、规则，不需要手写 JSON。</p>
+                </div>
+                <button type="button" class="btn btn-small btn-secondary" data-action="designer-open-json">切到 JSON</button>
+            </div>
+            <div id="memory-template-designer-body" style="flex:1; overflow:auto; padding-right:4px;"></div>
+            <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-neutral" data-action="designer-cancel">取消</button>
+                <button type="button" class="btn btn-primary" data-action="designer-save">保存模板</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="memory-conversion-modal" class="modal-overlay">
+        <div class="modal-window" style="width:min(92vw, 760px); max-height:84vh; overflow:hidden; display:flex; flex-direction:column;">
+            <h3 id="memory-conversion-title" style="margin:0 0 12px;">互转</h3>
+            <div id="memory-conversion-body" style="flex:1; overflow:auto;"></div>
+            <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-neutral" data-conversion-action="cancel-conversion">取消</button>
+                <button type="button" class="btn btn-primary" data-conversion-action="confirm-conversion">开始转换</button>
+            </div>
         </div>
     </div>
 
@@ -9810,6 +10146,8 @@
     <script src="js/modules/worldbook.js"></script> <!-- 世界书设定集 -->
     <script src="js/modules/peek.js"></script> <!-- 偷看手机(相册/短信等) -->
     <script src="js/modules/journal.js"></script> <!-- 回忆日记生成 -->
+    <script src="js/modules/memory_table.js"></script> <!-- 结构化记忆 -->
+    <script src="js/modules/vector_memory.js"></script> <!-- 向量记忆 -->
     <script src="js/modules/reminder.js"></script> <!-- 提醒事项 -->
     <script src="js/modules/storage.js"></script> <!-- 存储空间分析图表 -->
     <script src="js/modules/widgets.js"></script> <!-- 桌面小组件设置 -->
@@ -9823,17 +10161,16 @@
     <script src="js/modules/live.js"></script> <!-- 直播间模块 -->
     <script src="js/modules/shop.js"></script> <!-- 商城模块 -->
     <script src="js/modules/cot_settings.js"></script> <!-- 思维链设置模块 -->
-    <script src="js/modules/volcengine_tts_service.js"></script> <!-- 豆包/火山 TTS 语音合成服务 -->
     <script src="js/modules/tts_service.js"></script> <!-- TTS 语音合成代理服务 -->
     <script src="js/modules/voice_selector.js"></script> <!-- 音色选择器 -->
     <script src="js/modules/tts_settings.js"></script> <!-- TTS 设置管理 -->
     <script src="js/modules/video_call.js"></script> <!-- 视频通话模块 -->
     <script src="js/modules/archive.js"></script> <!-- 记忆存档库模块 -->
     <script src="js/modules/piggy_bank.js"></script> <!-- 存钱罐（钱包）模块 -->
-    <script src="js/modules/music_player.js"></script> <!-- 音乐播放器（后台保活） -->
     <script src="js/modules/appearance_settings.js"></script> <!-- 外观设置：整体 UI 切换 -->
     <script src="js/modules/node_system.js"></script> <!-- 节点系统 -->
     <script src="js/modules/msg_version.js"></script> <!-- 消息版本管理 -->
+    <script src="js/modules/keep_alive.js"></script> <!-- 后台保活 -->
 
     <!-- [4. 程序入口] -->
     <script src="js/main.js"></script> <!-- 主入口：初始化(init)、全局事件监听 -->

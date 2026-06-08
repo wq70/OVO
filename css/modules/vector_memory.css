@@ -1,0 +1,113 @@
+.vector-memory-panel {
+    background: linear-gradient(180deg, #ffffff 0%, #faf8ff 100%);
+    border-radius: 20px;
+    padding: 14px;
+    box-shadow: 0 10px 28px rgba(91, 56, 214, 0.08);
+    border: 1px solid rgba(116, 87, 255, 0.08);
+}
+
+.vector-memory-panel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.vector-memory-pill {
+    display: inline-flex;
+    margin-top: 8px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+}
+
+.vector-memory-auto-box {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid #ece7ff;
+    border-radius: 14px;
+    background: rgba(116, 87, 255, 0.04);
+}
+
+.vector-memory-auto-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.vector-memory-card {
+    background: #fff;
+    border: 1px solid #eee9ff;
+    border-radius: 18px;
+    padding: 14px;
+    box-shadow: 0 8px 22px rgba(91, 56, 214, 0.05);
+    margin-bottom: 12px;
+}
+
+.vector-memory-card.is-hit {
+    border-color: rgba(116, 87, 255, 0.35);
+    box-shadow: 0 10px 24px rgba(91, 56, 214, 0.1);
+}
+
+.vector-memory-card-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.vector-memory-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #2c2248;
+}
+
+.vector-memory-card-meta {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    color: #8578a7;
+}
+
+.vector-memory-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.vector-memory-card-body {
+    margin-top: 12px;
+    color: #463e61;
+    white-space: pre-wrap;
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+.vector-memory-card-tags {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #7d719d;
+}
+
+.vector-memory-empty-card {
+    background: #fff;
+    border: 1px dashed #d8cdf6;
+    border-radius: 18px;
+    padding: 18px;
+    color: #72678f;
+    text-align: center;
+}
+
+.vector-memory-radio {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    color: #444;
+    font-size: 14px;
+}

@@ -90,6 +90,76 @@ body {
     color: var(--primary-color);
 }
 
+.app-confirm-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 10010;
+}
+
+.app-confirm-dialog-window {
+    width: min(88vw, 360px);
+    max-width: 360px;
+    padding: 20px 18px 16px;
+    outline: none;
+}
+
+.app-confirm-dialog-title {
+    margin-bottom: 12px;
+}
+
+.app-confirm-dialog-message {
+    white-space: pre-line;
+    line-height: 1.6;
+    color: inherit;
+    font-size: 14px;
+}
+
+.app-confirm-dialog-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 18px;
+    flex-wrap: wrap;
+}
+
+.app-confirm-dialog-btn {
+    border: none;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+}
+
+.app-confirm-dialog-btn:hover {
+    transform: translateY(-1px);
+}
+
+.app-confirm-dialog-btn.secondary {
+    background: #f3f4f6;
+    color: #444;
+}
+
+.app-confirm-dialog-btn.ghost {
+    background: #fff3f3;
+    color: #c62828;
+}
+
+.app-confirm-dialog-btn.primary {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+body.night-mode-active .app-confirm-dialog-btn.secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e0e0e0;
+}
+
+body.night-mode-active .app-confirm-dialog-btn.ghost {
+    background: rgba(255, 99, 99, 0.14);
+    color: #ffb4b4;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; transform: scale(0.95); }
     to { opacity: 1; transform: scale(1); }

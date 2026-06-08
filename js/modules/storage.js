@@ -159,8 +159,45 @@ function setupStorageAnalysisScreen() {
         var countWarn = document.getElementById('storage-console-count-warn');
         var countError = document.getElementById('storage-console-count-error');
         var filterLabel = document.querySelector('.storage-console-filter-label');
+        
+        var zoomInBtn = document.getElementById('storage-console-zoom-in');
+        var zoomOutBtn = document.getElementById('storage-console-zoom-out');
+        var zoomResetBtn = document.getElementById('storage-console-zoom-reset');
+        
         var currentFilter = 'all'; // 'all' | 'log' | 'warn' | 'error'
+        var currentFontSize = 12; // default font size
+
         if (!widget || !bar || !panel || !listEl) return;
+
+        function updateFontSize() {
+            listEl.style.fontSize = currentFontSize + 'px';
+        }
+
+        if (zoomInBtn) {
+            zoomInBtn.addEventListener('click', function() {
+                if (currentFontSize < 32) {
+                    currentFontSize += 2;
+                    updateFontSize();
+                }
+            });
+        }
+
+        if (zoomOutBtn) {
+            zoomOutBtn.addEventListener('click', function() {
+                if (currentFontSize > 8) {
+                    currentFontSize -= 2;
+                    updateFontSize();
+                }
+            });
+        }
+
+        if (zoomResetBtn) {
+            zoomResetBtn.addEventListener('click', function() {
+                currentFontSize = 12;
+                updateFontSize();
+            });
+        }
+
 
         function getFilteredLogs(logs) {
             if (currentFilter === 'all') return logs;
