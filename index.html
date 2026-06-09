@@ -2283,6 +2283,33 @@
                         </div>
                     </div>
 
+                    <!-- 全局生图超时设置 -->
+                    <div class="kkt-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
+                        <div class="kkt-item" style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div class="kkt-item-label">生图超时时间 (秒)</div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="number" id="global-image-gen-timeout" value="0" min="0" step="1" style="width:60px; text-align:right; border:none; background: rgba(0,0,0,0.05); border-radius: 4px; padding: 4px 8px;">
+                                    <span style="color:#666; font-size: 13px;">秒</span>
+                                </div>
+                            </div>
+                            <p style="font-size: 12px; color: #999; margin: 0;">设置生图的最长等待时间，超过该时间未生成将自动取消并报错。设为 0 表示不限制（一直等待）。</p>
+                        </div>
+                    </div>
+
+                    <!-- 全局自动压缩生图设置 -->
+                    <div class="kkt-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
+                        <div class="kkt-item">
+                            <div class="kkt-item-label">自动压缩生图<p style="font-size:12px;color:#999;margin:4px 0 0;">开启后，AI生成的图片将自动压缩以节省存储空间</p></div>
+                            <div class="kkt-item-control">
+                                <label class="kkt-switch">
+                                    <input type="checkbox" id="global-auto-compress-image" checked>
+                                    <span class="kkt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 生图引擎选择 -->
                     <div class="kkt-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
                         <div style="margin-bottom: 15px;">
@@ -5417,12 +5444,28 @@
                                 </div>
                                 <div class="kkt-item"
                                     style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                                        <div class="kkt-item-label">头像圆角</div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div class="kkt-item-label">头像圆角</div>
+                                            <button type="button" id="reset-avatar-radius-btn" class="btn btn-small btn-secondary" style="padding: 2px 8px; font-size: 12px; height: auto; min-height: auto; border-radius: 4px;">重置</button>
+                                        </div>
                                         <span id="setting-avatar-radius-value"
                                             style="color: var(--primary-color); font-weight: bold;">50%</span>
                                     </div>
                                     <input type="range" id="setting-avatar-radius" min="0" max="50" step="1" value="50"
+                                        style="width: 100%; accent-color: var(--primary-color);">
+                                </div>
+                                <div class="kkt-item"
+                                    style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div class="kkt-item-label">图片显示大小</div>
+                                            <button type="button" id="reset-chat-image-max-width-btn" class="btn btn-small btn-secondary" style="padding: 2px 8px; font-size: 12px; height: auto; min-height: auto; border-radius: 4px;">重置</button>
+                                        </div>
+                                        <span id="setting-chat-image-max-width-value"
+                                            style="color: var(--primary-color); font-weight: bold;">200px</span>
+                                    </div>
+                                    <input type="range" id="setting-chat-image-max-width" min="100" max="350" step="5" value="200"
                                         style="width: 100%; accent-color: var(--primary-color);">
                                 </div>
                             </div>
@@ -5757,7 +5800,7 @@
                             <!-- NovelAI 生图设置（模型/尺寸/画师串） -->
                             <div class="kkt-group" style="margin-top:15px;">
                                 <div style="margin-bottom: 10px; padding-left: 8px;">
-                                    <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">生图设置</div>
+                                    <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">NovelAI 专属生图设置</div>
                                     <p style="font-size: 11px; color: #999; margin: 3px 0 0;">需先在 API 设置中配置 NovelAI Token 并启用</p>
                                 </div>
 
@@ -5800,6 +5843,23 @@
                                         style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 8px; resize: vertical; font-size: 13px; box-sizing: border-box;"></textarea>
                                     <p style="font-size: 12px; color: #999; margin-top: 5px; margin-bottom: 0;">
                                         用于控制画风，多个画师用逗号分隔。如 <code>artist:aki99, artist:ciloranko</code></p>
+                                </div>
+                            </div>
+
+                            <!-- GPT 生图设置（画师串） -->
+                            <div class="kkt-group" style="margin-top:15px;">
+                                <div style="margin-bottom: 10px; padding-left: 8px;">
+                                    <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">GPT 专属生图设置</div>
+                                    <p style="font-size: 11px; color: #999; margin: 3px 0 0;">需先在 API 设置中启用 GPT 生图</p>
+                                </div>
+                                <div class="kkt-item" style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <div class="kkt-item-label">GPT 专属画师串（附加词）</div>
+                                    </div>
+                                    <textarea id="gpt-artist-prompt" rows="2" placeholder="输入GPT生图专属附加词，例如：anime style, masterpiece"
+                                        style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 8px; resize: vertical; font-size: 13px; box-sizing: border-box;"></textarea>
+                                    <p style="font-size: 12px; color: #999; margin-top: 5px; margin-bottom: 0;">
+                                        当全局生图引擎为 GPT 时，此内容将自动拼接到该角色的生图提示词中。</p>
                                 </div>
                             </div>
 
@@ -6563,13 +6623,29 @@
                             </div>
                             <div class="kkt-item"
                                 style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                                    <div class="kkt-item-label">头像圆角</div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="kkt-item-label">头像圆角</div>
+                                        <button type="button" id="reset-group-avatar-radius-btn" class="btn btn-small btn-secondary" style="padding: 2px 8px; font-size: 12px; height: auto; min-height: auto; border-radius: 4px;">重置</button>
+                                    </div>
                                     <span id="setting-group-avatar-radius-value"
                                         style="color: var(--primary-color); font-weight: bold;">50%</span>
                                 </div>
                                 <input type="range" id="setting-group-avatar-radius" min="0" max="50" step="1"
                                     value="50" style="width: 100%; accent-color: var(--primary-color);">
+                            </div>
+                            <div class="kkt-item"
+                                style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="kkt-item-label">图片显示大小</div>
+                                        <button type="button" id="reset-group-chat-image-max-width-btn" class="btn btn-small btn-secondary" style="padding: 2px 8px; font-size: 12px; height: auto; min-height: auto; border-radius: 4px;">重置</button>
+                                    </div>
+                                    <span id="setting-group-chat-image-max-width-value"
+                                        style="color: var(--primary-color); font-weight: bold;">200px</span>
+                                </div>
+                                <input type="range" id="setting-group-chat-image-max-width" min="100" max="350" step="5"
+                                    value="200" style="width: 100%; accent-color: var(--primary-color);">
                             </div>
                         </div>
 
@@ -7899,6 +7975,12 @@
                     <h2 id="storage-total-size"
                         style="margin: 4px 0 0 0; font-size: 24px; color: #333; font-weight: 600;">---</h2>
                 </div>
+                
+                <div style="text-align: center; margin-bottom: 10px;">
+                    <button id="compress-all-images-btn" class="btn btn-secondary" style="width: 100%;">一键压缩聊天图片（生图/原图）</button>
+                    <p style="font-size: 12px; color: #999; margin-top: 5px;">扫描所有聊天记录并压缩Base64图片，大幅释放空间</p>
+                </div>
+                
                 <div id="storage-details-list" style="width: 100%; overflow-y: auto;"></div>
                 <!-- 移动端控制台：点击展开查看日志/报错/警告 -->
                 <div id="storage-console-widget" class="storage-console-widget">
@@ -9391,12 +9473,56 @@
             style="background: transparent; box-shadow: none; width: 100%; height: 100%; max-width: none; padding: 0; display: flex; align-items: center; justify-content: center; position: relative;">
             <img id="full-image-view" src=""
                 style="max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.3s ease;">
-            <button id="download-full-image-btn"
-                style="position: absolute; bottom: 40px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);" title="下载图片">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            </button>
-            <button id="close-full-image-btn"
-                style="position: absolute; top: 40px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);">×</button>
+            
+            <div id="full-image-version-switcher" class="image-version-switcher" style="position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: none; align-items: center; background: rgba(0,0,0,0.6); border-radius: 12px; padding: 4px 10px; z-index: 5;">
+                <button id="full-image-prev-version-btn" style="background:none;border:none;color:#fff;font-size:16px;cursor:pointer;padding:2px 8px;">‹</button>
+                <span id="full-image-version-text" style="color:#fff;font-size:14px;margin:0 8px;">1 / 1</span>
+                <button id="full-image-next-version-btn" style="background:none;border:none;color:#fff;font-size:16px;cursor:pointer;padding:2px 8px;">›</button>
+            </div>
+
+            <div class="full-image-actions" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 15px;">
+                <button id="close-full-image-btn"
+                    style="background: rgba(255,255,255,0.2); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);" title="关闭">✕</button>
+                <button id="regen-full-image-btn"
+                    style="background: rgba(255,255,255,0.2); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px);" title="重新生成">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.92-10.26l5.58 2.69"/></svg>
+                </button>
+                <button id="edit-full-image-btn"
+                    style="background: rgba(255,255,255,0.2); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px);" title="编辑提示词">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+                <button id="logs-full-image-btn"
+                    style="background: rgba(255,255,255,0.2); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px);" title="查看报错/提示词">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </button>
+                <button id="download-full-image-btn"
+                    style="background: rgba(255,255,255,0.2); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);" title="下载图片">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Image Prompt Modal -->
+    <div id="edit-image-prompt-modal" class="modal-overlay" style="z-index: 20001;">
+        <div class="modal-window">
+            <h3>编辑生图提示词</h3>
+            <div class="form-group">
+                <textarea id="edit-image-prompt-textarea" rows="6" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; resize: vertical;"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button id="edit-image-prompt-cancel-btn" class="btn btn-neutral" style="flex: 1;">取消</button>
+                <button id="edit-image-prompt-confirm-btn" class="btn btn-primary" style="flex: 1;">保存并重新生成</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Log Modal -->
+    <div id="image-log-modal" class="modal-overlay" style="z-index: 20001;">
+        <div class="modal-window" style="background: #2b2b2b; color: #eee; max-width: 90%; width: 400px;">
+            <h3 style="color: #fff; margin-bottom: 15px;">生图信息</h3>
+            <div id="image-log-content" style="font-family: monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all; max-height: 50vh; overflow-y: auto; background: #1e1e1e; padding: 10px; border-radius: 8px; border: 1px solid #444;"></div>
+            <button id="close-image-log-btn" class="btn btn-primary" style="margin-top: 15px; width: 100%;">关闭</button>
         </div>
     </div>
 

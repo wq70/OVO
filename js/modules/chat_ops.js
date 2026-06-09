@@ -192,33 +192,11 @@ function handleMessageLongPress(messageWrapper, x, y) {
         menuItems.push({
             label: '重新生图',
             action: async () => {
-                // 从消息内容提取 prompt
-                const pvMatch = message.content.match(/\[(?:.+?)发来的照片\/视频[：:]([\s\S]+?)\]/);
-                if (!pvMatch) { showToast('无法提取图片描述'); return; }
-                const pvContent = pvMatch[1].trim();
-                const tagMatch = pvContent.match(/\{\{([\s\S]+?)\}\}/);
-                const naiPrompt = tagMatch ? tagMatch[1].trim() : pvContent;
-                if (!naiPrompt) { showToast('提示词为空'); return; }
-
-                try {
-                    showToast('🎨 正在重新生图...');
-                    const result = await generateImageDispatch(naiPrompt);
-                    if (result && result.imageUrl) {
-                        // 保存旧图到版本历史
-                        if (!message._imageVersions) message._imageVersions = [];
-                        message._imageVersions.push({
-                            imageUrl: message.novelAiImageUrl,
-                            savedAt: Date.now()
-                        });
-                        // 更新为新图
-                        message.novelAiImageUrl = result.imageUrl;
-                        await saveCurrentChat();
-                        renderMessages(false, true);
-                        showToast('✅ 生图完成');
-                    }
-                } catch (err) {
-                    console.error('[ChatOps] 重新生图失败:', err);
-                    showToast('❌ 生图失败: ' + err.message);
+                if (typeof window.retryImageGen === 'function') {
+                    showToast('🎨 已加入重新生成队列...');
+                    window.retryImageGen(message.id, currentChatId, currentChatType);
+                } else {
+                    showToast('❌ 生图组件未就绪');
                 }
             }
         });

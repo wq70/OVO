@@ -147,6 +147,141 @@ function setupStorageAnalysisScreen() {
 
     observer.observe(screen, { attributes: true, attributeFilter: ['class'] });
 
+    const compressAllBtn = document.getElementById('compress-all-images-btn');
+    if (compressAllBtn) {
+        compressAllBtn.addEventListener('click', async () => {
+            const confirmed = await showAppConfirmDialog({
+                title: '压缩所有聊天图片',
+                message: '此操作将遍历所有角色和群组的聊天记录，压缩其中包含的图片（包括你发送的图片和AI生成的图片）。压缩可以节省大量空间，但会稍微降低图片画质。这可能需要一些时间，确定要继续吗？',
+                confirmText: '开始压缩',
+                cancelText: '取消'
+            });
+
+            if (confirmed !== 'confirm') return;
+
+            showToast('开始压缩图片，请耐心等待...');
+            compressAllBtn.disabled = true;
+            compressAllBtn.textContent = '压缩中...';
+            
+            let compressedCount = 0;
+            let totalSavedBytes = 0;
+
+            const compressHistoryImages = async (history) => {
+                if (!history || !Array.isArray(history)) return;
+                for (const msg of history) {
+                    let changed = false;
+
+                    const compressIfBase64 = async (url) => {
+                        if (url && url.startsWith('data:image/')) {
+                            try {
+                                const originalSize = Math.round((url.length * 3) / 4);
+                                // 跳过小于 100KB 的图片，避免不必要的性能消耗和画质损失
+                                if (originalSize < 100 * 1024) return url;
+
+                                const res = await fetch(url);
+                                const blob = await res.blob();
+                                // 使用 utils.js 中的 compressImage，默认按 1024x1024 0.8质量压缩
+                                const compressedDataUrl = await compressImage(blob, { quality: 0.8, maxWidth: 1024, maxHeight: 1024 });
+                                
+                                const newSize = Math.round((compressedDataUrl.length * 3) / 4);
+                                if (newSize < originalSize) {
+                                    totalSavedBytes += (originalSize - newSize);
+                                    compressedCount++;
+                                    return compressedDataUrl;
+                                }
+                            } catch (e) {
+                                console.warn('Failed to compress an image:', e);
+                            }
+                        }
+                        return url;
+                    };
+
+                    if (msg.novelAiImageUrl) {
+                        const newUrl = await compressIfBase64(msg.novelAiImageUrl);
+                        if (newUrl !== msg.novelAiImageUrl) {
+                            msg.novelAiImageUrl = newUrl;
+                            changed = true;
+                        }
+                    }
+
+                    if (msg._imageVersions && Array.isArray(msg._imageVersions)) {
+                        for (let i = 0; i < msg._imageVersions.length; i++) {
+                            if (msg._imageVersions[i].imageUrl) {
+                                const newUrl = await compressIfBase64(msg._imageVersions[i].imageUrl);
+                                if (newUrl !== msg._imageVersions[i].imageUrl) {
+                                    msg._imageVersions[i].imageUrl = newUrl;
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+
+                    if (msg.content && typeof msg.content === 'string' && msg.content.includes('data:image/')) {
+                        const regex = /(data:image\/[^;"']+(?:;[^;"']+)*;base64,[A-Za-z0-9+/=]+)/g;
+                        let match;
+                        let newContent = msg.content;
+                        const promises = [];
+                        
+                        while ((match = regex.exec(msg.content)) !== null) {
+                            const originalDataUrl = match[1];
+                            promises.push((async () => {
+                                const newUrl = await compressIfBase64(originalDataUrl);
+                                if (newUrl !== originalDataUrl) {
+                                    newContent = newContent.replace(originalDataUrl, newUrl);
+                                    changed = true;
+                                }
+                            })());
+                        }
+                        
+                        if (promises.length > 0) {
+                            await Promise.all(promises);
+                            if (changed) {
+                                msg.content = newContent;
+                            }
+                        }
+                    }
+                }
+            };
+
+            try {
+                if (typeof db !== 'undefined') {
+                    if (db.characters) {
+                        for (const char of db.characters) {
+                            await compressHistoryImages(char.history);
+                        }
+                    }
+                    
+                    if (db.groups) {
+                        for (const group of db.groups) {
+                            await compressHistoryImages(group.history);
+                        }
+                    }
+
+                    if (typeof saveData === 'function') {
+                        saveData();
+                    }
+                }
+                
+                if (typeof dataStorage !== 'undefined') {
+                    const storageInfo = await dataStorage.getStorageInfo();
+                    if (storageInfo) {
+                        renderStorageChart(storageInfo, colorPalette);
+                        renderStorageDetails(storageInfo, colorPalette);
+                        updatePersistenceStatus();
+                    }
+                }
+
+                showToast(`压缩完成！共压缩 ${compressedCount} 张图片，节省了 ${formatBytes(totalSavedBytes)} 空间。`);
+            } catch (err) {
+                console.error('批量压缩图片时出错:', err);
+                showToast('压缩过程中出现错误。');
+            } finally {
+                compressAllBtn.disabled = false;
+                compressAllBtn.textContent = '一键压缩聊天图片';
+            }
+        });
+    }
+
     // 底部控制台：全部/日志/警告/报错 四类筛选（移动端友好）
     (function setupStorageConsoleWidget() {
         var widget = document.getElementById('storage-console-widget');

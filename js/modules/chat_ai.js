@@ -2138,13 +2138,13 @@ function getOnlineOutputFormats(character, worldBooksBefore, worldBooksAfter) {
     
     if (character.useRealGallery && character.gallery && character.gallery.length > 0) {
         if (_imgEnabled) {
-            photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{相册图片名称} 或 {中文描述}{{english, novelai, tags}}] (优先使用相册名称；若相册无匹配则填写中文描述，并在 {{ }} 内写英文 ${engine === 'gpt' ? 'DALL-E' : 'NovelAI'} 风格 tag。根据角色性别用1boy或1girl，包含外貌特征、服装、表情、动作、场景，不加质量词，不超过25个tag)`;
+            photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{相册图片名称} 或 {中文描述}{{english, ${engine === 'gpt' ? 'dalle' : 'novelai'}, tags}}] (优先使用相册名称；若相册无匹配则填写中文描述，并在 {{ }} 内写英文 ${engine === 'gpt' ? 'DALL-E' : 'NovelAI'} 风格 tag。根据角色性别用1boy或1girl，包含外貌特征、服装、表情、动作、场景，不加质量词，不超过25个tag)`;
         } else {
             photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{相册图片名称} 或 {文字描述}] (优先使用相册名称，若相册无匹配则填写照片/视频的详细文字描述)`;
         }
     } else {
         if (_imgEnabled) {
-            photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{中文描述}{{english, novelai, tags}}] (发图时必须在 {{ }} 内写英文 ${engine === 'gpt' ? 'DALL-E' : 'NovelAI'} 风格 tag。根据角色性别用1boy或1girl，包含外貌特征、服装、表情、动作、场景，不加质量词，不超过25个tag)`;
+            photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{中文描述}{{english, ${engine === 'gpt' ? 'dalle' : 'novelai'}, tags}}] (发图时必须在 {{ }} 内写英文 ${engine === 'gpt' ? 'DALL-E' : 'NovelAI'} 风格 tag。根据角色性别用1boy或1girl，包含外貌特征、服装、表情、动作、场景，不加质量词，不超过25个tag)`;
         } else {
             photoVideoFormat = `e) 照片/视频: [${character.realName}发来的照片/视频：{描述}]`;
         }

@@ -1154,7 +1154,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
         if (isRealPhoto) {
             bubbleElement = document.createElement('div');
             bubbleElement.className = 'image-bubble';
-            bubbleElement.innerHTML = `<img src="${realPhotoUrl}" alt="${pvContent}" onclick="openImageViewer(this.src)" style="cursor: zoom-in;">`;
+            bubbleElement.innerHTML = `<img src="${realPhotoUrl}" alt="${pvContent}" onclick="openImageViewer(this.src, '${message.id}')" style="cursor: zoom-in;">`;
         } else {
             // === 自动生图逻辑 (NovelAI 或 GPT) ===
             const engine = db.imageGenerationEngine || 'novelai';
@@ -1165,68 +1165,86 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
                 _imgEnabled = db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token;
             }
             
-            if (message.novelAiImageUrl) {
-                // 已有生成好的图片（即使生图已关闭也显示已生成的图片）
+            if (message.isNovelAiGenerating) {
+                // 后台生图进行中...
+                let bgStyle = '';
+                let bgOverlay = '';
+                let currentUrl = message.novelAiImageUrl;
+                if (message._imageVersions && message._currentImageIndex !== undefined) {
+                    if (message._currentImageIndex < message._imageVersions.length) {
+                        currentUrl = message._imageVersions[message._currentImageIndex].imageUrl;
+                    }
+                }
+                if (currentUrl) {
+                    bgStyle = `background-image: url('${currentUrl}'); background-size: cover; background-position: center;`;
+                    bgOverlay = `<div style="position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.7); backdrop-filter: blur(4px);"></div>`;
+                }
+
+                bubbleElement = document.createElement('div');
+                bubbleElement.className = 'image-bubble photo-bubble nai-generating';
+                bubbleElement.innerHTML = `
+                    <div class="nai-loading-card" style="width: 200px; height: 280px; border-radius: 12px; background: #f0f0f0; ${bgStyle} display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; overflow: hidden; position: relative;">
+                        ${bgOverlay}
+                        <div class="nai-loading-shimmer" style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); animation: nai-shimmer 1.5s infinite;"></div>
+                        <div style="width: 24px; height: 24px; border: 2.5px solid #ccc; border-top-color: #999; border-radius: 50%; animation: nai-spin 0.8s linear infinite; z-index: 1;"></div>
+                        <span style="font-size: 12px; color: ${currentUrl ? '#333' : '#999'}; font-weight: ${currentUrl ? 'bold' : 'normal'}; z-index: 1;">作画中...</span>
+                        <button class="btn btn-small btn-ghost nai-cancel-btn" style="z-index: 2; margin-top: 10px; padding: 4px 10px; font-size: 12px; border-radius: 12px; ${currentUrl ? 'background: rgba(0,0,0,0.5); color: #fff; border: none;' : ''}" onclick="window.cancelImageGen('${message.id}')">取消</button>
+                    </div>`;
+            } else if (message.novelAiImageUrl) {
+                // 已有生成好的图片
+                let currentUrl = message.novelAiImageUrl;
+                let versionsCount = (message._imageVersions ? message._imageVersions.length : 0) + 1;
+                let currentIdx = message._currentImageIndex !== undefined ? message._currentImageIndex : versionsCount - 1;
+                
+                if (message._imageVersions && currentIdx < message._imageVersions.length) {
+                    currentUrl = message._imageVersions[currentIdx].imageUrl;
+                }
+
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = 'image-bubble photo-bubble';
-                bubbleElement.innerHTML = `<img src="${message.novelAiImageUrl}" alt="${pvContent}" onclick="openImageViewer(this.src)" style="cursor: zoom-in; max-width: 280px; border-radius: 12px;">`;
+
+                bubbleElement.innerHTML = `
+                    <div style="position: relative; display: inline-block;">
+                        <img src="${currentUrl}" alt="${pvContent}" onclick="openImageViewer(this.src, '${message.id}')" style="cursor: zoom-in; max-width: 280px; border-radius: 12px; display: block;">
+                    </div>
+                `;
+            } else if (message.novelAiError) {
+                // 生图失败卡片
+                bubbleElement = document.createElement('div');
+                bubbleElement.className = 'pv-card';
+                const displayContent = pvContent.replace(/\{\{[\s\S]+?\}\}/, '').trim();
+                const errMsg = message.novelAiError;
+                const safeErrMsg = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(errMsg) : errMsg;
+                const encodedErrMsg = encodeURIComponent(errMsg);
+                bubbleElement.innerHTML = `
+                    <div class="pv-card-content">${displayContent}</div>
+                    <div class="pv-card-image-overlay" style="background-image: url('${isSent ? 'https://i.postimg.cc/L8NFrBrW/1752307494497.jpg' : 'https://i.postimg.cc/1tH6ds9g/1752301200490.jpg'}'); filter: grayscale(1) opacity(0.3);"></div>
+                    <div class="pv-card-footer" style="flex-direction: column; align-items: stretch; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 5px; color: #d32f2f;">
+                            <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; flex-shrink: 0;"><path fill="currentColor" d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" /></svg>
+                            <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px;">${safeErrMsg}</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; pointer-events: auto;">
+                            <button class="btn btn-small btn-neutral" style="flex: 1; font-size: 11px; padding: 4px; background: #eee; border: none;" onclick="window.showErrorModal('生图出错了', new Error(decodeURIComponent('${encodedErrMsg}')))">查看报错</button>
+                            <button class="btn btn-small btn-primary" style="flex: 1; font-size: 11px; padding: 4px; border: none;" onclick="window.retryImageGen('${message.id}', '${currentChatId}', '${currentChatType}')">重新生成</button>
+                        </div>
+                    </div>`;
             } else if (_imgEnabled && !isSent && _naiAutoGenNewMsgIds.has(message.id)) {
-                // 生图已启用，角色发的新照片消息，触发自动生成
+                // 首次触发静默生图
+                message.isNovelAiGenerating = true;
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = 'image-bubble photo-bubble nai-generating';
                 bubbleElement.innerHTML = `
                     <div class="nai-loading-card" style="width: 200px; height: 280px; border-radius: 12px; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; overflow: hidden; position: relative;">
                         <div class="nai-loading-shimmer" style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); animation: nai-shimmer 1.5s infinite;"></div>
                         <div style="width: 24px; height: 24px; border: 2.5px solid #ccc; border-top-color: #999; border-radius: 50%; animation: nai-spin 0.8s linear infinite;"></div>
-                        <span style="font-size: 12px; color: #999; z-index: 1;">加载中...</span>
+                        <span style="font-size: 12px; color: #999; z-index: 1;">作画中...</span>
+                        <button class="btn btn-small btn-ghost nai-cancel-btn" style="z-index: 2; margin-top: 10px; padding: 4px 10px; font-size: 12px; border-radius: 12px;" onclick="window.cancelImageGen('${message.id}')">取消</button>
                     </div>`;
                 
-                // 异步触发 NovelAI 生图（使用队列避免并发请求过多）
-                const msgId = message.id;
-                const bubbleRef = bubbleElement;
-                const _pvContent = pvContent;
-                const _isSent = isSent;
-                _naiAutoGenQueue.push(async () => {
-                    try {
-                        // 从内容中提取 {{英文 tag}} 部分作为 prompt
-                        const tagMatch = _pvContent.match(/\{\{([\s\S]+?)\}\}/);
-                        let naiPrompt;
-                        if (tagMatch) {
-                            naiPrompt = tagMatch[1].trim();
-                        } else {
-                            // 没有 {{}} 标记，直接用整段描述
-                            naiPrompt = _pvContent;
-                        }
-                        
-                        console.log('[Image Auto] 为消息生图, prompt:', naiPrompt);
-                        const result = await generateImageDispatch(naiPrompt);
-                        
-                        if (result && result.imageUrl) {
-                            // 将生成的图片保存到消息对象中
-                            const chat = currentChatType === 'private' 
-                                ? db.characters.find(c => c.id === currentChatId)
-                                : db.groups.find(g => g.id === currentChatId);
-                            if (chat && chat.history) {
-                                const msg = chat.history.find(m => m.id === msgId);
-                                if (msg) {
-                                    msg.novelAiImageUrl = result.imageUrl;
-                                    saveData();
-                                }
-                            }
-                            
-                            // 更新 DOM
-                            bubbleRef.className = 'image-bubble photo-bubble';
-                            bubbleRef.innerHTML = `<img src="${result.imageUrl}" alt="${_pvContent}" onclick="openImageViewer(this.src)" style="cursor: zoom-in; max-width: 280px; border-radius: 12px;">`;
-                        }
-                    } catch (err) {
-                        console.error('[Image Auto] 生图失败:', err);
-                        // 失败时回退为普通 pv-card
-                        bubbleRef.className = 'pv-card';
-                        const displayContent = _pvContent.replace(/\{\{[\s\S]+?\}\}/, '').trim();
-                        bubbleRef.innerHTML = `<div class="pv-card-content">${displayContent}</div><div class="pv-card-image-overlay" style="background-image: url('${_isSent ? 'https://i.postimg.cc/L8NFrBrW/1752307494497.jpg' : 'https://i.postimg.cc/1tH6ds9g/1752301200490.jpg'}');"></div><div class="pv-card-footer"><svg viewBox="0 0 24 24"><path d="M4,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M4,6V18H20V6H4M10,9A1,1 0 0,1 11,10A1,1 0 0,1 10,11A1,1 0 0,1 9,10A1,1 0 0,1 10,9M8,17L11,13L13,15L17,10L20,14V17H8Z"></path></svg><span>生图失败・${err.message || '未知错误'}</span></div>`;
-                    }
-                });
-                _naiAutoGenProcess();
+                // 将任务放入队列并在后台处理，不再和 DOM 直接绑定
+                window._scheduleBackgroundNaiGen(message.id, currentChatId, currentChatType, pvContent);
+                _naiAutoGenNewMsgIds.delete(message.id);
             } else {
                 // 生图未启用或是用户发的，显示原始 pv-card
                 const displayContent = pvContent.replace(/\{\{[\s\S]+?\}\}/, '').trim() || pvContent;
@@ -1367,7 +1385,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
     } else if (imageRecogMatch || urlRegex.test(content)) {
         bubbleElement = document.createElement('div');
         bubbleElement.className = 'image-bubble photo-bubble';
-        bubbleElement.innerHTML = `<img src="${content}" alt="图片消息" onclick="openImageViewer(this.src)" style="cursor: zoom-in;">`;
+        bubbleElement.innerHTML = `<img src="${content}" alt="图片消息" onclick="openImageViewer(this.src, '${message.id}')" style="cursor: zoom-in;">`;
     } else if (textMatch) {
         bubbleElement = document.createElement('div');
         bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
@@ -2177,3 +2195,160 @@ function addMessageBubble(message, targetChatId, targetChatType) {
         }
     }
 }
+
+// --- 【新增】解绑后的后台静默生图任务系统 ---
+window._naiGenAbortControllers = {};
+
+window._scheduleBackgroundNaiGen = function(msgId, chatId, chatType, pvContent) {
+    _naiAutoGenQueue.push(async () => {
+        // 设置 AbortController 并支持可配置的超时时间
+        const controller = new AbortController();
+        window._naiGenAbortControllers[msgId] = controller;
+        const timeoutMs = (db.imageGenTimeout ?? 120) * 1000; // 默认 120 秒，0代表不限制
+        let timeoutId;
+        if (timeoutMs > 0) {
+            timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        }
+
+        let isSuccess = false;
+        let finalImageUrl = null;
+        let errorReason = null;
+
+        try {
+            const tagMatch = pvContent.match(/\{\{([\s\S]+?)\}\}/);
+            const naiPrompt = tagMatch ? tagMatch[1].trim() : pvContent;
+            
+            console.log('[Image Auto Background] 为消息生图, prompt:', naiPrompt);
+            const result = await generateImageDispatch(naiPrompt, controller.signal);
+            
+            if (result && result.imageUrl) {
+                finalImageUrl = result.imageUrl;
+                // 如果开启了自动压缩，则先压缩
+                if (db.autoCompressImage !== false) {
+                    try {
+                        const blob = await fetch(finalImageUrl).then(res => res.blob());
+                        const compressedUrl = await compressImage(blob, { quality: 0.85, maxWidth: 1080, maxHeight: 1920 });
+                        finalImageUrl = compressedUrl;
+                    } catch (compressErr) {
+                        console.error('[Image Auto Background] 自动压缩失败，降级保存原图', compressErr);
+                    }
+                }
+                isSuccess = true;
+            }
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                console.log('[Image Auto Background] 生图被取消或超时:', msgId);
+                errorReason = '生图超时或已取消';
+            } else {
+                console.error('[Image Auto Background] 生图失败:', err);
+                errorReason = err.message || '未知网络错误';
+            }
+        } finally {
+            clearTimeout(timeoutId);
+            delete window._naiGenAbortControllers[msgId];
+            
+            // 重要：为了防止闭包里的 db 引用过期，在这里重新查找最新的消息对象！
+            const currentChat = chatType === 'private' ? db.characters.find(c => c.id === chatId) : db.groups.find(g => g.id === chatId);
+            if (currentChat && currentChat.history) {
+                const currentMsg = currentChat.history.find(m => m.id === msgId);
+                if (currentMsg) {
+                    if (isSuccess && finalImageUrl) {
+                        // 保存旧图到版本历史
+                        if (currentMsg.novelAiImageUrl) {
+                            if (!currentMsg._imageVersions) currentMsg._imageVersions = [];
+                            // 避免重复存同样的图
+                            if (currentMsg._imageVersions.length === 0 || currentMsg._imageVersions[currentMsg._imageVersions.length - 1].imageUrl !== currentMsg.novelAiImageUrl) {
+                                currentMsg._imageVersions.push({
+                                    imageUrl: currentMsg.novelAiImageUrl,
+                                    savedAt: Date.now()
+                                });
+                            }
+                        }
+                        currentMsg.novelAiImageUrl = finalImageUrl;
+                        currentMsg._currentImageIndex = currentMsg._imageVersions ? currentMsg._imageVersions.length : 0;
+                        currentMsg.novelAiError = null;
+                        currentMsg.isNovelAiGenerating = false;
+                    } else if (errorReason) {
+                        currentMsg.novelAiError = errorReason;
+                        currentMsg.isNovelAiGenerating = false;
+                    }
+                }
+            }
+
+            // 数据落盘
+            if (typeof saveData === 'function') saveData();
+            
+            // 如果用户还留在这个聊天界面，主动刷新气泡
+            if (window.currentChatId === chatId && window.currentChatType === chatType) {
+                renderMessages(false, false);
+            }
+        }
+    });
+    _naiAutoGenProcess();
+};
+
+window.switchImageVersion = function(msgId, dir, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    if (typeof currentChatId === 'undefined' || typeof currentChatType === 'undefined') return;
+    const chat = currentChatType === 'private' ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
+    if (!chat || !chat.history) return;
+    const msg = chat.history.find(m => m.id === msgId);
+    if (!msg) return;
+
+    const versionsCount = (msg._imageVersions ? msg._imageVersions.length : 0) + 1;
+    if (versionsCount <= 1) return;
+
+    let currentIdx = msg._currentImageIndex !== undefined ? msg._currentImageIndex : versionsCount - 1;
+    currentIdx += dir;
+    if (currentIdx < 0) currentIdx = versionsCount - 1;
+    if (currentIdx >= versionsCount) currentIdx = 0;
+
+    msg._currentImageIndex = currentIdx;
+    
+    if (typeof saveData === 'function') saveData();
+    if (typeof renderMessages === 'function') renderMessages(false, false);
+};
+
+window.cancelImageGen = function(msgId) {
+    let controllerFound = false;
+    if (window._naiGenAbortControllers[msgId]) {
+        window._naiGenAbortControllers[msgId].abort();
+        controllerFound = true;
+    }
+
+    // 保底处理：处理已不存在于内存中但数据库状态仍标记为生图中（僵尸状态）的情况
+    if (!controllerFound && typeof currentChatId !== 'undefined' && typeof currentChatType !== 'undefined') {
+        const chat = currentChatType === 'private' ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
+        if (chat && chat.history) {
+            const msg = chat.history.find(m => m.id === msgId);
+            if (msg && msg.isNovelAiGenerating) {
+                console.log(`[Image Auto Background] 发现僵尸状态消息 ${msgId}，执行强制取消...`);
+                msg.isNovelAiGenerating = false;
+                msg.novelAiError = '生图已取消或中断';
+                if (typeof saveData === 'function') saveData();
+                if (typeof renderMessages === 'function') renderMessages(false, false);
+            }
+        }
+    }
+};
+
+window.retryImageGen = function(msgId, chatId, chatType) {
+    const chat = chatType === 'private' ? db.characters.find(c => c.id === chatId) : db.groups.find(g => g.id === chatId);
+    if (!chat || !chat.history) return;
+    const msg = chat.history.find(m => m.id === msgId);
+    if (!msg) return;
+
+    msg.novelAiError = null;
+    msg.isNovelAiGenerating = true;
+    saveData();
+    renderMessages(false, false);
+
+    // 重新提取内容并排队生图
+    const pvMatch = msg.content.match(/\[.*?发来的照片\/视频[：:]([\s\S]+?)\]/);
+    if (pvMatch) {
+        window._scheduleBackgroundNaiGen(msgId, chatId, chatType, pvMatch[1].trim());
+    }
+};

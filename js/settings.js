@@ -1859,6 +1859,34 @@ function loadSettingsToSidebar() {
             radiusValue.textContent = `${radiusSlider.value}%`;
         };
 
+        const chatImageMaxWidth = e.chatImageMaxWidth !== undefined ? e.chatImageMaxWidth : 200;
+        document.getElementById('setting-chat-image-max-width').value = chatImageMaxWidth;
+        document.getElementById('setting-chat-image-max-width-value').textContent = `${chatImageMaxWidth}px`;
+
+        const chatImageMaxWidthSlider = document.getElementById('setting-chat-image-max-width');
+        const chatImageMaxWidthValue = document.getElementById('setting-chat-image-max-width-value');
+        chatImageMaxWidthSlider.oninput = () => {
+            chatImageMaxWidthValue.textContent = `${chatImageMaxWidthSlider.value}px`;
+        };
+
+        // 头像圆角重置按钮
+        const resetAvatarRadiusBtn = document.getElementById('reset-avatar-radius-btn');
+        if (resetAvatarRadiusBtn) {
+            resetAvatarRadiusBtn.onclick = () => {
+                radiusSlider.value = 50;
+                radiusValue.textContent = '50%';
+            };
+        }
+
+        // 图片显示大小重置按钮
+        const resetChatImageMaxWidthBtn = document.getElementById('reset-chat-image-max-width-btn');
+        if (resetChatImageMaxWidthBtn) {
+            resetChatImageMaxWidthBtn.onclick = () => {
+                chatImageMaxWidthSlider.value = 200;
+                chatImageMaxWidthValue.textContent = '200px';
+            };
+        }
+
         document.getElementById('setting-bubble-blur').checked = e.bubbleBlurEnabled !== false; 
 
         document.getElementById('setting-title-layout').value = e.titleLayout || 'left';
@@ -2136,6 +2164,12 @@ function loadSettingsToSidebar() {
             if (naiModelEl && ns.model) naiModelEl.value = ns.model;
             if (naiResEl && ns.resolution) naiResEl.value = ns.resolution;
             if (naiArtistEl && ns.artistTags !== undefined) naiArtistEl.value = ns.artistTags;
+        }
+
+        // === 加载 GPT 专属画师串到拓展 Tab ===
+        const gptArtistEl = document.getElementById('gpt-artist-prompt');
+        if (gptArtistEl) {
+            gptArtistEl.value = e.gptArtistPrompt || '';
         }
 
         const ar = e.autoReply || {};
@@ -2468,9 +2502,12 @@ async function saveSettingsFromSidebar() {
         
         e.avatarMode = document.getElementById('setting-avatar-mode').value;
         e.avatarRadius = parseInt(document.getElementById('setting-avatar-radius').value, 10);
+        e.chatImageMaxWidth = parseInt(document.getElementById('setting-chat-image-max-width').value, 10);
+
+        const chatScreen = document.getElementById('chat-room-screen');
+        chatScreen.style.setProperty('--chat-image-max-width', `${e.chatImageMaxWidth}px`);
 
         e.bubbleBlurEnabled = document.getElementById('setting-bubble-blur').checked;
-        const chatScreen = document.getElementById('chat-room-screen');
         if (e.bubbleBlurEnabled) {
             chatScreen.classList.remove('disable-blur');
         } else {
@@ -2576,6 +2613,12 @@ async function saveSettingsFromSidebar() {
             if (naiModelEl) db.novelAiSettings.model = naiModelEl.value;
             if (naiResEl) db.novelAiSettings.resolution = naiResEl.value;
             if (naiArtistEl) db.novelAiSettings.artistTags = naiArtistEl.value.trim();
+        }
+
+        // === 保存 GPT 专属画师串 ===
+        const gptArtistEl = document.getElementById('gpt-artist-prompt');
+        if (gptArtistEl) {
+            e.gptArtistPrompt = gptArtistEl.value.trim();
         }
 
         if (!e.autoReply) e.autoReply = {};
@@ -4069,6 +4112,33 @@ function setupGptImageSettings() {
 }
 
 function setupNovelAiSettings() {
+    // --- 新增：全局生图超时时间配置初始化 ---
+    if (typeof db !== 'undefined' && db.imageGenTimeout === undefined) db.imageGenTimeout = 0; // 默认 0s (不限制)
+    const timeoutInput = document.getElementById('global-image-gen-timeout');
+    if (timeoutInput) {
+        timeoutInput.value = db.imageGenTimeout;
+        timeoutInput.addEventListener('change', async (e) => {
+            db.imageGenTimeout = parseInt(e.target.value, 10) || 0; // 0代表不限制
+            await saveData();
+            showToast('生图超时时间已保存');
+        });
+    }
+
+    const autoCompressEl = document.getElementById('global-auto-compress-image');
+    if (autoCompressEl) {
+        if (db.autoCompressImage !== undefined) {
+            autoCompressEl.checked = db.autoCompressImage;
+        } else {
+            autoCompressEl.checked = true; // 默认开启
+            db.autoCompressImage = true;
+        }
+        autoCompressEl.addEventListener('change', async (e) => {
+            db.autoCompressImage = e.target.checked;
+            await saveData();
+            showToast('自动压缩生图设置已保存');
+        });
+    }
+
     const enabledEl = document.getElementById('novelai-enabled');
     const tokenEl = document.getElementById('novelai-token');
     const customUrlEnabledEl = document.getElementById('novelai-custom-url-enabled');

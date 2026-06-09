@@ -816,7 +816,7 @@
 
 /* 大图片消息样式 (支持生图) */
 .photo-bubble {
-    max-width: 280px;
+    max-width: var(--chat-image-max-width, 240px);
 }
 
 .image-bubble img {
@@ -922,7 +922,7 @@
 
 /* 照片/视频卡片 (PV Card) */
 .pv-card {
-    width: 230px;
+    width: var(--chat-image-max-width, 200px);
     aspect-ratio: 1 / 1;
     background-color: #f0f0f0;
     border-radius: var(--border-radius);

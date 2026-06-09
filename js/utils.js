@@ -578,7 +578,7 @@ function showErrorModal(friendlyMessage, fullError) {
     }
 
     const modalHtml = `
-    <div id="error-modal-overlay" class="modal-overlay visible" style="z-index: 9999; align-items: center; justify-content: center; display: flex;">
+    <div id="error-modal-overlay" class="modal-overlay visible" style="z-index: 30000; align-items: center; justify-content: center; display: flex;">
         <div class="modal-window" style="max-width: 90%; width: 380px; padding: 0; overflow: hidden; display: flex; flex-direction: column; max-height: 85vh; border-radius: 16px; background: #fff; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
             <div style="padding: 25px 20px 15px; text-align: center; flex-shrink: 0;">
                 <div style="width: 56px; height: 56px; background: #ffebee; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
@@ -1262,16 +1262,96 @@ async function readStreamResponse(response, provider) {
 }
 
 // --- 图片查看器 ---
-function openImageViewer(src) {
+function openImageViewer(src, msgId = null) {
     const modal = document.getElementById('full-image-modal');
     const img = document.getElementById('full-image-view');
     const closeBtn = document.getElementById('close-full-image-btn');
     const downloadBtn = document.getElementById('download-full-image-btn');
+    const regenBtn = document.getElementById('regen-full-image-btn');
+    const editBtn = document.getElementById('edit-full-image-btn');
+    const logsBtn = document.getElementById('logs-full-image-btn');
+    const versionSwitcher = document.getElementById('full-image-version-switcher');
+    const prevVersionBtn = document.getElementById('full-image-prev-version-btn');
+    const nextVersionBtn = document.getElementById('full-image-next-version-btn');
+    const versionText = document.getElementById('full-image-version-text');
     
     if (!modal || !img) return;
     
     img.src = src;
     modal.classList.add('visible');
+
+    // 查找消息对象
+    let msgObj = null;
+    let chatObj = null;
+    if (msgId && typeof currentChatId !== 'undefined' && typeof currentChatType !== 'undefined') {
+        chatObj = currentChatType === 'private' ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
+        if (chatObj && chatObj.history) {
+            msgObj = chatObj.history.find(m => m.id === msgId);
+        }
+    }
+
+    // 处理图片版本切换逻辑
+    let versionsCount = 1;
+    let currentIdx = 0;
+    
+    const updateVersionUI = () => {
+        if (versionsCount > 1) {
+            versionSwitcher.style.display = 'flex';
+            versionText.textContent = `${currentIdx + 1} / ${versionsCount}`;
+        } else {
+            versionSwitcher.style.display = 'none';
+        }
+    };
+
+    if (msgObj && msgObj._imageVersions && msgObj._imageVersions.length > 0) {
+        versionsCount = msgObj._imageVersions.length + (msgObj.novelAiImageUrl ? 1 : 0);
+        currentIdx = msgObj._currentImageIndex !== undefined ? msgObj._currentImageIndex : versionsCount - 1;
+        updateVersionUI();
+    } else {
+        if (versionSwitcher) versionSwitcher.style.display = 'none';
+    }
+
+    const handleVersionSwitch = (dir, event) => {
+        if (event) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+        if (versionsCount <= 1 || !msgObj) return;
+
+        currentIdx += dir;
+        if (currentIdx < 0) currentIdx = versionsCount - 1;
+        if (currentIdx >= versionsCount) currentIdx = 0;
+
+        msgObj._currentImageIndex = currentIdx;
+        
+        // 更新全屏图片显示
+        if (currentIdx < msgObj._imageVersions.length) {
+            img.src = msgObj._imageVersions[currentIdx].imageUrl;
+        } else {
+            img.src = msgObj.novelAiImageUrl;
+        }
+        
+        updateVersionUI();
+        
+        // 顺便保存和更新背景的聊天气泡，保持同步
+        if (typeof saveData === 'function') saveData();
+        if (typeof renderMessages === 'function') renderMessages(false, false);
+    };
+
+    // 清理旧事件监听，防止多次绑定
+    if (prevVersionBtn) {
+        prevVersionBtn.onclick = (e) => handleVersionSwitch(-1, e);
+    }
+    if (nextVersionBtn) {
+        nextVersionBtn.onclick = (e) => handleVersionSwitch(1, e);
+    }
+
+    // 根据消息状态显示/隐藏高级按钮
+    const isAiGenerated = msgObj && (msgObj.novelAiImageUrl || msgObj.novelAiError || msgObj.isNovelAiGenerating || (msgObj.content && msgObj.content.match(/\[.*?发来的照片\/视频[：:]([\s\S]+?)\]/)));
+
+    if (regenBtn) regenBtn.style.display = isAiGenerated ? 'flex' : 'none';
+    if (editBtn) editBtn.style.display = isAiGenerated ? 'flex' : 'none';
+    if (logsBtn) logsBtn.style.display = isAiGenerated ? 'flex' : 'none';
     
     // 简单的关闭逻辑
     const closeModal = () => {
@@ -1280,6 +1360,117 @@ function openImageViewer(src) {
     };
     
     if (closeBtn) closeBtn.onclick = closeModal;
+
+    if (regenBtn && isAiGenerated) {
+        regenBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (typeof window.retryImageGen === 'function') {
+                window.retryImageGen(msgId, currentChatId, currentChatType);
+                closeModal();
+                if (typeof showToast === 'function') showToast('已加入重新生成队列...');
+            }
+        };
+    }
+
+    if (editBtn && isAiGenerated) {
+        editBtn.onclick = (e) => {
+            e.stopPropagation();
+            const editModal = document.getElementById('edit-image-prompt-modal');
+            const textarea = document.getElementById('edit-image-prompt-textarea');
+            const confirmBtn = document.getElementById('edit-image-prompt-confirm-btn');
+            const cancelBtn = document.getElementById('edit-image-prompt-cancel-btn');
+
+            if (!editModal || !textarea) return;
+
+            // 提取提示词
+            const pvMatch = msgObj.content.match(/\[.*?发来的照片\/视频[：:]([\s\S]+?)\]/);
+            let originalPrompt = pvMatch ? pvMatch[1].trim() : '';
+
+            // 去掉 {{ }} 包装以便于编辑
+            const tagMatch = originalPrompt.match(/\{\{([\s\S]+?)\}\}/);
+            if (tagMatch) originalPrompt = tagMatch[1].trim();
+
+            textarea.value = originalPrompt;
+            editModal.classList.add('visible');
+
+            const closeEditModal = () => {
+                editModal.classList.remove('visible');
+            };
+
+            cancelBtn.onclick = closeEditModal;
+
+            confirmBtn.onclick = () => {
+                const newPrompt = textarea.value.trim();
+                if (!newPrompt) {
+                    if (typeof showToast === 'function') showToast('提示词不能为空');
+                    return;
+                }
+
+                // 更新消息内容，保留消息包装格式
+                if (pvMatch) {
+                    msgObj.content = msgObj.content.replace(pvMatch[1], `{{${newPrompt}}}`);
+                } else {
+                    // 如果由于某种原因正则没有匹配上，直接替换整个内容，并加上照片包装
+                    const senderName = msgObj.role === 'assistant' ? (chatObj.remarkName || chatObj.name || 'AI') : '你';
+                    msgObj.content = `[${senderName}发来的照片/视频：{{${newPrompt}}}]`;
+                }
+
+                if (typeof saveData === 'function') saveData();
+                if (typeof window.retryImageGen === 'function') {
+                    window.retryImageGen(msgId, currentChatId, currentChatType);
+                }
+                
+                closeEditModal();
+                closeModal();
+                if (typeof showToast === 'function') showToast('已保存新提示词并重新生成...');
+            };
+        };
+    }
+
+    if (logsBtn && isAiGenerated) {
+        logsBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (msgObj.novelAiError) {
+                if (typeof showErrorModal === 'function') {
+                    showErrorModal('生图出错了', new Error(msgObj.novelAiError));
+                }
+            } else {
+                const logModal = document.getElementById('image-log-modal');
+                const logContent = document.getElementById('image-log-content');
+                const closeLogBtn = document.getElementById('close-image-log-btn');
+
+                if (!logModal || !logContent) return;
+
+                const engine = db.imageGenerationEngine || 'novelai';
+                const pvMatch = msgObj.content.match(/\[.*?发来的照片\/视频[：:]([\s\S]+?)\]/);
+                let promptRaw = pvMatch ? pvMatch[1].trim() : msgObj.content;
+                let finalPrompt = promptRaw;
+
+                const tagMatch = promptRaw.match(/\{\{([\s\S]+?)\}\}/);
+                if (tagMatch) finalPrompt = tagMatch[1].trim();
+
+                let logText = `引擎: ${engine.toUpperCase()}\n状态: 成功\n\n[提取的提示词]\n${finalPrompt}`;
+                
+                if (engine === 'novelai' && db.novelAiSettings) {
+                    if (db.novelAiSettings.systemPrompt) logText += `\n\n[系统附加词]\n${db.novelAiSettings.systemPrompt}`;
+                    if (db.novelAiSettings.artistTags) logText += `\n\n[画师附加词]\n${db.novelAiSettings.artistTags}`;
+                    if (db.novelAiSettings.negativePrompt) logText += `\n\n[负面提示词]\n${db.novelAiSettings.negativePrompt}`;
+                } else if (engine === 'gpt' && db.gptImageSettings) {
+                    if (db.gptImageSettings.systemPrompt) logText += `\n\n[系统附加词]\n${db.gptImageSettings.systemPrompt}`;
+                    if (db.gptImageSettings.negativePrompt) logText += `\n\n[负面提示词]\n${db.gptImageSettings.negativePrompt}`;
+                }
+
+                logContent.textContent = logText;
+                logModal.classList.add('visible');
+
+                if (closeLogBtn) {
+                    closeLogBtn.onclick = () => {
+                        logModal.classList.remove('visible');
+                    };
+                }
+            }
+        };
+    }
     
     if (downloadBtn) {
         downloadBtn.onclick = async (e) => {
@@ -1317,8 +1508,9 @@ function openImageViewer(src) {
     
     modal.onclick = (e) => {
         if (e.target === modal || e.target.closest('.modal-window')) {
-            // 点击图片或下载按钮本身不关闭，点击背景或关闭按钮关闭
-            if (e.target !== img && e.target !== downloadBtn && !downloadBtn.contains(e.target) && e.target !== closeBtn) {
+            // 忽略对按钮的点击
+            const isActionButton = [downloadBtn, closeBtn, regenBtn, editBtn, logsBtn].some(btn => btn && (e.target === btn || btn.contains(e.target)));
+            if (!isActionButton && e.target !== img) {
                 closeModal();
             }
         }
@@ -1393,7 +1585,7 @@ function _nai_resolveBase64Image(b64) {
  * @param {object} [overrideSettings] - 可选，覆盖 db.gptImageSettings 的参数
  * @returns {Promise<{imageUrl: string}>} - 返回图片 URL 或 DataURL
  */
-async function generateGptImage(prompt, overrideSettings = {}) {
+async function generateGptImage(prompt, overrideSettings = {}, signal = null) {
     const settings = Object.assign({}, db.gptImageSettings || {}, overrideSettings);
     const url = settings.url;
     const key = settings.key;
@@ -1407,8 +1599,19 @@ async function generateGptImage(prompt, overrideSettings = {}) {
     const negativePrompt = settings.negativePrompt || '';
 
     // 智能拼接提示词
-    let finalPrompt = prompt.trim();
-    if (systemPrompt) finalPrompt = `${systemPrompt}, ${finalPrompt}`;
+    const promptParts = [];
+    if (systemPrompt) promptParts.push(systemPrompt);
+    
+    if (typeof currentChatId !== 'undefined' && typeof currentChatType !== 'undefined' && currentChatType === 'private') {
+        const charObj = typeof db !== 'undefined' && db.characters ? db.characters.find(c => c.id === currentChatId) : null;
+        if (charObj && charObj.gptArtistPrompt) {
+            promptParts.push(charObj.gptArtistPrompt);
+        }
+    }
+    
+    promptParts.push(prompt.trim());
+    
+    let finalPrompt = promptParts.filter(Boolean).join(', ');
     if (negativePrompt) finalPrompt = `${finalPrompt} --no ${negativePrompt}`;
 
     const endpoint = url.endsWith('/') ? `${url}v1/images/generations` : `${url}/v1/images/generations`;
@@ -1425,8 +1628,10 @@ async function generateGptImage(prompt, overrideSettings = {}) {
             model: model,
             prompt: finalPrompt,
             n: 1,
-            size: size
-        })
+            size: size,
+            response_format: 'b64_json'
+        }),
+        signal: signal
     });
 
     if (!response.ok) {
@@ -1466,12 +1671,12 @@ async function generateGptImage(prompt, overrideSettings = {}) {
  * @param {string} prompt - 提示词
  * @returns {Promise<{imageUrl: string}>} - 返回生成的图片 DataURL/URL
  */
-async function generateImageDispatch(prompt) {
+async function generateImageDispatch(prompt, signal = null) {
     const engine = db.imageGenerationEngine || 'novelai';
     if (engine === 'gpt') {
-        return generateGptImage(prompt);
+        return generateGptImage(prompt, {}, signal);
     } else {
-        return generateNovelAiImage(prompt);
+        return generateNovelAiImage(prompt, {}, signal);
     }
 }
 
@@ -1481,7 +1686,7 @@ async function generateImageDispatch(prompt) {
  * @param {object} [overrideSettings] - 可选，覆盖 db.novelAiSettings 的参数
  * @returns {Promise<{imageUrl: string}>} - 返回图片 DataURL
  */
-async function generateNovelAiImage(prompt, overrideSettings = {}) {
+async function generateNovelAiImage(prompt, overrideSettings = {}, signal = null) {
     const settings = Object.assign({}, db.novelAiSettings || {}, overrideSettings);
     const token = settings.token;
     if (!token) throw new Error('NovelAI Token 未配置');
@@ -1611,7 +1816,8 @@ async function generateNovelAiImage(prompt, overrideSettings = {}) {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${cleanToken}`
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        signal: signal
     });
 
     console.log(`[NovelAI] 响应状态: ${response.status}, Content-Type: ${response.headers.get('content-type')}`);
@@ -1713,6 +1919,18 @@ async function generateNovelAiImage(prompt, overrideSettings = {}) {
         throw new Error('未能从响应中获取图片');
     }
 
+    // 将普通 URL 转换为 DataURL 以实现持久化本地缓存，防止过期裂图
+    if (imageDataUrl.startsWith('http')) {
+        try {
+            console.log('[NovelAI] 尝试将返回的 URL 图片持久化为 Base64...');
+            const imgRes = await fetch(imageDataUrl, { signal });
+            const imgBlob = await imgRes.blob();
+            imageDataUrl = await _nai_blobToDataUrl(imgBlob);
+        } catch (e) {
+            console.warn('[NovelAI] 图片 URL 转 Base64 失败，使用原链接:', e);
+        }
+    }
+
     console.log('[NovelAI] ✅ 生图成功');
     return { imageUrl: imageDataUrl };
 }
@@ -1730,6 +1948,7 @@ async function novelAiGenerate(prompt) {
 }
 
 // 暴露给全局
+window.showErrorModal = showErrorModal;
 window.openImageViewer = openImageViewer;
 window.getRandomValue = getRandomValue;
 window.pad = pad;

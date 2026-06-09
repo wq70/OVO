@@ -678,6 +678,11 @@ function openChatRoom(chatId, type) {
     const avatarRadius = chat.avatarRadius !== undefined ? chat.avatarRadius : 50;
     document.documentElement.style.setProperty('--chat-avatar-radius', `${avatarRadius}%`);
 
+    const imageMaxWidth = type === 'private' 
+        ? (db.settings?.chatImageMaxWidth || 200) 
+        : (chat.chatImageMaxWidth || 200);
+    chatRoomScreen.style.setProperty('--chat-image-max-width', `${imageMaxWidth}px`);
+
     if (chat.bubbleBlurEnabled === false) {
         chatRoomScreen.classList.add('disable-blur');
     } else {
