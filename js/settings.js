@@ -1859,31 +1859,12 @@ function loadSettingsToSidebar() {
             radiusValue.textContent = `${radiusSlider.value}%`;
         };
 
-        const chatImageMaxWidth = e.chatImageMaxWidth !== undefined ? e.chatImageMaxWidth : 200;
-        document.getElementById('setting-chat-image-max-width').value = chatImageMaxWidth;
-        document.getElementById('setting-chat-image-max-width-value').textContent = `${chatImageMaxWidth}px`;
-
-        const chatImageMaxWidthSlider = document.getElementById('setting-chat-image-max-width');
-        const chatImageMaxWidthValue = document.getElementById('setting-chat-image-max-width-value');
-        chatImageMaxWidthSlider.oninput = () => {
-            chatImageMaxWidthValue.textContent = `${chatImageMaxWidthSlider.value}px`;
-        };
-
         // 头像圆角重置按钮
         const resetAvatarRadiusBtn = document.getElementById('reset-avatar-radius-btn');
         if (resetAvatarRadiusBtn) {
             resetAvatarRadiusBtn.onclick = () => {
                 radiusSlider.value = 50;
                 radiusValue.textContent = '50%';
-            };
-        }
-
-        // 图片显示大小重置按钮
-        const resetChatImageMaxWidthBtn = document.getElementById('reset-chat-image-max-width-btn');
-        if (resetChatImageMaxWidthBtn) {
-            resetChatImageMaxWidthBtn.onclick = () => {
-                chatImageMaxWidthSlider.value = 200;
-                chatImageMaxWidthValue.textContent = '200px';
             };
         }
 
@@ -2502,10 +2483,8 @@ async function saveSettingsFromSidebar() {
         
         e.avatarMode = document.getElementById('setting-avatar-mode').value;
         e.avatarRadius = parseInt(document.getElementById('setting-avatar-radius').value, 10);
-        e.chatImageMaxWidth = parseInt(document.getElementById('setting-chat-image-max-width').value, 10);
 
         const chatScreen = document.getElementById('chat-room-screen');
-        chatScreen.style.setProperty('--chat-image-max-width', `${e.chatImageMaxWidth}px`);
 
         e.bubbleBlurEnabled = document.getElementById('setting-bubble-blur').checked;
         if (e.bubbleBlurEnabled) {
@@ -3268,6 +3247,73 @@ function setupApiSettingsApp() {
     setupGptImageSettings();
 }
 
+// 提取为全局函数以便复用
+window.fetchAndPopulateGptModels = async (showToastFlag = true) => {
+    const urlEl = document.getElementById('gpt-image-url');
+    const keyEl = document.getElementById('gpt-image-key');
+    const modelEl = document.getElementById('gpt-image-model');
+    const modelSelectEl = document.getElementById('gpt-image-model-select');
+    const fetchModelsBtn = document.getElementById('gpt-image-fetch-models-btn');
+
+    // 如果是通过自动调用且没有 DOM，尝试从 db 中读取
+    const apiUrl = urlEl ? urlEl.value.trim() : (db.gptImageSettings?.url || '');
+    const apiKey = keyEl ? keyEl.value.trim() : (db.gptImageSettings?.key || '');
+
+    if (!apiUrl || !apiKey) {
+        if (showToastFlag) showToast('请先填写 GPT API 地址和 Key');
+        return;
+    }
+
+    const blockedDomains = (typeof BLOCKED_API_DOMAINS !== 'undefined') ? BLOCKED_API_DOMAINS : [];
+    if (blockedDomains.some(d => apiUrl.includes(d))) {
+        if (showToastFlag) showToast('该API站点已被屏蔽');
+        return;
+    }
+
+    const endpoint = `${apiUrl.replace(/\/$/, '')}/v1/models`;
+    let origText = '';
+    if (fetchModelsBtn) {
+        fetchModelsBtn.disabled = true;
+        origText = fetchModelsBtn.textContent;
+        fetchModelsBtn.textContent = '拉取中…';
+    }
+
+    try {
+        const resp = await fetch(endpoint, { headers: { 'Authorization': `Bearer ${apiKey}` } });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const json = await resp.json();
+        const models = (json.data || []).map(m => m.id).filter(Boolean).sort();
+        
+        if (!models.length) {
+            if (showToastFlag) showToast('未找到可用模型');
+            if (modelSelectEl) modelSelectEl.innerHTML = '<option value="">未找到任何模型</option>';
+            return;
+        }
+
+        const cur = modelEl ? modelEl.value : (db.gptImageSettings?.model || '');
+        if (modelSelectEl) {
+            modelSelectEl.innerHTML = '<option value="">— 请选择 —</option>';
+            models.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                modelSelectEl.appendChild(opt);
+            });
+            if (models.includes(cur)) modelSelectEl.value = cur;
+        }
+        if (showToastFlag) showToast(`成功拉取 ${models.length} 个模型`);
+    } catch (err) {
+        console.error('[GPT Image] 拉取模型失败:', err);
+        if (showToastFlag) showToast('拉取模型失败：' + (err.message || '未知错误'));
+        if (modelSelectEl) modelSelectEl.innerHTML = '<option value="">拉取失败</option>';
+    } finally {
+        if (fetchModelsBtn) {
+            fetchModelsBtn.disabled = false;
+            fetchModelsBtn.textContent = origText;
+        }
+    }
+};
+
 // --- 预设管理 ---
 function _getApiPresets() {
     return db.apiPresets || [];
@@ -3741,7 +3787,6 @@ function setupSubApiPresets(prefix, dbKey, presetsKey) {
 // === NovelAI 生图 API 设置 ===
 // === GPT 生图 API 设置 ===
 function setupGptImageSettings() {
-    const engineEl = document.getElementById('image-generation-engine');
     const urlEl = document.getElementById('gpt-image-url');
     const keyEl = document.getElementById('gpt-image-key');
     const modelEl = document.getElementById('gpt-image-model');
@@ -3764,13 +3809,17 @@ function setupGptImageSettings() {
     const closeModalBtn = document.getElementById('gpt-image-close-modal');
     const presetListContainer = document.getElementById('gpt-image-presets-list');
 
-    // 引擎选择
-    if (engineEl) {
-        engineEl.value = db.imageGenerationEngine || 'novelai';
-        engineEl.addEventListener('change', async () => {
-            db.imageGenerationEngine = engineEl.value;
-            await saveData();
-            showToast(`生图引擎已切换至：${engineEl.value}`);
+    // 互斥开关逻辑
+    const gptEnabledCheckbox = document.getElementById('gpt-image-enabled');
+    if (gptEnabledCheckbox) {
+        gptEnabledCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                const novelaiEnabledCheckbox = document.getElementById('novelai-enabled');
+                if (novelaiEnabledCheckbox && novelaiEnabledCheckbox.checked) {
+                    novelaiEnabledCheckbox.checked = false;
+                    showToast('已自动关闭 NovelAI 生图，两种生图引擎只能开启一个');
+                }
+            }
         });
     }
 
@@ -3782,7 +3831,11 @@ function setupGptImageSettings() {
         if (urlEl) urlEl.value = s.url || '';
         if (keyEl) keyEl.value = s.key || '';
         if (modelEl) modelEl.value = s.model || 'dall-e-3';
-        if (sizeEl) sizeEl.value = s.size || '1024x1024';
+        let defaultSize = '512x512';
+        if (Object.keys(s).length > 0 && !s.size) {
+            defaultSize = '1024x1024';
+        }
+        if (sizeEl) sizeEl.value = s.size || defaultSize;
         if (sysPromptEl) sysPromptEl.value = s.systemPrompt || '';
         if (negPromptEl) negPromptEl.value = s.negativePrompt || '';
     }
@@ -3791,12 +3844,16 @@ function setupGptImageSettings() {
     if (saveBtn) {
         saveBtn.addEventListener('click', async () => {
             const enabledEl = document.getElementById('gpt-image-enabled');
+            let defaultSize = '512x512';
+            if (db.gptImageSettings && Object.keys(db.gptImageSettings).length > 0 && !db.gptImageSettings.size) {
+                defaultSize = '1024x1024';
+            }
             db.gptImageSettings = {
                 enabled: enabledEl ? enabledEl.checked : false,
                 url: urlEl ? urlEl.value.trim() : '',
                 key: keyEl ? keyEl.value.trim() : '',
                 model: modelEl ? modelEl.value.trim() : 'dall-e-3',
-                size: sizeEl ? sizeEl.value : '1024x1024',
+                size: sizeEl ? sizeEl.value : defaultSize,
                 systemPrompt: sysPromptEl ? sysPromptEl.value.trim() : '',
                 negativePrompt: negPromptEl ? negPromptEl.value.trim() : ''
             };
@@ -3807,59 +3864,7 @@ function setupGptImageSettings() {
 
     // 拉取模型
     if (fetchModelsBtn) {
-        fetchModelsBtn.addEventListener('click', async () => {
-            const apiUrl = urlEl ? urlEl.value.trim() : '';
-            const apiKey = keyEl ? keyEl.value.trim() : '';
-
-            if (!apiUrl || !apiKey) {
-                showToast('请先填写 GPT API 地址和 Key');
-                return;
-            }
-
-            const blockedDomains = (typeof BLOCKED_API_DOMAINS !== 'undefined') ? BLOCKED_API_DOMAINS : [];
-            if (blockedDomains.some(d => apiUrl.includes(d))) {
-                showToast('该API站点已被屏蔽');
-                return;
-            }
-
-            const endpoint = `${apiUrl.replace(/\/$/, '')}/v1/models`;
-            fetchModelsBtn.disabled = true;
-            const origText = fetchModelsBtn.textContent;
-            fetchModelsBtn.textContent = '拉取中…';
-
-            try {
-                const resp = await fetch(endpoint, { headers: { 'Authorization': `Bearer ${apiKey}` } });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const json = await resp.json();
-                const models = (json.data || []).map(m => m.id).filter(Boolean).sort();
-                
-                if (!models.length) {
-                    showToast('未找到可用模型');
-                    if (modelSelectEl) modelSelectEl.innerHTML = '<option value="">未找到任何模型</option>';
-                    return;
-                }
-
-                const cur = modelEl ? modelEl.value : '';
-                if (modelSelectEl) {
-                    modelSelectEl.innerHTML = '<option value="">— 请选择 —</option>';
-                    models.forEach(m => {
-                        const opt = document.createElement('option');
-                        opt.value = m;
-                        opt.textContent = m;
-                        modelSelectEl.appendChild(opt);
-                    });
-                    if (models.includes(cur)) modelSelectEl.value = cur;
-                }
-                showToast(`成功拉取 ${models.length} 个模型`);
-            } catch (err) {
-                console.error('[GPT Image] 拉取模型失败:', err);
-                showToast('拉取模型失败：' + (err.message || '未知错误'));
-                if (modelSelectEl) modelSelectEl.innerHTML = '<option value="">拉取失败</option>';
-            } finally {
-                fetchModelsBtn.disabled = false;
-                fetchModelsBtn.textContent = origText;
-            }
-        });
+        fetchModelsBtn.addEventListener('click', () => window.fetchAndPopulateGptModels(true));
     }
 
     if (modelSelectEl) {
@@ -3889,11 +3894,15 @@ function setupGptImageSettings() {
                     throw new Error('生图功能尚未就绪，请刷新重试');
                 }
 
+                let defaultSize = '512x512';
+                if (db.gptImageSettings && Object.keys(db.gptImageSettings).length > 0 && !db.gptImageSettings.size) {
+                    defaultSize = '1024x1024';
+                }
                 const result = await generateGptImage('1girl, beautiful, masterpiece', {
                     url: url,
                     key: key,
                     model: modelEl ? modelEl.value.trim() : 'dall-e-3',
-                    size: sizeEl ? sizeEl.value : '1024x1024',
+                    size: sizeEl ? sizeEl.value : defaultSize,
                     systemPrompt: sysPromptEl ? sysPromptEl.value.trim() : '',
                     negativePrompt: negPromptEl ? negPromptEl.value.trim() : ''
                 });
@@ -3975,12 +3984,16 @@ function setupGptImageSettings() {
     if (savePresetBtn) {
         savePresetBtn.addEventListener('click', () => {
             const enabledEl = document.getElementById('gpt-image-enabled');
+            let defaultSize = '512x512';
+            if (db.gptImageSettings && Object.keys(db.gptImageSettings).length > 0 && !db.gptImageSettings.size) {
+                defaultSize = '1024x1024';
+            }
             const data = {
                 enabled: enabledEl ? enabledEl.checked : false,
                 url: urlEl ? urlEl.value.trim() : '',
                 key: keyEl ? keyEl.value.trim() : '',
                 model: modelEl ? modelEl.value.trim() : 'dall-e-3',
-                size: sizeEl ? sizeEl.value : '1024x1024',
+                size: sizeEl ? sizeEl.value : defaultSize,
                 systemPrompt: sysPromptEl ? sysPromptEl.value.trim() : '',
                 negativePrompt: negPromptEl ? negPromptEl.value.trim() : ''
             };
@@ -4140,6 +4153,18 @@ function setupNovelAiSettings() {
     }
 
     const enabledEl = document.getElementById('novelai-enabled');
+    if (enabledEl) {
+        enabledEl.addEventListener('change', function() {
+            if (this.checked) {
+                const gptEnabledCheckbox = document.getElementById('gpt-image-enabled');
+                if (gptEnabledCheckbox && gptEnabledCheckbox.checked) {
+                    gptEnabledCheckbox.checked = false;
+                    showToast('已自动关闭 GPT 生图，两种生图引擎只能开启一个');
+                }
+            }
+        });
+    }
+
     const tokenEl = document.getElementById('novelai-token');
     const customUrlEnabledEl = document.getElementById('novelai-custom-url-enabled');
     const customUrlContainer = document.getElementById('novelai-custom-url-container');

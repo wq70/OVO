@@ -180,8 +180,8 @@ function setupStorageAnalysisScreen() {
 
                                 const res = await fetch(url);
                                 const blob = await res.blob();
-                                // 使用 utils.js 中的 compressImage，默认按 1024x1024 0.8质量压缩
-                                const compressedDataUrl = await compressImage(blob, { quality: 0.8, maxWidth: 1024, maxHeight: 1024 });
+                                // 使用 utils.js 中的 compressImage，默认按 512x512 0.8质量压缩
+                                const compressedDataUrl = await compressImage(blob, { quality: 0.8, maxWidth: 512, maxHeight: 512 });
                                 
                                 const newSize = Math.round((compressedDataUrl.length * 3) / 4);
                                 if (newSize < originalSize) {

@@ -180,18 +180,34 @@ function handleMessageLongPress(messageWrapper, x, y) {
         });
     }
 
-    // 重新生图：生图已启用 + 消息是已生成过图的照片/视频消息
-    const engine = db.imageGenerationEngine || 'novelai';
-    let _imgEnabled = false;
-    if (engine === 'gpt') {
-        _imgEnabled = db.gptImageSettings && db.gptImageSettings.enabled && db.gptImageSettings.url && db.gptImageSettings.key;
-    } else {
-        _imgEnabled = db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token;
-    }
-    if (!isWithdrawn && isPhotoVideoMessage && message.novelAiImageUrl && _imgEnabled) {
+    // 生成图片/重新生图：无论是否开启，都显示选项，在点击时判断
+    if (!isWithdrawn && !isInvisibleMessage) {
         menuItems.push({
-            label: '重新生图',
+            label: isPhotoVideoMessage ? '重新生图' : '生成图片',
             action: async () => {
+                const gptSettings = db.gptImageSettings || {};
+                const naiSettings = db.novelAiSettings || {};
+                
+                const isGptOn = gptSettings.enabled;
+                const isNaiOn = naiSettings.enabled;
+                
+                if (!isGptOn && !isNaiOn) {
+                    showToast('未开启生图功能，请先在设置中开启生图引擎');
+                    return;
+                }
+                
+                if (isGptOn) {
+                    if (!gptSettings.url || !gptSettings.key) {
+                        showToast('已开启 GPT 生图，但未填写 URL 或 API Key');
+                        return;
+                    }
+                } else if (isNaiOn) {
+                    if (!naiSettings.token) {
+                        showToast('已开启 NovelAI 生图，但未填写 Token');
+                        return;
+                    }
+                }
+
                 if (typeof window.retryImageGen === 'function') {
                     showToast('🎨 已加入重新生成队列...');
                     window.retryImageGen(message.id, currentChatId, currentChatType);

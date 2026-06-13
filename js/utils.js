@@ -1441,7 +1441,10 @@ function openImageViewer(src, msgId = null) {
 
                 if (!logModal || !logContent) return;
 
-                const engine = db.imageGenerationEngine || 'novelai';
+                let engine = '未知';
+                if (db.novelAiSettings && db.novelAiSettings.enabled) engine = 'novelai';
+                if (db.gptImageSettings && db.gptImageSettings.enabled) engine = 'gpt';
+
                 const pvMatch = msgObj.content.match(/\[.*?发来的照片\/视频[：:]([\s\S]+?)\]/);
                 let promptRaw = pvMatch ? pvMatch[1].trim() : msgObj.content;
                 let finalPrompt = promptRaw;
@@ -1594,7 +1597,21 @@ async function generateGptImage(prompt, overrideSettings = {}, signal = null) {
     if (!prompt || !prompt.trim()) throw new Error('提示词不能为空');
 
     const model = settings.model || 'dall-e-3';
-    const size = settings.size || '1024x1024';
+    
+    // 优先读取角色覆盖尺寸
+    let finalSize = settings.size;
+    if (typeof currentChatId !== 'undefined' && typeof currentChatType !== 'undefined' && currentChatType === 'private') {
+        const charObj = typeof db !== 'undefined' && db.characters ? db.characters.find(c => c.id === currentChatId) : null;
+        if (charObj && charObj.gptImageSizeOverride && charObj.gptImageSizeOverride.trim() !== '') {
+            finalSize = charObj.gptImageSizeOverride;
+        }
+    }
+    
+    let defaultSize = '512x512';
+    if (db.gptImageSettings && Object.keys(db.gptImageSettings).length > 0 && !db.gptImageSettings.size) {
+        defaultSize = '1024x1024';
+    }
+    const size = finalSize || defaultSize;
     const systemPrompt = settings.systemPrompt || '';
     const negativePrompt = settings.negativePrompt || '';
 
@@ -1672,11 +1689,15 @@ async function generateGptImage(prompt, overrideSettings = {}, signal = null) {
  * @returns {Promise<{imageUrl: string}>} - 返回生成的图片 DataURL/URL
  */
 async function generateImageDispatch(prompt, signal = null) {
-    const engine = db.imageGenerationEngine || 'novelai';
-    if (engine === 'gpt') {
+    const gptEnabled = db.gptImageSettings && db.gptImageSettings.enabled;
+    const naiEnabled = db.novelAiSettings && db.novelAiSettings.enabled;
+
+    if (gptEnabled) {
         return generateGptImage(prompt, {}, signal);
-    } else {
+    } else if (naiEnabled) {
         return generateNovelAiImage(prompt, {}, signal);
+    } else {
+        throw new Error('未开启任何生图引擎，请在设置中开启 NovelAI生图 或 GPT生图');
     }
 }
 

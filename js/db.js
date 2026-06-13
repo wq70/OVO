@@ -172,7 +172,7 @@ const globalSettingKeys = [
     'theaterScenarios', 'theaterPromptPresets',
     'theaterHtmlScenarios', 'theaterHtmlPromptPresets', 'theaterMode',
     'theaterApiSettings', 'theaterFontSize', 'theaterFontPreset',
-    'novelAiSettings', 'imageGenerationEngine', 'gptImageSettings', 'gptImagePresets', 'avatarRecognitionDetailLevel',
+    'novelAiSettings', 'gptImageSettings', 'gptImagePresets', 'avatarRecognitionDetailLevel',
     'phoneControlRecycleBin', 'nodeTemplates', 'nodeSummaryText', 'memoryTableTemplates', 'vectorMemoryTemplates',
     'nightModeSettings', 'homeStatusBarSettings', 'stickerCategories', 'magicRoom'
 ];
@@ -879,7 +879,6 @@ function initDatabase() {
             cotSettings: data.cotSettings || { enabled: false, activePresetId: 'default' },
             cotPresets: data.cotPresets || JSON.parse(JSON.stringify(DEFAULT_COT_PRESETS)),
             stickerCategories: data.stickerCategories || [],
-            imageGenerationEngine: data.imageGenerationEngine || 'novelai',
             gptImageSettings: data.gptImageSettings || {},
             gptImagePresets: data.gptImagePresets || [],
             magicRoom: Object.assign({
@@ -1114,7 +1113,6 @@ const loadData = async () => {
             theaterFontSize: 15,
         theaterFontPreset: null,
         avatarRecognitionDetailLevel: 'detailed',
-        imageGenerationEngine: 'novelai',
         gptImageSettings: {},
         gptImagePresets: [],
         nodeTemplates: [],

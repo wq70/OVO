@@ -797,6 +797,7 @@
 
 /* 图片/表情包消息 */
 .image-bubble {
+    max-width: 75%;
     margin: 0 8px;
     padding: 0;
     background-color: transparent;
@@ -809,16 +810,6 @@
     overflow: visible; /* 确保时间戳显示在外部 */
 }
 
-/* 小表情包样式 */
-.sticker-bubble {
-    max-width: 84px;
-}
-
-/* 大图片消息样式 (支持生图) */
-.photo-bubble {
-    max-width: var(--chat-image-max-width, 240px);
-}
-
 .image-bubble img {
     width: 100%;
     height: auto;
@@ -826,8 +817,10 @@
     border-radius: 8px;
 }
 
-.photo-bubble img {
-    border-radius: 12px;
+/* 表情包和照片保持原小图尺寸 */
+.image-bubble.sticker-bubble,
+.image-bubble.photo-bubble {
+    max-width: 84px;
 }
 
 /* 修复图片/表情包消息时间戳样式 */
@@ -922,7 +915,7 @@
 
 /* 照片/视频卡片 (PV Card) */
 .pv-card {
-    width: var(--chat-image-max-width, 200px);
+    width: 200px;
     aspect-ratio: 1 / 1;
     background-color: #f0f0f0;
     border-radius: var(--border-radius);

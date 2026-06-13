@@ -2310,25 +2310,6 @@
                         </div>
                     </div>
 
-                    <!-- 生图引擎选择 -->
-                    <div class="kkt-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
-                        <div style="margin-bottom: 15px;">
-                            <h3 style="margin: 0; font-size: 16px; color: var(--primary-color);">生图引擎选择</h3>
-                            <p style="font-size: 12px; color: #999; margin: 5px 0 0;">选择全局使用的 AI 图像生成引擎</p>
-                        </div>
-                        <div class="kkt-item">
-                            <div class="kkt-item-label">当前生图引擎</div>
-                            <div class="kkt-item-control">
-                                <select id="image-generation-engine"
-                                    style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
-                                    <option value="novelai" selected>NovelAI</option>
-                                    <option value="gpt">GPT (DALL-E等格式)</option>
-                                </select>
-                                <span class="kkt-arrow">›</span>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- GPT 生图 API 配置 -->
                     <div class="kkt-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
                         <div style="margin-bottom: 15px;">
@@ -2400,10 +2381,14 @@
                             <div class="kkt-item-control">
                                 <select id="gpt-image-size"
                                     style="border:none; background:transparent; text-align:right; direction: rtl; appearance: none; -webkit-appearance: none; padding-right: 15px;">
-                                    <option value="1024x1024">1024x1024</option>
-                                    <option value="1024x1792">1024x1792 (竖版)</option>
-                                    <option value="1792x1024">1792x1024 (横版)</option>
                                     <option value="512x512">512x512</option>
+                                    <option value="1024x1024">1024x1024 (1:1 方形)</option>
+                                    <option value="768x1024">768x1024 (3:4 竖版)</option>
+                                    <option value="1024x768">1024x768 (4:3 横版)</option>
+                                    <option value="576x1024">576x1024 (9:16 壁纸竖版)</option>
+                                    <option value="1024x576">1024x576 (16:9 壁纸横版)</option>
+                                    <option value="1024x1792">1024x1792 (长竖版)</option>
+                                    <option value="1792x1024">1792x1024 (长横版)</option>
                                 </select>
                                 <span class="kkt-arrow">›</span>
                             </div>
@@ -5455,19 +5440,6 @@
                                     <input type="range" id="setting-avatar-radius" min="0" max="50" step="1" value="50"
                                         style="width: 100%; accent-color: var(--primary-color);">
                                 </div>
-                                <div class="kkt-item"
-                                    style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
-                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                            <div class="kkt-item-label">图片显示大小</div>
-                                            <button type="button" id="reset-chat-image-max-width-btn" class="btn btn-small btn-secondary" style="padding: 2px 8px; font-size: 12px; height: auto; min-height: auto; border-radius: 4px;">重置</button>
-                                        </div>
-                                        <span id="setting-chat-image-max-width-value"
-                                            style="color: var(--primary-color); font-weight: bold;">200px</span>
-                                    </div>
-                                    <input type="range" id="setting-chat-image-max-width" min="100" max="350" step="5" value="200"
-                                        style="width: 100%; accent-color: var(--primary-color);">
-                                </div>
                             </div>
 
                             <!-- 气泡样式分组 -->
@@ -5858,7 +5830,7 @@
                                     </div>
                                     <textarea id="gpt-artist-prompt" rows="2" placeholder="输入GPT生图专属附加词，例如：anime style, masterpiece"
                                         style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 8px; resize: vertical; font-size: 13px; box-sizing: border-box;"></textarea>
-                                    <p style="font-size: 12px; color: #999; margin-top: 5px; margin-bottom: 0;">
+                                    <p style="font-size: 12px; color: #999; margin: 5px 0 0;">
                                         当全局生图引擎为 GPT 时，此内容将自动拼接到该角色的生图提示词中。</p>
                                 </div>
                             </div>
@@ -6633,19 +6605,6 @@
                                 </div>
                                 <input type="range" id="setting-group-avatar-radius" min="0" max="50" step="1"
                                     value="50" style="width: 100%; accent-color: var(--primary-color);">
-                            </div>
-                            <div class="kkt-item"
-                                style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <div class="kkt-item-label">图片显示大小</div>
-                                        <button type="button" id="reset-group-chat-image-max-width-btn" class="btn btn-small btn-secondary" style="padding: 2px 8px; font-size: 12px; height: auto; min-height: auto; border-radius: 4px;">重置</button>
-                                    </div>
-                                    <span id="setting-group-chat-image-max-width-value"
-                                        style="color: var(--primary-color); font-weight: bold;">200px</span>
-                                </div>
-                                <input type="range" id="setting-group-chat-image-max-width" min="100" max="350" step="5"
-                                    value="200" style="width: 100%; accent-color: var(--primary-color);">
                             </div>
                         </div>
 

@@ -1274,31 +1274,12 @@ function loadGroupSettingsToSidebar() {
         radiusValue.textContent = `${radiusSlider.value}%`;
     };
 
-    const chatImageMaxWidth = group.chatImageMaxWidth !== undefined ? group.chatImageMaxWidth : 200;
-    document.getElementById('setting-group-chat-image-max-width').value = chatImageMaxWidth;
-    document.getElementById('setting-group-chat-image-max-width-value').textContent = `${chatImageMaxWidth}px`;
-
-    const chatImageMaxWidthSlider = document.getElementById('setting-group-chat-image-max-width');
-        const chatImageMaxWidthValue = document.getElementById('setting-group-chat-image-max-width-value');
-        chatImageMaxWidthSlider.oninput = () => {
-            chatImageMaxWidthValue.textContent = `${chatImageMaxWidthSlider.value}px`;
-        };
-
         // 头像圆角重置按钮
         const resetAvatarRadiusBtn = document.getElementById('reset-group-avatar-radius-btn');
         if (resetAvatarRadiusBtn) {
             resetAvatarRadiusBtn.onclick = () => {
                 radiusSlider.value = 50;
                 radiusValue.textContent = '50%';
-            };
-        }
-
-        // 图片显示大小重置按钮
-        const resetChatImageMaxWidthBtn = document.getElementById('reset-group-chat-image-max-width-btn');
-        if (resetChatImageMaxWidthBtn) {
-            resetChatImageMaxWidthBtn.onclick = () => {
-                chatImageMaxWidthSlider.value = 200;
-                chatImageMaxWidthValue.textContent = '200px';
             };
         }
 
@@ -1463,7 +1444,6 @@ async function saveGroupSettingsFromSidebar(showToastFlag = true) {
     }
 
     group.avatarRadius = parseInt(document.getElementById('setting-group-avatar-radius').value, 10);
-    group.chatImageMaxWidth = parseInt(document.getElementById('setting-group-chat-image-max-width').value, 10);
 
     group.showTimestamp = document.getElementById('setting-group-show-timestamp').checked;
     group.timestampStyle = document.getElementById('setting-group-timestamp-style').value;
@@ -1509,7 +1489,6 @@ async function saveGroupSettingsFromSidebar(showToastFlag = true) {
 
     chatScreen.classList.remove('timestamp-style-bubble', 'timestamp-style-avatar');
     chatScreen.classList.add(`timestamp-style-${group.timestampStyle || 'bubble'}`);
-    chatScreen.style.setProperty('--chat-image-max-width', `${group.chatImageMaxWidth}px`);
 
     // updateCustomBubbleStyle(currentChatId, group.customBubbleCss, group.useCustomBubbleCss); // 移除实时应用以防污染设置页
     await saveGroup(group.id);

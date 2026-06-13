@@ -1157,13 +1157,9 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
             bubbleElement.innerHTML = `<img src="${realPhotoUrl}" alt="${pvContent}" onclick="openImageViewer(this.src, '${message.id}')" style="cursor: zoom-in;">`;
         } else {
             // === 自动生图逻辑 (NovelAI 或 GPT) ===
-            const engine = db.imageGenerationEngine || 'novelai';
-            let _imgEnabled = false;
-            if (engine === 'gpt') {
-                _imgEnabled = db.gptImageSettings && db.gptImageSettings.enabled && db.gptImageSettings.url && db.gptImageSettings.key;
-            } else {
-                _imgEnabled = db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token;
-            }
+            const gptEnabled = db.gptImageSettings && db.gptImageSettings.enabled && db.gptImageSettings.url && db.gptImageSettings.key;
+            const naiEnabled = db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token;
+            const _imgEnabled = gptEnabled || naiEnabled;
             
             if (message.isNovelAiGenerating) {
                 // 后台生图进行中...
@@ -1181,14 +1177,13 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
                 }
 
                 bubbleElement = document.createElement('div');
-                bubbleElement.className = 'image-bubble photo-bubble nai-generating';
+                bubbleElement.className = 'image-bubble nai-generating';
                 bubbleElement.innerHTML = `
-                    <div class="nai-loading-card" style="width: 200px; height: 280px; border-radius: 12px; background: #f0f0f0; ${bgStyle} display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; overflow: hidden; position: relative;">
+                    <div class="nai-loading-card" style="width: 84px; height: 84px; border-radius: 8px; background: #f0f0f0; ${bgStyle} display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; overflow: hidden; position: relative;">
                         ${bgOverlay}
                         <div class="nai-loading-shimmer" style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); animation: nai-shimmer 1.5s infinite;"></div>
-                        <div style="width: 24px; height: 24px; border: 2.5px solid #ccc; border-top-color: #999; border-radius: 50%; animation: nai-spin 0.8s linear infinite; z-index: 1;"></div>
-                        <span style="font-size: 12px; color: ${currentUrl ? '#333' : '#999'}; font-weight: ${currentUrl ? 'bold' : 'normal'}; z-index: 1;">作画中...</span>
-                        <button class="btn btn-small btn-ghost nai-cancel-btn" style="z-index: 2; margin-top: 10px; padding: 4px 10px; font-size: 12px; border-radius: 12px; ${currentUrl ? 'background: rgba(0,0,0,0.5); color: #fff; border: none;' : ''}" onclick="window.cancelImageGen('${message.id}')">取消</button>
+                        <div style="width: 16px; height: 16px; border: 2px solid #ccc; border-top-color: #999; border-radius: 50%; animation: nai-spin 0.8s linear infinite; z-index: 1;"></div>
+                        <span style="font-size: 10px; color: ${currentUrl ? '#333' : '#999'}; font-weight: ${currentUrl ? 'bold' : 'normal'}; z-index: 1; transform: scale(0.8);">作画中</span>
                     </div>`;
             } else if (message.novelAiImageUrl) {
                 // 已有生成好的图片
@@ -1201,12 +1196,10 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
                 }
 
                 bubbleElement = document.createElement('div');
-                bubbleElement.className = 'image-bubble photo-bubble';
+                bubbleElement.className = 'image-bubble';
 
                 bubbleElement.innerHTML = `
-                    <div style="position: relative; display: inline-block;">
-                        <img src="${currentUrl}" alt="${pvContent}" onclick="openImageViewer(this.src, '${message.id}')" style="cursor: zoom-in; max-width: 280px; border-radius: 12px; display: block;">
-                    </div>
+                    <img src="${currentUrl}" alt="${pvContent}" onclick="openImageViewer(this.src, '${message.id}')" style="cursor: zoom-in; display: block;">
                 `;
             } else if (message.novelAiError) {
                 // 生图失败卡片
@@ -1233,13 +1226,12 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
                 // 首次触发静默生图
                 message.isNovelAiGenerating = true;
                 bubbleElement = document.createElement('div');
-                bubbleElement.className = 'image-bubble photo-bubble nai-generating';
+                bubbleElement.className = 'image-bubble nai-generating';
                 bubbleElement.innerHTML = `
-                    <div class="nai-loading-card" style="width: 200px; height: 280px; border-radius: 12px; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; overflow: hidden; position: relative;">
+                    <div class="nai-loading-card" style="width: 84px; height: 84px; border-radius: 8px; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; overflow: hidden; position: relative;">
                         <div class="nai-loading-shimmer" style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); animation: nai-shimmer 1.5s infinite;"></div>
-                        <div style="width: 24px; height: 24px; border: 2.5px solid #ccc; border-top-color: #999; border-radius: 50%; animation: nai-spin 0.8s linear infinite;"></div>
-                        <span style="font-size: 12px; color: #999; z-index: 1;">作画中...</span>
-                        <button class="btn btn-small btn-ghost nai-cancel-btn" style="z-index: 2; margin-top: 10px; padding: 4px 10px; font-size: 12px; border-radius: 12px;" onclick="window.cancelImageGen('${message.id}')">取消</button>
+                        <div style="width: 16px; height: 16px; border: 2px solid #ccc; border-top-color: #999; border-radius: 50%; animation: nai-spin 0.8s linear infinite;"></div>
+                        <span style="font-size: 10px; color: #999; z-index: 1; transform: scale(0.8);">作画中</span>
                     </div>`;
                 
                 // 将任务放入队列并在后台处理，不再和 DOM 直接绑定
@@ -2341,14 +2333,47 @@ window.retryImageGen = function(msgId, chatId, chatType) {
     const msg = chat.history.find(m => m.id === msgId);
     if (!msg) return;
 
+    // 如果不是照片/视频格式，则将其转换为照片/视频格式
+    const pvMatch = msg.content.match(/\[.*?发来的照片\/视频[：:]([\s\S]+?)\]/);
+    let extractPrompt = '';
+    
+    if (pvMatch) {
+        extractPrompt = pvMatch[1].trim();
+    } else {
+        // 从普通消息提取文本作为 prompt
+        const textMatch = msg.content.match(/\[.*?：([\s\S]*?)\]$/);
+        if (textMatch) {
+            extractPrompt = textMatch[1].trim();
+        } else {
+            extractPrompt = msg.content.replace(/^\[(.*?)\]$/, '$1').trim();
+        }
+        
+        // 获取发送者名称
+        let senderName = '角色';
+        if (msg.role === 'user') {
+            senderName = (chatType === 'private') ? (chat.myName || '我') : (chat.me ? chat.me.nickname : '我');
+        } else {
+            if (chatType === 'private') {
+                senderName = chat.remarkName || chat.name || '角色';
+            } else {
+                const sender = chat.members.find(m => m.id === msg.senderId);
+                senderName = sender ? sender.groupNickname : '未知成员';
+            }
+        }
+        
+        // 修改内容格式
+        msg.content = `[${senderName}发来的照片/视频：${extractPrompt}]`;
+        if (msg.parts && msg.parts.length > 0) {
+            msg.parts[0].text = msg.content;
+        }
+    }
+
     msg.novelAiError = null;
     msg.isNovelAiGenerating = true;
     saveData();
     renderMessages(false, false);
 
-    // 重新提取内容并排队生图
-    const pvMatch = msg.content.match(/\[.*?发来的照片\/视频[：:]([\s\S]+?)\]/);
-    if (pvMatch) {
-        window._scheduleBackgroundNaiGen(msgId, chatId, chatType, pvMatch[1].trim());
+    if (extractPrompt) {
+        window._scheduleBackgroundNaiGen(msgId, chatId, chatType, extractPrompt);
     }
 };

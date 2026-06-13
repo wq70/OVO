@@ -2128,13 +2128,10 @@ function getOnlineOutputFormats(character, worldBooksBefore, worldBooksAfter) {
     let photoVideoFormat = '';
     
     // === 自动生图判断 (支持 NovelAI / GPT) ===
-    const engine = db.imageGenerationEngine || 'novelai';
-    let _imgEnabled = false;
-    if (engine === 'gpt') {
-        _imgEnabled = db.gptImageSettings && db.gptImageSettings.enabled && db.gptImageSettings.url && db.gptImageSettings.key;
-    } else {
-        _imgEnabled = db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token;
-    }
+    const gptEnabled = db.gptImageSettings && db.gptImageSettings.enabled && db.gptImageSettings.url && db.gptImageSettings.key;
+    const naiEnabled = db.novelAiSettings && db.novelAiSettings.enabled && db.novelAiSettings.token;
+    const _imgEnabled = gptEnabled || naiEnabled;
+    const engine = naiEnabled ? 'novelai' : (gptEnabled ? 'gpt' : 'novelai');
     
     if (character.useRealGallery && character.gallery && character.gallery.length > 0) {
         if (_imgEnabled) {
