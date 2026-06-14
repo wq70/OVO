@@ -12,6 +12,13 @@ window.KeepAliveModule = {
         this.initAudioElement();
         this.bindEvents();
         this.restoreSettings();
+        this.initLibrary();
+    },
+
+    initLibrary() {
+        if (!db.keepAliveAudioLibrary) {
+            db.keepAliveAudioLibrary = [];
+        }
     },
 
     initAudioElement() {
@@ -85,13 +92,16 @@ window.KeepAliveModule = {
             urlApplyBtn.addEventListener('click', async () => {
                 const url = urlInput.value.trim();
                 if (url) {
+                    const name = url.split('/').pop() || 'URL 音频';
                     db.keepAliveAudioSrc = url;
-                    db.keepAliveAudioName = url.split('/').pop() || 'URL 音频';
+                    db.keepAliveAudioName = name;
+                    this.addToLibrary(name, url);
                     await saveData();
                     this.loadAudioSource();
                     if (db.keepAliveAudioEnabled) {
                         this.playAudio();
                     }
+                    urlInput.value = '';
                     if (typeof showToast === 'function') showToast('保活音频链接已应用');
                 }
             });
@@ -114,8 +124,11 @@ window.KeepAliveModule = {
 
                 const reader = new FileReader();
                 reader.onload = async (ev) => {
-                    db.keepAliveAudioSrc = ev.target.result; // Base64
-                    db.keepAliveAudioName = file.name;
+                    const base64Src = ev.target.result;
+                    const name = file.name;
+                    db.keepAliveAudioSrc = base64Src; // Base64
+                    db.keepAliveAudioName = name;
+                    this.addToLibrary(name, base64Src);
                     await saveData();
                     this.loadAudioSource();
                     if (db.keepAliveAudioEnabled) {
@@ -124,6 +137,74 @@ window.KeepAliveModule = {
                     if (typeof showToast === 'function') showToast('本地保活音频已应用');
                 };
                 reader.readAsDataURL(file);
+            });
+        }
+
+        const clearBtn = document.getElementById('keep-alive-clear-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', async () => {
+                this.pauseAudio();
+                db.keepAliveAudioSrc = '';
+                db.keepAliveAudioName = '';
+                db.keepAliveAudioEnabled = false;
+                if (audioSwitch) audioSwitch.checked = false;
+                this.audioElement.src = '';
+                const nameEl = document.getElementById('keep-alive-current-name');
+                if (nameEl) nameEl.textContent = '未选择音频';
+                clearBtn.style.display = 'none';
+                this.updateUIStatus();
+                await saveData();
+                if (typeof showToast === 'function') showToast('当前保活音频已清除');
+            });
+        }
+
+        // 音频库管理弹窗
+        const openLibraryBtn = document.getElementById('open-keep-alive-library-btn');
+        const libraryModal = document.getElementById('keep-alive-library-modal');
+        const closeLibraryBtn = document.getElementById('close-keep-alive-library-btn');
+        
+        if (openLibraryBtn && libraryModal) {
+            openLibraryBtn.addEventListener('click', () => {
+                this.renderLibrary();
+                libraryModal.classList.add('visible');
+            });
+        }
+        if (closeLibraryBtn && libraryModal) {
+            closeLibraryBtn.addEventListener('click', () => {
+                libraryModal.classList.remove('visible');
+            });
+        }
+
+        // 音频库全选和批量删除
+        const selectAllCb = document.getElementById('keep-alive-lib-select-all');
+        const delSelectedBtn = document.getElementById('keep-alive-lib-delete-selected-btn');
+        if (selectAllCb) {
+            selectAllCb.addEventListener('change', (e) => {
+                const cbs = document.querySelectorAll('.keep-alive-lib-checkbox');
+                cbs.forEach(cb => cb.checked = e.target.checked);
+                if (delSelectedBtn) delSelectedBtn.disabled = !e.target.checked;
+            });
+        }
+        if (delSelectedBtn) {
+            delSelectedBtn.addEventListener('click', async () => {
+                const cbs = document.querySelectorAll('.keep-alive-lib-checkbox:checked');
+                if (cbs.length === 0) return;
+                
+                if (confirm(`确定要删除选中的 ${cbs.length} 个音频吗？`)) {
+                    const idsToRemove = Array.from(cbs).map(cb => cb.dataset.id);
+                    db.keepAliveAudioLibrary = db.keepAliveAudioLibrary.filter(item => !idsToRemove.includes(item.id));
+                    
+                    // 如果删除了当前正在播放的音频
+                    if (idsToRemove.includes(db.keepAliveAudioSrc) || idsToRemove.includes(this.currentLibraryId)) {
+                         if (clearBtn) clearBtn.click();
+                    }
+                    
+                    await saveData();
+                    this.renderLibrary();
+                    if (selectAllCb) selectAllCb.checked = false;
+                    delSelectedBtn.disabled = true;
+                    if (typeof showToast === 'function') showToast('已删除选中音频');
+                }
             });
         }
 
@@ -182,13 +263,119 @@ window.KeepAliveModule = {
         }
     },
 
+    addToLibrary(name, src) {
+        if (!db.keepAliveAudioLibrary) db.keepAliveAudioLibrary = [];
+        const existingId = db.keepAliveAudioLibrary.findIndex(item => item.src === src);
+        if (existingId !== -1) {
+            this.currentLibraryId = db.keepAliveAudioLibrary[existingId].id;
+            return; // 已经存在则不重复添加
+        }
+        
+        const newItem = {
+            id: 'ka_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+            name: name,
+            src: src,
+            timestamp: Date.now()
+        };
+        db.keepAliveAudioLibrary.unshift(newItem); // 加到开头
+        this.currentLibraryId = newItem.id;
+    },
+
+    renderLibrary() {
+        const listContainer = document.getElementById('keep-alive-library-list');
+        const toolbar = document.getElementById('keep-alive-lib-toolbar');
+        const selectAllCb = document.getElementById('keep-alive-lib-select-all');
+        const delSelectedBtn = document.getElementById('keep-alive-lib-delete-selected-btn');
+        
+        if (!listContainer) return;
+        listContainer.innerHTML = '';
+        
+        if (selectAllCb) selectAllCb.checked = false;
+        if (delSelectedBtn) delSelectedBtn.disabled = true;
+
+        if (!db.keepAliveAudioLibrary || db.keepAliveAudioLibrary.length === 0) {
+            listContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-size:13px;">音频库空空如也</div>';
+            if (toolbar) toolbar.style.display = 'none';
+            return;
+        }
+
+        if (toolbar) toolbar.style.display = 'flex';
+
+        db.keepAliveAudioLibrary.forEach(item => {
+            const isCurrent = db.keepAliveAudioSrc === item.src;
+            
+            const div = document.createElement('div');
+            div.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 10px;
+                background: #fff;
+                border-radius: 8px;
+                border: 1px solid ${isCurrent ? 'var(--primary-color)' : '#eee'};
+            `;
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'keep-alive-lib-checkbox';
+            checkbox.dataset.id = item.id;
+            checkbox.style.margin = '0';
+            checkbox.addEventListener('change', () => {
+                const anyChecked = document.querySelector('.keep-alive-lib-checkbox:checked') !== null;
+                if (delSelectedBtn) delSelectedBtn.disabled = !anyChecked;
+                
+                const allChecked = document.querySelectorAll('.keep-alive-lib-checkbox:not(:checked)').length === 0;
+                if (selectAllCb) selectAllCb.checked = allChecked;
+            });
+
+            const infoDiv = document.createElement('div');
+            infoDiv.style.cssText = `flex: 1; min-width: 0; cursor: pointer;`;
+            infoDiv.innerHTML = `
+                <div style="font-size: 14px; color: #333; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${item.name}
+                </div>
+                <div style="font-size: 11px; color: #999; margin-top: 4px;">
+                    ${new Date(item.timestamp).toLocaleString()} ${isCurrent ? '<span style="color:var(--primary-color);margin-left:5px;">(当前使用)</span>' : ''}
+                </div>
+            `;
+            
+            infoDiv.addEventListener('click', async () => {
+                db.keepAliveAudioSrc = item.src;
+                db.keepAliveAudioName = item.name;
+                this.currentLibraryId = item.id;
+                await saveData();
+                this.loadAudioSource();
+                if (db.keepAliveAudioEnabled) {
+                    this.playAudio();
+                } else {
+                    const audioSwitch = document.getElementById('keep-alive-audio-enabled');
+                    if (audioSwitch) {
+                        audioSwitch.checked = true;
+                        // 触发change事件以保存设置并播放
+                        audioSwitch.dispatchEvent(new Event('change'));
+                    }
+                }
+                this.renderLibrary(); // 刷新高亮状态
+                if (typeof showToast === 'function') showToast('已切换保活音频');
+            });
+
+            div.appendChild(checkbox);
+            div.appendChild(infoDiv);
+            listContainer.appendChild(div);
+        });
+    },
+
     loadAudioSource() {
+        const clearBtn = document.getElementById('keep-alive-clear-btn');
         if (db.keepAliveAudioSrc) {
             this.audioElement.src = db.keepAliveAudioSrc;
             const nameEl = document.getElementById('keep-alive-current-name');
             if (nameEl) {
                 nameEl.textContent = db.keepAliveAudioName || '自定义音频';
             }
+            if (clearBtn) clearBtn.style.display = 'flex';
+        } else {
+            if (clearBtn) clearBtn.style.display = 'none';
         }
     },
 

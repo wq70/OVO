@@ -9380,7 +9380,10 @@
                         <svg id="keep-alive-icon-play" viewBox="0 0 24 24" width="40" height="40" fill="var(--primary-color)"><path d="M8 5v14l11-7z"/></svg>
                         <svg id="keep-alive-icon-pause" viewBox="0 0 24 24" width="40" height="40" fill="var(--primary-color)" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                     </div>
-                    <div id="keep-alive-current-name" style="font-size:14px;color:#666;font-weight:600;min-height:20px;">未选择音频</div>
+                    <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <div id="keep-alive-current-name" style="font-size:14px;color:#666;font-weight:600;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">未选择音频</div>
+                        <button type="button" id="keep-alive-clear-btn" title="清除当前音频" style="background:rgba(255,59,48,0.1); border:1px solid rgba(255,59,48,0.2); color:#ff3b30; width:22px; height:22px; border-radius:50%; font-size:12px; display:none; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;">✕</button>
+                    </div>
                     <div style="font-size:11px;color:#aaa;margin-top:4px;">默认单曲循环播放</div>
                 </div>
 
@@ -9400,6 +9403,26 @@
 
                 <input type="file" id="keep-alive-file-input" accept="audio/*" style="display:none;">
                 <button type="button" id="keep-alive-local-upload-btn" class="btn btn-secondary" style="width:100%;">从本地选择文件</button>
+                <button type="button" id="open-keep-alive-library-btn" class="btn btn-neutral" style="width:100%;">🗂️ 音频库管理</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 保活音频库管理弹窗 -->
+    <div id="keep-alive-library-modal" class="modal-overlay">
+        <div class="modal-window" style="max-width: 360px; max-height: 80vh; display: flex; flex-direction: column;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                <h3 style="margin:0;color:#333;">保活音频库</h3>
+                <button type="button" id="close-keep-alive-library-btn" style="background:none;border:none;font-size:20px;color:#999;cursor:pointer;">×</button>
+            </div>
+            
+            <div id="keep-alive-lib-toolbar" style="display:flex; justify-content:space-between; margin-bottom:10px; align-items:center; display:none;">
+                <label style="font-size:13px; color:#666; display:flex; align-items:center; gap:5px;"><input type="checkbox" id="keep-alive-lib-select-all"> 全选</label>
+                <button type="button" id="keep-alive-lib-delete-selected-btn" class="btn btn-danger btn-small" disabled>删除选中</button>
+            </div>
+
+            <div id="keep-alive-library-list" style="flex:1; overflow-y:auto; border:1px solid #eee; border-radius:8px; padding:8px; background:#fafafa; display:flex; flex-direction:column; gap:8px;">
+                <!-- JS 动态渲染列表 -->
             </div>
         </div>
     </div>

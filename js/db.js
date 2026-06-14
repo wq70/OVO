@@ -174,7 +174,8 @@ const globalSettingKeys = [
     'theaterApiSettings', 'theaterFontSize', 'theaterFontPreset',
     'novelAiSettings', 'gptImageSettings', 'gptImagePresets', 'avatarRecognitionDetailLevel',
     'phoneControlRecycleBin', 'nodeTemplates', 'nodeSummaryText', 'memoryTableTemplates', 'vectorMemoryTemplates',
-    'nightModeSettings', 'homeStatusBarSettings', 'stickerCategories', 'magicRoom'
+    'nightModeSettings', 'homeStatusBarSettings', 'stickerCategories', 'magicRoom',
+    'keepAliveCodeEnabled', 'keepAliveAudioEnabled', 'keepAliveAudioSrc', 'keepAliveAudioName', 'keepAliveAudioLibrary'
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
 
@@ -1129,7 +1130,12 @@ const loadData = async () => {
             sysNotifCustomServer: false,
             sysNotifServerUrl: '',
             sysNotifServerKey: '',
-        }
+        },
+        keepAliveCodeEnabled: false,
+        keepAliveAudioEnabled: false,
+        keepAliveAudioSrc: '',
+        keepAliveAudioName: '',
+        keepAliveAudioLibrary: []
     };
     db[key] = settings[key] !== undefined ? settings[key] : (defaultValue[key] !== undefined ? JSON.parse(JSON.stringify(defaultValue[key])) : undefined);
 });
@@ -1385,6 +1391,8 @@ const dataStorage = {
         categorizedSizes.apiAndCore += stringify(db.apiPresets);
         categorizedSizes.apiAndCore += stringify(db.cotSettings);
         categorizedSizes.apiAndCore += stringify(db.cotPresets);
+        categorizedSizes.apiAndCore += stringify(db.keepAliveAudioSrc);
+        categorizedSizes.apiAndCore += stringify(db.keepAliveAudioLibrary);
 
         const totalSize = Object.values(categorizedSizes).reduce((sum, size) => sum + size, 0);
 
