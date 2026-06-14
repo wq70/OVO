@@ -1153,7 +1153,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
 
         if (isRealPhoto) {
             bubbleElement = document.createElement('div');
-            bubbleElement.className = 'image-bubble';
+            bubbleElement.className = 'image-bubble photo-bubble';
             bubbleElement.innerHTML = `<img src="${realPhotoUrl}" alt="${pvContent}" onclick="openImageViewer(this.src, '${message.id}')" style="cursor: zoom-in;">`;
         } else {
             // === 自动生图逻辑 (NovelAI 或 GPT) ===
