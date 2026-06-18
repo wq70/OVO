@@ -196,13 +196,15 @@ function renderContactList() {
 
     listContainer.innerHTML = '';
     
-    const allContacts = db.characters || [];
+    // 过滤掉可能残留在内存里但已经被删除（无ID或ID异常）的幽灵角色
+    // 确保这里的列表和聊天列表 (chat_list) 保持数据一致性
+    const allContacts = (db.characters || []).filter(c => c && c.id);
     
     if (countEl) countEl.textContent = allContacts.length;
 
     // 按名称排序
     const sortedContacts = [...allContacts].sort((a, b) => {
-        return (a.remarkName || a.realName).localeCompare(b.remarkName || b.realName);
+        return (a.remarkName || a.realName || '').localeCompare(b.remarkName || b.realName || '');
     });
 
     sortedContacts.forEach(char => {

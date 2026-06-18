@@ -1285,6 +1285,11 @@ function ensureAutoJournalState(chat) {
         chat.autoJournalPending = false;
     }
 
+    // 修复卡死：如果记录是 running 但当前并没有在生成，强行重置为 idle
+    if (chat.autoJournalState === 'running' && (typeof isGenerating === 'undefined' || !isGenerating || generatingChatId !== chat.id)) {
+        chat.autoJournalState = 'idle';
+    }
+
     if (chat.lastSummarizedMsgId === undefined) {
         if (!isNaN(legacyIndex) && legacyIndex > 0 && legacyIndex <= history.length) {
             const legacyMessage = history[legacyIndex - 1];
@@ -1298,35 +1303,6 @@ function ensureAutoJournalState(chat) {
         }
     }
 
-    if (chat.lastSummarizedMsgId) {
-        const messageExists = history.some(message => message.id === chat.lastSummarizedMsgId);
-        if (!messageExists) {
-            const fallbackMessage = findBestAutoJournalCursorFallback(chat);
-            if (fallbackMessage) {
-                chat.lastSummarizedMsgId = fallbackMessage.id;
-                chat.lastSummarizedMsgTimestamp = fallbackMessage.timestamp || null;
-            } else {
-                chat.lastSummarizedMsgId = null;
-                chat.lastSummarizedMsgTimestamp = null;
-            }
-        }
-    }
-}
-
-function findBestAutoJournalCursorFallback(chat) {
-    const history = Array.isArray(chat && chat.history) ? chat.history : [];
-    if (!history.length || !chat || !chat.lastSummarizedMsgTimestamp) {
-        return null;
-    }
-
-    for (let index = history.length - 1; index >= 0; index--) {
-        const message = history[index];
-        if ((message.timestamp || 0) <= chat.lastSummarizedMsgTimestamp) {
-            return message;
-        }
-    }
-
-    return null;
 }
 
 function getAutoJournalCursorInfo(chat) {
@@ -1334,17 +1310,43 @@ function getAutoJournalCursorInfo(chat) {
 
     const history = Array.isArray(chat && chat.history) ? chat.history : [];
     const interval = Math.max(10, parseInt(chat && chat.autoJournalInterval, 10) || 100);
-    const cursorIndex = chat && chat.lastSummarizedMsgId
-        ? history.findIndex(message => message.id === chat.lastSummarizedMsgId)
-        : -1;
-    const nextStartIndex = cursorIndex + 1;
+    
+    let nextStartIndex = 0;
+    
+    if (chat) {
+        let foundIndex = -1;
+        if (chat.lastSummarizedMsgId) {
+            foundIndex = history.findIndex(message => message.id === chat.lastSummarizedMsgId);
+        }
+        
+        if (foundIndex !== -1) {
+            nextStartIndex = foundIndex + 1;
+        } else {
+            // 极简容错：直接读取历史日记中的最大 range.end
+            let maxEnd = 0;
+            if (Array.isArray(chat.memoryJournals)) {
+                for (const j of chat.memoryJournals) {
+                    if (j.range && typeof j.range.end === 'number') {
+                        maxEnd = Math.max(maxEnd, j.range.end);
+                    }
+                }
+            }
+            
+            if (maxEnd > 0) {
+                nextStartIndex = Math.min(maxEnd, history.length); // 防越界
+            } else if (chat.lastAutoJournalIndex !== undefined && !isNaN(parseInt(chat.lastAutoJournalIndex, 10))) {
+                nextStartIndex = Math.max(0, Math.min(parseInt(chat.lastAutoJournalIndex, 10), history.length));
+            }
+        }
+    }
+
     const unsummarizedCount = Math.max(0, history.length - nextStartIndex);
     const completedBatchCount = Math.floor(unsummarizedCount / interval);
 
     return {
         history,
         interval,
-        cursorIndex,
+        cursorIndex: nextStartIndex - 1,
         nextStartIndex,
         unsummarizedCount,
         completedBatchCount
@@ -1610,7 +1612,7 @@ async function flushPendingAutoJournal(chatId) {
     if (!chat) return;
 
     ensureAutoJournalState(chat);
-    if (!chat.autoJournalPending || chat.autoJournalState === 'failed') {
+    if (!chat.autoJournalPending) {
         return;
     }
 
@@ -1634,11 +1636,6 @@ async function processAutoJournal(chat, options = {}) {
     if (!options.force && !chat.autoJournalEnabled) {
         refreshAutoJournalButton(chat, options.chatType);
         return { status: 'disabled', generatedCount: 0 };
-    }
-
-    if (chat.autoJournalState === 'failed' && !options.ignoreFailedState) {
-        refreshAutoJournalButton(chat, options.chatType);
-        return { status: 'failed', generatedCount: 0 };
     }
 
     if (chat.autoJournalState === 'running') {
@@ -1714,7 +1711,20 @@ async function processAutoJournal(chat, options = {}) {
         chat.autoJournalPending = false;
         await saveData();
         refreshAutoJournalButton(chat, targetChatType);
-        showApiError(error);
+        
+        // 高调报错：弹窗显示失败原因
+        const errorMsg = error ? (error.message || String(error)) : '未知错误';
+        if (typeof showAppConfirmDialog === 'function') {
+            showAppConfirmDialog({
+                title: '自动总结失败',
+                message: `API 报错：\n${errorMsg}\n\n当前进度已暂停。当您继续发送消息，累计达到下一个间隔时系统将自动重试；您也可以随时在设置中手动触发。`,
+                confirmText: '确定',
+                cancelText: '' // 隐藏取消按钮
+            }).catch(() => {});
+        } else {
+            window.alert(`自动总结失败：\n${errorMsg}`);
+        }
+        
         return { status: 'failed', generatedCount, error };
     } finally {
         currentChatId = savedChatId;
@@ -1933,11 +1943,6 @@ async function checkAndTriggerAutoJournal(chat) {
     if (!chat || !chat.autoJournalEnabled) return;
 
     ensureAutoJournalState(chat);
-
-    if (chat.autoJournalState === 'failed') {
-        refreshAutoJournalButton(chat);
-        return;
-    }
 
     await processAutoJournal(chat, {
         force: false,

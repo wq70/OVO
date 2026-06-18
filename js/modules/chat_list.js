@@ -383,14 +383,26 @@ function handleChatListLongPress(chatId, chatType, x, y) {
             action: async () => {
                 if (confirm(`确定要删除与“${itemName}”的聊天记录吗？此操作不可恢复。`)) {
                     if (chatType === 'private') {
+                        // 1. 从 IndexedDB 彻底删除
                         await dexieDB.characters.delete(chatId);
+                        // 2. 从内存状态中彻底删除
                         db.characters = db.characters.filter(c => c.id !== chatId);
+                        // 3. 同步清理通讯录里遗留的“我的档案”绑定关系，避免出现幽灵角色
+                        if (db.myPersonaPresets) {
+                            db.myPersonaPresets.forEach(preset => {
+                                if (preset.bindings && preset.bindings[chatId]) {
+                                    delete preset.bindings[chatId];
+                                }
+                            });
+                        }
                     } else {
                         await dexieDB.groups.delete(chatId);
                         db.groups = db.groups.filter(g => g.id !== chatId);
                     }
+                    await saveData(); // 确保删除状态被即刻持久化
                     renderChatList();
-                    showToast('聊天已删除');
+                    if (typeof renderContactList === 'function') renderContactList();
+                    showToast('聊天及相关数据已彻底删除');
                 }
             }
         }

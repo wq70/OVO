@@ -27,10 +27,17 @@ const switchScreen = (targetId) => {
     if (targetId !== 'chat-room-screen' && typeof MinimaxTTSService !== 'undefined' && MinimaxTTSService.stop) {
         MinimaxTTSService.stop();
     }
-    // 离开聊天室时清理自定义样式
+    // 离开聊天室时清理自定义样式及全局状态
     if (targetId !== 'chat-room-screen') {
         const customStyles = document.querySelectorAll('style[id^="custom-bubble-style-for-"]');
         customStyles.forEach(style => style.remove());
+        
+        // 防止串线：仅在返回大厅类主页面时清空当前聊天目标ID，防止影响聊天设置页等二级页面
+        const mainScreens = ['chat-list-screen', 'contacts-screen', 'more-screen', 'phone-screen', 'home-screen', 'forum-screen', 'piggy-bank-screen'];
+        if (mainScreens.includes(targetId)) {
+            if (typeof currentChatId !== 'undefined') currentChatId = null;
+            if (typeof currentChatType !== 'undefined') currentChatType = null;
+        }
     } else {
         // 返回聊天室时重新应用样式
         if (typeof currentChatId !== 'undefined' && currentChatId) {

@@ -179,8 +179,20 @@ const globalSettingKeys = [
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
 
-const appVersion = "6.8";
+const appVersion = "6.8.1";
 const updateLog = [
+    {
+        version: "6.8.1",
+        date: "2026-06-18",
+        notes: [
+            "**[重要测试] 修复聊天室串线与自动总结 Bug**",
+            "尝试修复了退出聊天室时状态残留导致界面串线的问题，以及自动总结相关的异常。",
+            "**[数据清理] 解决“幽灵角色”残留问题**",
+            "优化了删除角色时的深层清理逻辑。对于已删除但仍在联系人列表中残留的“幽灵角色”，现在将会被彻底清理并屏蔽。",
+            "————",
+            "作者留言：本次更新属于测试性修复。如果在体验中发现任何问题或不妥之处，我会随时回退。欢迎大家及时反馈！"
+        ]
+    },
     {
         version: "6.8",
         date: "2026-06-08",
