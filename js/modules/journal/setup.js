@@ -329,19 +329,12 @@ function setupMemoryJournalScreen() {
     }
     
     // --- 下载 JSON 工具函数 ---
-    function downloadJournalsJson(journalsData, defaultFilename) {
+    async function downloadJournalsJson(journalsData, defaultFilename) {
         try {
             const dataStr = JSON.stringify(journalsData, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${defaultFilename}_${new Date().getTime()}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast(`成功导出 ${journalsData.length} 篇日记`);
+            await OvoFileDownload.save(blob, `${defaultFilename}_${new Date().getTime()}.json`);
+
         } catch (e) {
             console.error('导出日记失败:', e);
             showToast('导出日记失败');

@@ -1372,7 +1372,7 @@ const NodeSystem = {
     },
 
     // --- 模板导出 ---
-    exportTemplates() {
+    async exportTemplates() {
         if (!db.nodeTemplates || db.nodeTemplates.length === 0) {
             showToast('暂无模板可导出');
             return;
@@ -1384,13 +1384,8 @@ const NodeSystem = {
             templates: JSON.parse(JSON.stringify(db.nodeTemplates))
         };
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `节点模板_${new Date().toLocaleDateString().replace(/\//g, '-')}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        showToast('模板已导出');
+        await OvoFileDownload.save(blob, `节点模板_${new Date().toLocaleDateString().replace(/\//g, '-')}.json`);
+
     },
 
     // --- 模板导入 ---

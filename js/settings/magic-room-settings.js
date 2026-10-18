@@ -256,20 +256,13 @@ B. 纯线上互动：这是一个完全虚拟的线上聊天。你扮演的角�
         e.target.value = '';
     });
 
-    exportBtn.addEventListener('click', () => {
+    exportBtn.addEventListener('click', async () => {
         // 如果有预设，优先提示是否导出整个预设库
         if (db.magicRoom && db.magicRoom.presets && db.magicRoom.presets.length > 0) {
             if (confirm('是否导出整个预设库？（点击取消则仅导出当前编辑框内容）')) {
                 const blob = new Blob([JSON.stringify(db.magicRoom.presets, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `系统提示词预设库_${new Date().toISOString().slice(0, 10)}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                showToast('预设库导出成功');
+                await OvoFileDownload.save(blob, `系统提示词预设库_${new Date().toISOString().slice(0, 10)}.json`);
+
                 return;
             }
         }
@@ -285,15 +278,8 @@ B. 纯线上互动：这是一个完全虚拟的线上聊天。你扮演的角�
             items: draft ? draft.items : undefined
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `系统提示词模板_${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showToast('模板导出成功');
+        await OvoFileDownload.save(blob, `系统提示词模板_${new Date().toISOString().slice(0, 10)}.json`);
+
     });
 
     saveBtn.addEventListener('click', async () => {

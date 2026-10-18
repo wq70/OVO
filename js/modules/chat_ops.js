@@ -175,7 +175,6 @@ function handleMessageLongPress(messageWrapper, x, y) {
                     const opts = { speed: voiceConfig.speed };
                     if (isUserMsg) opts.forUser = true;
                     await MinimaxTTSService.download(text, voiceConfig.voiceId, voiceConfig.language || 'auto', opts);
-                    showToast('✅ 语音已下载');
                 } catch (err) {
                     console.error('[ChatOps] 下载语音失败:', err);
                     showToast('❌ 下载失败: ' + err.message);
@@ -851,14 +850,7 @@ async function generateCapture() {
         // 设置下载按钮
         const downloadBtn = document.getElementById('download-capture-btn');
         if (downloadBtn) {
-            downloadBtn.onclick = () => {
-                const link = document.createElement('a');
-                link.href = imgUrl;
-                link.download = `uwu_chat_${new Date().getTime()}.png`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            };
+            downloadBtn.onclick = () => OvoFileDownload.saveImage(imgUrl, `uwu_chat_${new Date().getTime()}.png`);
         }
 
         document.getElementById('capture-result-modal').classList.add('visible');

@@ -758,8 +758,7 @@ const TTSService = {
         try {
             const audioUrl = await this.synthesize(text, voiceId, language, options);
             // 从 blob URL 获取 blob
-            const resp = await fetch(audioUrl);
-            const blob = await resp.blob();
+            const blob = await OvoFileDownload.readMedia(audioUrl, 'audio');
             const now = new Date();
             const ts = now.getFullYear().toString() +
                 String(now.getMonth() + 1).padStart(2, '0') +
@@ -767,16 +766,9 @@ const TTSService = {
                 String(now.getHours()).padStart(2, '0') +
                 String(now.getMinutes()).padStart(2, '0') +
                 String(now.getSeconds()).padStart(2, '0');
-            const extension = blob.type.includes('ogg') ? 'ogg' : blob.type.includes('wav') ? 'wav' : 'mp3';
+            const extension = ({ 'audio/ogg': 'ogg', 'audio/wav': 'wav', 'audio/mp4': 'm4a', 'audio/aac': 'aac', 'audio/flac': 'flac' })[blob.type] || 'mp3';
             const filename = '语音_' + ts + '.' + extension;
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(a.href);
-            return true;
+            return await OvoFileDownload.save(blob, filename);
         } catch (err) {
             console.error('[TTS] 下载失败:', err);
             throw err;

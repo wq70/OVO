@@ -45,7 +45,7 @@ function fixture() {
         fetch: async () => new Response(new Uint8Array([1, 2, 3]), { headers: { 'content-type': 'audio/mpeg' } })
     };
     vm.createContext(context);
-    for (const file of ['js/modules/tts_service.js', 'js/modules/voice_selector.js', 'js/modules/tts_settings.js', 'js/settings/tts-settings.js']) {
+    for (const file of ['js/core/file-download.js', 'js/modules/tts_service.js', 'js/modules/voice_selector.js', 'js/modules/tts_settings.js', 'js/settings/tts-settings.js']) {
         vm.runInContext(read(file), context, { filename: file });
     }
     const service = context.window.TTSService;
@@ -261,9 +261,9 @@ for (const [status, message] of [[401, /Key/], [403, /权限/], [404, /音色/],
     assert.equal(context.document.getElementById('elevenlabs-voice-id').value, 'saved-voice');
     let exported;
     context.document.createElement = () => ({ click() { exported = blobs.get(this.href); } });
-    // Capture before export revokes its temporary URL.
-    context.URL.revokeObjectURL = () => {};
-    vm.runInContext('exportTTSPresets()', context);
+    // Inspect the existing exporter payload; delivery is covered by file-download tests.
+    context.OvoFileDownload.save = async blob => { exported = blob; return true; };
+    await vm.runInContext('exportTTSPresets()', context);
     const data = JSON.parse(await exported.text());
     assert.equal(data[0].elevenApiKey, ''); assert.equal(data[0].elevenVoiceId, 'saved-voice');
     const previous = service.config;

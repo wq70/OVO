@@ -227,18 +227,13 @@ function updateStatusBarPreview() {
 }
 
 // 导出单个预设
-window.exportStatusBarPreset = function(presetId) {
+window.exportStatusBarPreset = async function(presetId) {
     const preset = db.statusBarPresets.find(p => p.id === presetId);
     if (!preset) return;
 
     const data = JSON.stringify(preset, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `status_preset_${preset.name}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    await OvoFileDownload.save(blob, `status_preset_${preset.name}.json`);
 };
 
 // 导入预设

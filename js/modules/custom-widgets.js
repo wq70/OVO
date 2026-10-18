@@ -145,11 +145,7 @@ function customWidgetDownload(payload, name) {
                 const blob = new Blob([JSON.stringify(shared, null, 2)], { type: 'application/json' });
                 if (blob.size > 20 * 1024 * 1024) throw new Error('导出文件超过 20 MB，请减少所选图片或压缩后再导出');
                 if (!overlay.isConnected) return;
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `${name || '小组件'}.json`; a.click();
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-                freeHomeCloseSheet();
-                showToast(selection.size ? '已导出所选图片，不包含自定义组件使用数据' : '已导出，不包含图片和自定义组件使用数据');
+                if (await OvoFileDownload.save(blob, `${name || '小组件'}.json`)) freeHomeCloseSheet();
             } catch (error) { status.textContent = error.message || '导出失败，请重试'; }
             finally { exporting = false; buttons.forEach(button => button.disabled = false); }
         };

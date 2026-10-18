@@ -600,7 +600,7 @@ async function generateTheaterScenario() {
 }
 
 // 导出小剧场
-function exportTheaterScenario() {
+async function exportTheaterScenario() {
     if (!currentTheaterScenarioId) return;
     
     const scenario = getTheaterScenarios().find(s => s.id === currentTheaterScenarioId);
@@ -691,16 +691,9 @@ ${content}
     
     // 创建Blob并下载
     const blob = new Blob([content], { type: mimeType + ';charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    await OvoFileDownload.save(blob, filename);
+
     
-    showToast(`已导出为${isHtmlMode ? 'HTML' : 'TXT'}文件`);
 }
 
 // 显示分享选择模态框

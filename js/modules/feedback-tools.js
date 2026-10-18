@@ -429,18 +429,7 @@
                   ],
                   { type: "application/json" },
                 );
-                const url = URL.createObjectURL(blob),
-                  link = document.createElement("a");
-                link.href = url;
-                link.download = a.product + "-feedback-credentials.json";
-                link.hidden = true;
-                root.appendChild(link);
-                link.click();
-                a.status("已生成凭证文件，请确认下载完成。");
-                setTimeout(() => {
-                  link.remove();
-                  URL.revokeObjectURL(url);
-                }, 1000);
+                await OvoFileDownload.save(blob, a.product + "-feedback-credentials.json");
                 return;
               }
               if (action === "clear-reply-image") {

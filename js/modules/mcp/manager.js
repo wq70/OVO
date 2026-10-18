@@ -1810,7 +1810,7 @@
     return copy;
   }
 
-  function exportConnections() {
+  async function exportConnections() {
     const payload = {
       kind: 'ephone-mcp-connections',
       format: 1,
@@ -1818,13 +1818,8 @@
       connections: state.connections.map(sanitizedConnection)
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `EPhone-MCP-${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-    showToast('连接配置已导出，凭证未包含', 'success');
+    await OvoFileDownload.save(blob, `EPhone-MCP-${new Date().toISOString().slice(0, 10)}.json`);
+
   }
 
   async function importConnections(file) {

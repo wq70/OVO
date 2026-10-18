@@ -147,18 +147,13 @@ function importTTSPresets() {
     input.click();
 }
 
-function exportTTSPresets() {
+async function exportTTSPresets() {
     const presets = db.ttsPresets || [];
     if (!presets.length) return showToast('没有可导出的 TTS 预设');
     const safePresets = presets.map(({ apiKey, volcAccessToken, elevenApiKey, ...preset }) => ({ ...preset, apiKey: '', volcAccessToken: '', elevenApiKey: '' }));
     const blob = new Blob([JSON.stringify(safePresets, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'tts_presets_' + Date.now() + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('TTS 预设已导出');
+    await OvoFileDownload.save(blob, 'tts_presets_' + Date.now() + '.json');
+
 }
 
 // 在页面加载时填充 TTS 预设列表，并绑定气泡样式「导入文档」（委托到 document，因按钮在 chat/group-settings-form 内）

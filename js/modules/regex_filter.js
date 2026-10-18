@@ -279,17 +279,12 @@ window.deleteRegexFilterPreset = async function(presetId, event) {
 };
 
 // 导出预设
-window.exportRegexFilterPreset = function(presetId) {
+window.exportRegexFilterPreset = async function(presetId) {
     const preset = (db.regexFilterPresets || []).find(p => p.id === presetId);
     if (!preset) return;
     const data = JSON.stringify(preset, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `regex_filter_${preset.name}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    await OvoFileDownload.save(blob, `regex_filter_${preset.name}.json`);
 };
 
 // 导入预设

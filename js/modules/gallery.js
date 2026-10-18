@@ -160,7 +160,7 @@ function setupGalleryManagement() {
 
     // 导出相册
     if (exportGalleryBtn) {
-        exportGalleryBtn.addEventListener('click', () => {
+        exportGalleryBtn.addEventListener('click', async () => {
             const char = db.characters.find(c => c.id === currentChatId);
             if (!char || !char.gallery || char.gallery.length === 0) {
                 return showToast('相册为空，无法导出');
@@ -172,15 +172,8 @@ function setupGalleryManagement() {
             });
 
             const blob = new Blob([content], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${char.realName}_相册导出.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast('相册已导出');
+            await OvoFileDownload.save(blob, `${char.realName}_相册导出.txt`);
+
         });
     }
 

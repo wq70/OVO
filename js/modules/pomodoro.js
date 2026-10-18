@@ -453,9 +453,7 @@ function setupPomodoroApp() {
             const canvas = await html2canvas(byId('pomodoro-certificate-content'), { backgroundColor: '#fff8fa', scale: 2 });
             const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
             if (!blob) throw new Error('图片生成失败');
-            const url = URL.createObjectURL(blob), link = document.createElement('a');
-            link.href = url; link.download = '专注成果.png'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-            showToast('成果图片已生成');
+            await OvoFileDownload.save(blob, '专注成果.png');
         } catch (_) { showToast('图片保存失败，请稍后重试'); }
         finally { button.disabled = false; }
     });

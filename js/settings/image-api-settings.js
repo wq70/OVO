@@ -312,20 +312,13 @@ function setupGptImageSettings() {
         if (manageModal) manageModal.style.display = 'none';
     });
     
-    if (exportPresetBtn) exportPresetBtn.addEventListener('click', () => {
+    if (exportPresetBtn) exportPresetBtn.addEventListener('click', async () => {
         const presets = _getGptPresets();
         if (presets.length === 0) return showToast('暂无预设可导出');
         const safePresets = presets.map(p => ({ ...p, data: { ...(p.data || {}), key: '' } }));
         const blob = new Blob([JSON.stringify(safePresets, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `GPT_Image_Presets_${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showToast('GPT 生图预设已导出');
+        await OvoFileDownload.save(blob, `GPT_Image_Presets_${new Date().toISOString().slice(0, 10)}.json`);
+
     });
 
     if (importPresetBtn) importPresetBtn.addEventListener('click', () => {
@@ -822,20 +815,13 @@ function setupNovelAiSettings() {
     }
     
     if (exportPresetBtn) {
-        exportPresetBtn.addEventListener('click', () => {
+        exportPresetBtn.addEventListener('click', async () => {
             const presets = _getNovelAiPresets();
             if (presets.length === 0) return showToast('暂无预设可导出');
             const safePresets = presets.map(p => ({ ...p, data: { ...(p.data || {}), token: '' } }));
             const blob = new Blob([JSON.stringify(safePresets, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `NovelAI_Presets_${new Date().toISOString().slice(0, 10)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast('NovelAI 预设已导出');
+            await OvoFileDownload.save(blob, `NovelAI_Presets_${new Date().toISOString().slice(0, 10)}.json`);
+
         });
     }
 
@@ -1160,20 +1146,13 @@ function setupGenericImagePresets(providerName, config) {
     }
 
     if (exportPresetBtn) {
-        exportPresetBtn.addEventListener('click', () => {
+        exportPresetBtn.addEventListener('click', async () => {
             const presets = _getPresets();
             if (presets.length === 0) return showToast('暂无预设可导出');
             const safePresets = presets.map(p => ({ ...p, data: { ...(p.data || {}), key: '' } }));
             const blob = new Blob([JSON.stringify(safePresets, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${title}_Image_Presets_${new Date().toISOString().slice(0, 10)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast(`${title} 生图预设已导出`);
+            await OvoFileDownload.save(blob, `${title}_Image_Presets_${new Date().toISOString().slice(0, 10)}.json`);
+
         });
     }
 
@@ -1293,18 +1272,11 @@ function setupImageAtmosphereGroups() {
         clearFields();
         showToast('氛围组已删除');
     });
-    document.getElementById('image-atmosphere-export')?.addEventListener('click', () => {
+    document.getElementById('image-atmosphere-export')?.addEventListener('click', async () => {
         if (!db.imageAtmosphereGroups.length) return showToast('没有可导出的氛围组');
         const payload = { type: 'ovo-image-atmospheres', items: db.imageAtmosphereGroups };
-        const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = `OVO_生图氛围组_${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-        URL.revokeObjectURL(url);
-        showToast(`已导出 ${db.imageAtmosphereGroups.length} 个氛围组`);
+        await OvoFileDownload.save(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), `OVO_生图氛围组_${new Date().toISOString().slice(0, 10)}.json`);
+
     });
     document.getElementById('image-atmosphere-import')?.addEventListener('click', () => {
         const input = document.createElement('input');
