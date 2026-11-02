@@ -14,6 +14,9 @@ function handleMessageLongPress(messageWrapper, x, y) {
     const message = chat.history.find(m => m.id === messageId);
     if (!message) return;
 
+    // The menu must not interpret command examples embedded in HTML source.
+    const actionContent = window.InteractiveMessages?.sourceOf(message) ? '' : message.content;
+
     let menuItems = [];
     if (message.apiUsage) menuItems.push({ label: 'API 调用详情', action: () => {
         const usage = message.apiUsage;
@@ -65,12 +68,12 @@ function handleMessageLongPress(messageWrapper, x, y) {
     }
 
     const isImageRecognitionMsg = message.parts && message.parts.some(p => p.type === 'image');
-    const isVoiceMessage = /\[.*?的语音：.*?\]/.test(message.content);
-    const isStickerMessage = /\[.*?的表情包：.*?\]|\[.*?发送的表情包：.*?\]/.test(message.content);
-    const isPhotoVideoMessage = /\[.*?发来的照片\/视频：.*?\]/.test(message.content);
-    const isTransferMessage = /\[.*?给你转账：.*?\]|\[.*?的转账：.*?\]|\[.*?向.*?转账：.*?\]/.test(message.content);
-    const isGiftMessage = /\[.*?送来的礼物：.*?\]|\[.*?向.*?送来了礼物：.*?\]/.test(message.content);
-    const timeGapMatch = message.content.match(/\[system-display:距离上次聊天已经过去 (.*?)\]/);
+    const isVoiceMessage = /\[.*?的语音：.*?\]/.test(actionContent);
+    const isStickerMessage = /\[.*?的表情包：.*?\]|\[.*?发送的表情包：.*?\]/.test(actionContent);
+    const isPhotoVideoMessage = /\[.*?发来的照片\/视频：.*?\]/.test(actionContent);
+    const isTransferMessage = /\[.*?给你转账：.*?\]|\[.*?的转账：.*?\]|\[.*?向.*?转账：.*?\]/.test(actionContent);
+    const isGiftMessage = /\[.*?送来的礼物：.*?\]|\[.*?向.*?送来了礼物：.*?\]/.test(actionContent);
+    const timeGapMatch = actionContent.match(/\[system-display:距离上次聊天已经过去 (.*?)\]/);
     
     let invisibleRegex;
     if (chat.showStatusUpdateMsg) {
@@ -78,7 +81,7 @@ function handleMessageLongPress(messageWrapper, x, y) {
     } else {
         invisibleRegex = /\[.*?(?:接收|退回).*?的转账\]|\[.*?更新状态为：.*?\]|\[.*?已接收礼物\]|\[system:.*?\]|\[.*?邀请.*?加入了群聊\]|\[.*?修改群名为：.*?\]|\[system-display:.*?\]|\[avatar-action:.*?\]/;
     }
-    const isInvisibleMessage = invisibleRegex.test(message.content);
+    const isInvisibleMessage = invisibleRegex.test(actionContent);
     const isWithdrawn = message.isWithdrawn; 
 
     if (!isWithdrawn) {
@@ -175,7 +178,6 @@ function handleMessageLongPress(messageWrapper, x, y) {
                     const opts = { speed: voiceConfig.speed };
                     if (isUserMsg) opts.forUser = true;
                     await MinimaxTTSService.download(text, voiceConfig.voiceId, voiceConfig.language || 'auto', opts);
-                    showToast('✅ 语音已下载');
                 } catch (err) {
                     console.error('[ChatOps] 下载语音失败:', err);
                     showToast('❌ 下载失败: ' + err.message);
@@ -275,6 +277,8 @@ function startDebugEdit(messageId) {
         const text = textMatch[2];
         const quoteContent = message.quote.content;
         textarea.value = `[${name}引用“${quoteContent}”并回复：${text}]`;
+    } else if (window.InteractiveMessages?.sourceOf(message)) {
+        textarea.value = message.parts[0].text;
     } else if (message.parts && message.parts.some(p => p.type !== 'text')) {
         // 如果是多模态消息，在调试模式下以 JSON 格式显示其结构，并保护 Base64 数据
         const partsCopy = JSON.parse(JSON.stringify(message.parts));
@@ -326,6 +330,7 @@ function startDebugEdit(messageId) {
         });
     }
 
+    window.InteractiveMessages?.setupEditor(message);
     modal.classList.add('visible');
     textarea.focus();
 }
@@ -351,9 +356,11 @@ function startQuoteReply(messageId) {
         }
     }
     
-    let previewContent = message.content;
+    let previewContent = window.InteractiveMessages?.contextText(message) || message.content;
     const textMatch = message.content.match(/\[.*?的消息：([\s\S]+?)\]/);
-    if (textMatch) {
+    if (window.InteractiveMessages?.contextText(message)) {
+        previewContent = window.InteractiveMessages.contextText(message);
+    } else if (textMatch) {
         previewContent = textMatch[1];
     } else if (/\[.*?的表情包：.*?\]/.test(message.content)) {
         previewContent = '[表情包]';
@@ -397,12 +404,12 @@ function startMessageEdit(messageId) {
     const modal = document.getElementById('message-edit-modal');
     const textarea = document.getElementById('message-edit-textarea');
 
-    let contentToEdit = message.content;
+    let contentToEdit = window.InteractiveMessages?.sourceOf(message) ? message.parts[0].text : message.content;
     const plainTextMatch = contentToEdit.match(/^\[.*?：([\s\S]*)\]$/);
-    if (plainTextMatch && plainTextMatch[1]) {
+    if (!window.InteractiveMessages?.sourceOf(message) && plainTextMatch && plainTextMatch[1]) {
         contentToEdit = plainTextMatch[1].trim();
     }
-    contentToEdit = contentToEdit.replace(/\[发送时间:.*?\]/g, '').trim();
+    if (!window.InteractiveMessages?.sourceOf(message)) contentToEdit = contentToEdit.replace(/\[发送时间:.*?\]/g, '').trim();
     
     textarea.value = contentToEdit;
 
@@ -420,6 +427,7 @@ function startMessageEdit(messageId) {
         timestampGroup.style.display = 'flex';
     }
 
+    window.InteractiveMessages?.setupEditor(message);
     modal.classList.add('visible');
     textarea.focus();
 }
@@ -438,7 +446,25 @@ async function saveMessageEdit() {
         return;
     }
 
-    if (isRawEditMode) {
+    const editType = currentChatType;
+    const editId = editingMessageId;
+    const htmlMode = document.getElementById('message-edit-html-mode')?.value || 'auto';
+    const htmlFound = htmlMode !== 'text' && window.InteractiveMessages?.extract(newText, htmlMode === 'html');
+    const originalMessage = JSON.parse(JSON.stringify(chat.history[messageIndex]));
+    if (htmlFound) {
+        try {
+            const resources = window.InteractiveMessages.editorResources();
+            window.InteractiveMessages.apply(chat.history[messageIndex], newText, htmlMode);
+            chat.history[messageIndex].interactive.resources = resources;
+            const importedState = document.getElementById('message-edit-textarea').ovoImportedState;
+            if (importedState !== undefined) {
+                chat.history[messageIndex].interactive.state = JSON.parse(JSON.stringify(importedState));
+                chat.history[messageIndex].interactive.summary = '';
+            }
+            chat.history[messageIndex].isStatusUpdate = false;
+            delete chat.history[messageIndex].statusSnapshot;
+        } catch (error) { showToast(error.message); return; }
+    } else if (isRawEditMode) {
         // 尝试解析 JSON（处理多模态消息的编辑）
         let isJsonEdit = false;
         try {
@@ -538,6 +564,13 @@ async function saveMessageEdit() {
         }
     }
 
+    if (!htmlFound) {
+        if (htmlMode === 'text') {
+            chat.history[messageIndex].interactive = { mode: 'text' };
+            chat.history[messageIndex].parts = [{ type: 'text', text: chat.history[messageIndex].content }];
+        }
+        else delete chat.history[messageIndex].interactive;
+    }
     const timestampInput = document.getElementById('message-edit-timestamp');
     if (timestampInput && timestampInput.value) {
         if (timestampInput.value !== timestampInput.dataset.originalValue) {
@@ -552,7 +585,7 @@ async function saveMessageEdit() {
     if (currentChatType === 'private') {
         recalculateChatStatus(chat);
 
-        if (chat.statusPanel && chat.statusPanel.enabled && chat.statusPanel.regexPattern) {
+        if (!htmlFound && chat.statusPanel && chat.statusPanel.enabled && chat.statusPanel.regexPattern) {
             try {
                 let pattern = chat.statusPanel.regexPattern;
                 let flags = 'gs'; 
@@ -640,7 +673,19 @@ async function saveMessageEdit() {
         }
     }
 
-    await saveCurrentChat();
+    const saved = editType === 'group' ? await saveGroup(chat.id) : await saveCharacter(chat.id);
+    if (saved === false) {
+        const index = chat.history.findIndex(message => message.id === editId);
+        if (index !== -1) {
+            const target = chat.history[index];
+            for (const key of Object.keys(target)) delete target[key];
+            Object.assign(target, originalMessage);
+        }
+        showToast('消息保存失败，编辑内容已保留，请重试');
+        return;
+    }
+    window.InteractiveMessages?.clearDraft(editId, editType, chat.id);
+    if (currentChatType !== editType || currentChatId !== chat.id || editingMessageId !== editId) return;
     currentPage = 1;
     renderMessages(false, true);
     renderChatList();
@@ -649,6 +694,7 @@ async function saveMessageEdit() {
 }
 
 function cancelMessageEdit() {
+    window.InteractiveMessages?.closeEditor();
     editingMessageId = null;
     isRawEditMode = false; 
     const modal = document.getElementById('message-edit-modal');
@@ -851,14 +897,7 @@ async function generateCapture() {
         // 设置下载按钮
         const downloadBtn = document.getElementById('download-capture-btn');
         if (downloadBtn) {
-            downloadBtn.onclick = () => {
-                const link = document.createElement('a');
-                link.href = imgUrl;
-                link.download = `uwu_chat_${new Date().getTime()}.png`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            };
+            downloadBtn.onclick = () => OvoFileDownload.saveImage(imgUrl, `uwu_chat_${new Date().getTime()}.png`);
         }
 
         document.getElementById('capture-result-modal').classList.add('visible');
@@ -1270,7 +1309,7 @@ function recalculateChatStatus(chat) {
     for (let i = chat.history.length - 1; i >= 0; i--) {
         const msg = chat.history[i];
         // 忽略被撤回的消息
-        if (msg.isWithdrawn) continue;
+        if (msg.isWithdrawn || window.InteractiveMessages?.sourceOf(msg)) continue;
 
         const match = msg.content.match(updateStatusRegex);
         if (match) {
@@ -1443,6 +1482,9 @@ async function confirmInsertMessage() {
         role: isCharMessage ? 'assistant' : 'user',
         senderId: isCharMessage ? (currentMessage.senderId || chat.id) : 'user_me'
     };
+
+    try { window.InteractiveMessages?.apply(newMessage, newContent); }
+    catch (error) { showToast(error.message); return; }
 
     // 插入新消息到数组
     chat.history.splice(currentMessageIndex + 1, 0, newMessage);
@@ -1633,6 +1675,12 @@ async function confirmForwardMessages() {
                 timestamp: newTimestamp,
                 senderId: 'user_me'
             };
+
+            if (window.InteractiveMessages?.sourceOf(originalMsg)) {
+                window.InteractiveMessages.apply(newMessage, originalMsg.parts[0].text, 'html');
+                // Forward templates, not private interaction progress.
+                newMessage.interactive.resources = JSON.parse(JSON.stringify(originalMsg.interactive?.resources || {}));
+            }
 
             targetChat.history.push(newMessage);
         }

@@ -434,20 +434,14 @@ function setupChatSettings() {
             delete exportChar.phoneControlHistory;
 
             const pngDataUrl = await writeOvoPngMetadata(base64Image, exportChar);
-            const a = document.createElement('a');
-            a.href = pngDataUrl;
-            a.download = `OVO角色卡_${character.remarkName || character.realName || '未命名'}_${new Date().toISOString().slice(0, 10)}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            showToast('PNG 角色卡导出成功');
+            await OvoFileDownload.saveImage(pngDataUrl, `OVO角色卡_${character.remarkName || character.realName || '未命名'}_${new Date().toISOString().slice(0, 10)}.png`);
         } catch (error) {
             console.error('导出 PNG 角色卡失败:', error);
             showToast(`导出失败: ${error.message}`);
         }
     });
 
-    document.getElementById('export-ovo-card-json-btn')?.addEventListener('click', () => {
+    document.getElementById('export-ovo-card-json-btn')?.addEventListener('click', async () => {
         const character = db.characters.find(c => c.id === currentChatId);
         if (!character) return showToast('未找到角色数据');
 
@@ -462,21 +456,13 @@ function setupChatSettings() {
 
         const jsonStr = JSON.stringify(exportChar, null, 2);
         const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
+        await OvoFileDownload.save(blob, `OVO角色卡_${character.remarkName || character.realName || '未命名'}_${new Date().toISOString().slice(0, 10)}.json`);
         
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `OVO角色卡_${character.remarkName || character.realName || '未命名'}_${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
         
-        showToast('JSON 角色卡导出成功');
     });
 
     // --- 聊天记录导出 ---
-    document.getElementById('export-chat-history-btn')?.addEventListener('click', () => {
+    document.getElementById('export-chat-history-btn')?.addEventListener('click', async () => {
         const character = db.characters.find(c => c.id === currentChatId);
         if (!character) return;
         if (!character.history || character.history.length === 0) {
@@ -492,15 +478,8 @@ function setupChatSettings() {
             history: character.history
         };
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `聊天记录_${character.remarkName}_${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showToast('聊天记录导出成功');
+        await OvoFileDownload.save(blob, `聊天记录_${character.remarkName}_${new Date().toISOString().slice(0, 10)}.json`);
+
     });
 
     // --- 聊天记录导入 ---

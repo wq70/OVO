@@ -193,6 +193,7 @@ function initDatabase() {
         importNaiVibeAssets: '&id,sourceHash,createdAt', importNaiVibeEncodings: '&id,assetId,model,modelKey,createdAt', importNaiVibeGroups: '&id,name,updatedAt',
         pendingReplies: '&id,chatId,chatType,state,updatedAt'
     });
+    dexieDB.version(10).stores({ musicAssets: '&id', importMusicAssets: '&id' });
 }
 
 // 数据保存与加载。旧调用入口保持不变；并发触发时合并为同一个有序写入队列，

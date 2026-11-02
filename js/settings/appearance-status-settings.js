@@ -60,15 +60,11 @@ function setupNightModeBindings() {
     });
 
     // 导出
-    document.getElementById('night-mode-export-btn')?.addEventListener('click', () => {
+    document.getElementById('night-mode-export-btn')?.addEventListener('click', async () => {
         const payload = { type: 'night-mode-config', settings: db.nightModeSettings || {} };
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = '夜间模式配置.json';
-        a.click();
-        URL.revokeObjectURL(a.href);
-        showToast('夜间模式配置已导出');
+        await OvoFileDownload.save(blob, '夜间模式配置.json');
+
     });
 
     // 导入
@@ -186,15 +182,11 @@ function setupStatusBarBindings() {
     });
 
     // 导出
-    document.getElementById('statusbar-export-btn')?.addEventListener('click', () => {
+    document.getElementById('statusbar-export-btn')?.addEventListener('click', async () => {
         const payload = { type: 'home-statusbar-config', settings: db.homeStatusBarSettings || {} };
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = '顶栏状态栏配置.json';
-        a.click();
-        URL.revokeObjectURL(a.href);
-        showToast('顶栏配置已导出');
+        await OvoFileDownload.save(blob, '顶栏状态栏配置.json');
+
     });
 
     // 导入

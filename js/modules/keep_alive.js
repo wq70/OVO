@@ -411,6 +411,7 @@ window.KeepAliveModule = {
     },
 
     setupMediaSession() {
+        if (window.MusicPlayer?.holdsMedia()) { window.MusicPlayer.ownMedia(); return; }
         if (!navigator.mediaSession) return;
         const setHandler = (action, handler) => {
             try { navigator.mediaSession.setActionHandler(action, handler); } catch (_) { /* unsupported action */ }
@@ -430,6 +431,7 @@ window.KeepAliveModule = {
     },
 
     updateMediaSessionMetadata() {
+        if (window.MusicPlayer?.holdsMedia()) return;
         if (!navigator.mediaSession || typeof MediaMetadata === 'undefined') return;
         try {
             navigator.mediaSession.metadata = new MediaMetadata({
@@ -441,6 +443,7 @@ window.KeepAliveModule = {
     },
 
     setMediaSessionPlaybackState(state) {
+        if (window.MusicPlayer?.holdsMedia()) return;
         if (!navigator.mediaSession) return;
         try { navigator.mediaSession.playbackState = state; } catch (_) { /* optional enhancement */ }
     },
@@ -569,7 +572,7 @@ window.KeepAliveModule = {
             this.updateMediaSessionMetadata();
         } else {
             if (clearBtn) clearBtn.style.display = 'none';
-            if (navigator.mediaSession) navigator.mediaSession.metadata = null;
+            if (navigator.mediaSession && !window.MusicPlayer?.holdsMedia()) navigator.mediaSession.metadata = null;
         }
     },
 
@@ -611,6 +614,7 @@ window.KeepAliveModule = {
     },
 
     async playAudio(options = {}) {
+        if (window.MusicPlayer?.holdsMedia()) return false;
         if (!this.audioElement.src) return;
         const operation = ++this.playOperation;
         try {

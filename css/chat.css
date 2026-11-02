@@ -744,6 +744,35 @@
 }
 
 /* 调试模式样式 */
+.ovo-interactive-content { min-width: 0; max-width: calc(100% - 48px); width: 360px; }
+.group-msg-content:has(> .ovo-interactive) { min-width: 0; max-width: calc(100% - 48px); width: 360px; }
+.message-bubble.html-bubble.ovo-interactive { width: 100% !important; max-width: 100%; min-width: 0; overflow: hidden !important; border: 1px solid #8883; border-radius: 12px; }
+.ovo-interactive-toolbar, .ovo-interactive-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 7px; background: var(--secondary-bg, #f4f4f4); color: var(--text-color, #444); font: 12px/1.5 sans-serif; }
+.ovo-interactive-title { flex: 1; min-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ovo-interactive-toolbar button, .ovo-interactive-tools button { padding: 5px 8px; border: 1px solid #8884; border-radius: 7px; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.ovo-interactive button { touch-action: manipulation; }
+.ovo-interactive-tools[hidden], .ovo-interactive-errors[hidden] { display: none; }
+.ovo-interactive-tools textarea { width: 100%; min-height: 120px; }
+.ovo-interactive-viewport { width: 100%; background: transparent; }
+.ovo-interactive-frame { display: block; width: 100%; height: 350px; border: 0; background: transparent; }
+.ovo-interactive-status { margin: 0; padding: 6px 8px; color: #777; font: 12px/1.5 sans-serif; overflow-wrap: anywhere; }
+.ovo-interactive-status:empty { display: none; }
+.ovo-interactive-errors { padding: 8px; color: #a43838; background: #fff3f3; font: 12px/1.5 sans-serif; }
+.ovo-interactive-errors pre { white-space: pre-wrap; max-height: 160px; overflow: auto; }
+.ovo-interactive-quote { font-size: 12px; opacity: .7; max-height: 48px; overflow: hidden; margin-bottom: 5px; }
+.ovo-interactive-open { overflow: hidden !important; }
+.message-bubble.html-bubble.ovo-interactive-expanded { position: fixed !important; inset: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)) !important; z-index: 20000; width: auto !important; max-width: none; display: flex; flex-direction: column; background: var(--bg-color, #fff) !important; box-shadow: 0 0 0 100vmax #0008; }
+.ovo-interactive-expanded .ovo-interactive-viewport { flex: 1; min-height: 0; overflow: auto; }
+.ovo-html-editor { font-size: 13px; }
+.ovo-html-editor select { width: 100%; padding: 8px; }
+.ovo-html-editor details { padding: 8px 0; }
+.ovo-html-editor details p { line-height: 1.6; overflow-wrap: anywhere; }
+.ovo-html-editor details label { display: block; margin-top: 8px; }
+.ovo-html-editor textarea { width: 100%; }
+.ovo-html-editor #message-edit-html-preview-box { margin-top: 10px; }
+.ovo-html-editor .ovo-interactive { max-width: 100%; }
+
+/* 调试模式样式 */
 .debug-thought-visible {
     margin: 5px 0;
 }

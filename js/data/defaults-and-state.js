@@ -178,7 +178,8 @@ const globalSettingKeys = [
     'phoneControlRecycleBin', 'nodeTemplates', 'nodeSummaryText', 'memoryTableTemplates', 'vectorMemoryTemplates',
     'nightModeSettings', 'homeStatusBarSettings', 'homeLayoutMode', 'freeHomeLayout', 'freeHomeWidgetPresets', 'stickerCategories', 'magicRoom',
     'keepAliveCodeEnabled', 'keepAliveAutoWakeEnabled', 'keepAliveAudioEnabled', 'keepAliveAudioSrc', 'keepAliveAudioName', 'keepAliveAudioLibrary',
-    'ttsPresets', 'weatherApiSettings', 'bilingualSettings', 'bilingualTranslations', 'statusStorageSettings'
+    'ttsPresets', 'weatherApiSettings', 'bilingualSettings', 'bilingualTranslations', 'statusStorageSettings',
+    'musicLibrary', 'musicSettings', 'musicSecrets'
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
 

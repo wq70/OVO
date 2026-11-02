@@ -966,16 +966,9 @@ function openCotPresetManageModal() {
             }
         });
 
-        const exportBtn = createIconBtn('⭳', () => { // 使用下载符号
+        const exportBtn = createIconBtn('⭳', async () => { // 使用下载符号
             const blob = new Blob([JSON.stringify(preset, null, 2)], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `cot_preset_${preset.name}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            await OvoFileDownload.save(blob, `cot_preset_${preset.name}.json`);
         });
 
         const deleteBtn = createIconBtn('×', async () => {

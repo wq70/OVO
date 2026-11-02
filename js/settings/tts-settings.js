@@ -147,18 +147,13 @@ function importTTSPresets() {
     input.click();
 }
 
-function exportTTSPresets() {
+async function exportTTSPresets() {
     const presets = db.ttsPresets || [];
     if (!presets.length) return showToast('没有可导出的 TTS 预设');
     const safePresets = presets.map(({ apiKey, volcAccessToken, elevenApiKey, ...preset }) => ({ ...preset, apiKey: '', volcAccessToken: '', elevenApiKey: '' }));
     const blob = new Blob([JSON.stringify(safePresets, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'tts_presets_' + Date.now() + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('TTS 预设已导出');
+    await OvoFileDownload.save(blob, 'tts_presets_' + Date.now() + '.json');
+
 }
 
 // 在页面加载时填充 TTS 预设列表，并绑定气泡样式「导入文档」（委托到 document，因按钮在 chat/group-settings-form 内）
@@ -238,7 +233,7 @@ function recalculateChatStatus(chat) {
     for (let i = chat.history.length - 1; i >= 0; i--) {
         const msg = chat.history[i];
         // 忽略被撤回的消息
-        if (msg.isWithdrawn) continue;
+        if (msg.isWithdrawn || window.InteractiveMessages?.sourceOf(msg)) continue;
 
         const match = msg.content.match(updateStatusRegex);
         if (match) {

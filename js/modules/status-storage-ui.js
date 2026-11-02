@@ -343,8 +343,7 @@
     }
 
     async function download(blob, filename) {
-        const url = URL.createObjectURL(blob), anchor = document.createElement('a'); anchor.href = url; anchor.download = filename;
-        document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
+        return OvoFileDownload.save(blob, filename);
     }
     function packArchive(value) {
         const templates = {}, ids = new Map(); let next = 0;
@@ -381,7 +380,9 @@
                 if (typeof CompressionStream !== 'undefined') { blob = await new Response(blob.stream().pipeThrough(new CompressionStream('gzip'))).blob(); extension += '.gz'; }
             }
             if (taskController.signal.aborted) throw new Error('备份已取消，没有执行整理');
-            await download(blob, `${full ? '完整数据备份' : '状态栏整理恢复备份'}_${plan.id}${extension}`);
+            if (!await download(blob, `${full ? '完整数据备份' : '状态栏整理恢复备份'}_${plan.id}${extension}`)) {
+                backupSaved = false; status('尚未完成文件保存，请重试备份。'); return;
+            }
             backupSaved = true; status('备份文件已生成并请求下载。请确认文件已保存成功后勾选确认，再执行整理。');
         } catch (error) { backupSaved = false; fail(error); } finally { setBusy(false); }
     }

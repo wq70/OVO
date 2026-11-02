@@ -215,13 +215,15 @@ function renderContactList() {
         const statusText = char.status || (char.persona ? char.persona.substring(0, 20) + '...' : '');
 
         li.innerHTML = `
-            <img src="${char.avatar}" alt="${char.remarkName}" class="profile-avatar squircle">
+            <img src="${char.avatar}" alt="" class="profile-avatar squircle">
             <div class="profile-info">
-                <div class="profile-name">${char.remarkName}</div>
+                <div class="profile-name"></div>
                 <div class="profile-status">${statusText}</div>
             </div>
         `;
         
+        li.querySelector('.profile-avatar').alt = char.remarkName || '';
+        li.querySelector('.profile-name').textContent = char.remarkName || '';
         li.addEventListener('click', () => {
             openProfileCard(char.id);
         });

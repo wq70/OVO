@@ -6,58 +6,59 @@
                 </div>
                 <div class="placeholder"></div>
             </header>
-            <main class="content">
-                <div class="kkt-settings-container">
-                    <div style="margin-bottom: 15px; padding-top: 5px; padding-left: 8px;">
-                        <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">系统提示词自定义</div>
-                        <p style="font-size: 11px; color: #999; margin: 5px 0 0;">修改底层提示词结构，打造完全属于你的 AI 灵魂内核。</p>
+            <main class="content magic-room-content">
+                <div class="magic-room-layout">
+                    <div class="magic-room-hero">
+                        <div>
+                            <h2>魔法屋设置</h2>
+                            <p>配置系统提示词、动态能力和运行设置。</p>
+                        </div>
+                        <span class="magic-room-hero-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 20 12-12 3 3L7 23z" transform="translate(0 -3)"></path><path d="m14 5 3 3M5 3v4M3 5h4M20 16v4M18 18h4M20 2v4M18 4h4"></path></svg>
+                        </span>
                     </div>
-
-                    <div class="kkt-group">
-                        <div class="kkt-item">
-                            <div class="kkt-item-label">启用自定义系统提示词</div>
-                            <div class="kkt-item-control">
-                                <label class="kkt-switch">
-                                    <input type="checkbox" id="magic-room-custom-prompt-enabled">
+                    <nav class="magic-room-nav" role="tablist" aria-label="魔法屋设置分类">
+                        <button type="button" id="magic-room-tab-prompts" class="magic-room-tab active" role="tab" aria-selected="true" aria-controls="magic-room-panel-prompts" data-magic-room-tab="prompts">系统提示词</button>
+                        <button type="button" id="magic-room-tab-moments" class="magic-room-tab" role="tab" aria-selected="false" aria-controls="magic-room-panel-moments" data-magic-room-tab="moments" tabindex="-1">动态能力</button>
+                        <button type="button" id="magic-room-tab-runtime" class="magic-room-tab" role="tab" aria-selected="false" aria-controls="magic-room-panel-runtime" data-magic-room-tab="runtime" tabindex="-1">运行与通知</button>
+                    </nav>
+                    <section id="magic-room-panel-prompts" class="magic-room-panel" role="tabpanel" aria-labelledby="magic-room-tab-prompts" data-magic-room-panel="prompts">
+                        <div class="kkt-group magic-room-card magic-room-enable">
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">自定义系统提示词<span class="magic-room-field-hint">开启后，使用下方编排的提示词。</span></div>
+                                <div class="kkt-item-control">
+                                    <label class="kkt-switch">
+                                    <input type="checkbox" id="magic-room-custom-prompt-enabled" aria-label="自定义系统提示词">
                                     <span class="kkt-slider"></span>
                                 </label>
+                                </div>
                             </div>
                         </div>
-
                         <div id="magic-room-prompt-editor" style="display: none;">
-                            <div class="api-presets-embedded" style="margin-bottom:15px; border-top: 1px solid #f5f5f5; padding-top: 15px;">
-                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                                    <label style="min-width:40px; color:#666; font-size: 14px;">预设库</label>
-                                    <select id="magic-room-preset-select"
-                                        style="flex:1; padding:6px; border-radius:6px; border:1px solid #ddd;">
+                            <div class="magic-room-card magic-room-preset">
+                                <div class="magic-room-preset-select-row">
+                                    <label for="magic-room-preset-select">提示词预设</label>
+                                    <select id="magic-room-preset-select">
                                         <option value="">— 选择 —</option>
                                     </select>
-                                    <button type="button" id="magic-room-apply-preset" class="btn btn-primary btn-small"
-                                        style="padding: 6px 12px;">加载</button>
+                                    <button type="button" id="magic-room-apply-preset" class="btn btn-primary btn-small">加载</button>
                                 </div>
-                                <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
-                                    <button type="button" id="magic-room-save-preset" class="btn btn-small" style="flex: 1;">当前存为预设</button>
-                                    <button type="button" id="magic-room-manage-presets" class="btn btn-small" style="flex: 1;">管理</button>
-                                </div>
-                                <div id="magic-room-presets-modal"
-                                    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:9999;align-items:center;justify-content:center;">
-                                    <div
-                                        style="width:640px;max-width:94%;background:var(--panel-bg,#fff);padding:16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);">
-                                        <h3 style="margin:0 0 12px 0;">提示词预设管理</h3>
-                                        <div id="magic-room-presets-list"
-                                            style="max-height:360px;overflow:auto;border:1px solid #f0f0f0;padding:8px;border-radius:6px;">
-                                        </div>
-                                        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
-                                            <button type="button" id="magic-room-close-modal" class="btn btn-primary">关闭</button>
-                                        </div>
-                                    </div>
+                                <div class="magic-room-preset-actions">
+                                    <button type="button" id="magic-room-save-preset" class="btn btn-small">当前存为预设</button>
+                                    <button type="button" id="magic-room-manage-presets" class="btn btn-small">管理</button>
+                                    <button type="button" id="magic-room-import-btn" class="btn btn-secondary">导入模板</button>
+                                    <button type="button" id="magic-room-export-btn" class="btn btn-secondary">导出模板</button>
+                                    <input type="file" id="magic-room-import-input" accept=".json" style="display: none;">
                                 </div>
                             </div>
-                            <div class="prompt-studio-toolbar" aria-label="提示词编辑方式">
-                                <button type="button" class="prompt-studio-mode-btn active" data-prompt-mode="items">条目编辑</button>
-                                <button type="button" class="prompt-studio-mode-btn" data-prompt-mode="source">完整源码</button>
+                            <div class="magic-room-editor-heading">
+                                <h2>提示词编排</h2>
+                                <div class="prompt-studio-toolbar" aria-label="提示词编辑方式" role="tablist">
+                                    <button type="button" class="prompt-studio-mode-btn active" data-prompt-mode="items" id="prompt-studio-mode-items" role="tab" aria-controls="prompt-studio-items-panel" aria-selected="true">条目编辑</button>
+                                    <button type="button" class="prompt-studio-mode-btn" data-prompt-mode="source" id="prompt-studio-mode-source" role="tab" aria-controls="prompt-studio-source-panel" aria-selected="false">完整源码</button>
+                                </div>
                             </div>
-                            <div id="prompt-studio-items-panel" class="prompt-studio-panel">
+                            <div id="prompt-studio-items-panel" class="prompt-studio-panel" role="tabpanel" aria-labelledby="prompt-studio-mode-items">
                                 <div class="prompt-studio-actions">
                                     <button type="button" id="prompt-studio-add-item" class="btn btn-small btn-secondary">添加条目</button>
                                     <button type="button" id="prompt-studio-open-variables" class="btn btn-small btn-secondary">变量库</button>
@@ -66,8 +67,9 @@
                                 </div>
                                 <div id="prompt-studio-status" class="prompt-studio-status" aria-live="polite"></div>
                                 <div id="prompt-studio-item-list" class="prompt-studio-item-list"></div>
+                                <p class="magic-room-order-hint">按当前顺序执行，可用上下箭头调整条目顺序。</p>
                             </div>
-                            <div id="prompt-studio-variables" class="prompt-studio-drawer" hidden>
+                            <div id="prompt-studio-variables" class="prompt-studio-drawer" hidden="">
                                 <div class="prompt-studio-drawer-head">
                                     <div>
                                         <strong>变量库</strong>
@@ -77,7 +79,7 @@
                                 </div>
                                 <div id="prompt-studio-variable-list"></div>
                             </div>
-                            <div id="prompt-studio-preview-panel" class="prompt-studio-drawer" hidden>
+                            <div id="prompt-studio-preview-panel" class="prompt-studio-drawer" hidden="">
                                 <div class="prompt-studio-drawer-head">
                                     <div>
                                         <strong>最终提示词预览</strong>
@@ -89,195 +91,199 @@
                                 <div id="prompt-studio-preview-warnings" class="prompt-studio-preview-warnings"></div>
                                 <pre id="prompt-studio-preview-content" class="prompt-studio-preview-content"></pre>
                             </div>
-                            <div id="prompt-studio-source-panel" class="kkt-item prompt-studio-source-panel" style="flex-direction: column; align-items: stretch; padding-bottom: 15px; border-top: 1px solid #f5f5f5;" hidden>
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                    <div class="kkt-item-label" style="font-size: 13px;">提示词模板</div>
-                                    <div style="display: flex; gap: 5px;">
-                                        <button type="button" id="magic-room-reset-prompt-btn" class="btn btn-small btn-secondary" style="padding: 4px 8px;">恢复默认</button>
+                            <div id="prompt-studio-source-panel" class="kkt-item prompt-studio-source-panel" hidden="" role="tabpanel" aria-labelledby="prompt-studio-mode-source">
+                                <div>
+                                    <div class="kkt-item-label">提示词模板</div>
+                                    <div>
+                                        <button type="button" id="magic-room-reset-prompt-btn" class="btn btn-small btn-secondary">恢复默认</button>
                                     </div>
                                 </div>
-                                <p style="font-size: 11px; color: #888; margin: 0 0 8px 0; line-height: 1.4;">
+                                <p>
                                     支持的变量：<br>
-                                    <code style="color:var(--primary-color);">{{当前时间}}</code> <code style="color:var(--primary-color);">{{世界书_前}}</code> <code style="color:var(--primary-color);">{{世界书_中}}</code> <code style="color:var(--primary-color);">{{世界书_后}}</code> <code style="color:var(--primary-color);">{{角色名}}</code> <code style="color:var(--primary-color);">{{用户称呼}}</code> <code style="color:var(--primary-color);">{{角色状态}}</code> <code style="color:var(--primary-color);">{{角色人设}}</code> <code style="color:var(--primary-color);">{{用户人设}}</code> <code style="color:var(--primary-color);">{{角色时间年龄通知}}</code> <code style="color:var(--primary-color);">{{用户时间年龄通知}}</code> <code style="color:var(--primary-color);">{{共同回忆}}</code> <code style="color:var(--primary-color);">{{在线逻辑规则}}</code> <code style="color:var(--primary-color);">{{输出格式}}</code> <code style="color:var(--primary-color);">{{天气信息}}</code>
+                                    <code>{{当前时间}}</code> <code>{{世界书_前}}</code> <code>{{世界书_中}}</code> <code>{{世界书_后}}</code> <code>{{角色名}}</code> <code>{{用户称呼}}</code> <code>{{角色状态}}</code> <code>{{角色人设}}</code> <code>{{用户人设}}</code> <code>{{角色时间年龄通知}}</code> <code>{{用户时间年龄通知}}</code> <code>{{共同回忆}}</code> <code>{{在线逻辑规则}}</code> <code>{{输出格式}}</code> <code>{{天气信息}}</code>
                                 </p>
-                                <textarea id="magic-room-custom-prompt" rows="15" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 8px; resize: vertical; font-size: 12px; font-family: monospace; box-sizing: border-box; background: #fafafa;"></textarea>
-                            </div>
-                            
-                            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                                <button type="button" id="magic-room-import-btn" class="btn btn-secondary" style="flex: 1;">导入模板</button>
-                                <button type="button" id="magic-room-export-btn" class="btn btn-secondary" style="flex: 1;">导出模板</button>
-                                <input type="file" id="magic-room-import-input" accept=".json" style="display:none;">
+                                <textarea id="magic-room-custom-prompt" rows="15" aria-label="提示词模板"></textarea>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="kkt-group" id="magic-room-moments-prompts" style="margin-top:12px;">
-                        <div class="kkt-item"><div class="kkt-item-label">动态能力提示词<p class="kkt-item-hint">只注入角色已开启的能力；旧预设自动接入。这里修改的文字对所有预设生效。</p></div></div>
-                        <div class="kkt-item" style="display:block;"><label class="kkt-item-label" for="magic-moments-post">自主发动态</label><textarea id="magic-moments-post" data-moments-prompt="post" class="magic-moments-prompt"></textarea></div>
-                        <div class="kkt-item" style="display:block;"><label class="kkt-item-label" for="magic-moments-story">自主发 Story</label><textarea id="magic-moments-story" data-moments-prompt="story" class="magic-moments-prompt"></textarea></div>
-                        <div class="kkt-item" style="display:block;"><label class="kkt-item-label" for="magic-moments-browse">自主浏览</label><textarea id="magic-moments-browse" data-moments-prompt="browse" class="magic-moments-prompt"></textarea></div>
-                        <div class="kkt-item" style="display:block;"><label class="kkt-item-label" for="magic-moments-explicit-view">明确请求观看</label><textarea id="magic-moments-explicit-view" data-moments-prompt="explicitView" class="magic-moments-prompt"></textarea></div>
-                        <div class="kkt-item" style="display:block;"><label class="kkt-item-label" for="magic-moments-interact">点赞与评论</label><textarea id="magic-moments-interact" data-moments-prompt="interact" class="magic-moments-prompt"></textarea></div>
-                        <div class="kkt-item" style="display:block;"><label class="kkt-item-label" for="magic-moments-contacts">角色人脉</label><textarea id="magic-moments-contacts" data-moments-prompt="contacts" class="magic-moments-prompt"></textarea></div>
-                        <div class="kkt-item" style="display:block;"><label class="kkt-item-label" for="magic-moments-seen">已看动态上下文</label><textarea id="magic-moments-seen" data-moments-prompt="seen" class="magic-moments-prompt"></textarea></div>
-                        <div class="kkt-item" style="display:block;"><label class="kkt-item-label" for="magic-moments-unseen">未看帖子索引</label><textarea id="magic-moments-unseen" data-moments-prompt="unseen" class="magic-moments-prompt"></textarea></div>
-                        <div class="kkt-item" style="display:block;"><label class="kkt-item-label" for="magic-moments-post-generation">发帖内容生成</label><textarea id="magic-moments-post-generation" data-moments-prompt="postGeneration" class="magic-moments-prompt"></textarea></div>
-                        <div class="kkt-item" style="display:block;"><label class="kkt-item-label" for="magic-moments-autonomy">自主活动判断</label><textarea id="magic-moments-autonomy" data-moments-prompt="autonomy" class="magic-moments-prompt"></textarea></div>
-                        <div class="kkt-item" style="display:block;"><label class="kkt-item-label" for="magic-moments-chat-view-decision">私聊中查看判断</label><textarea id="magic-moments-chat-view-decision" data-moments-prompt="chatViewDecision" class="magic-moments-prompt"></textarea></div>
-                        <div class="kkt-item" style="display:block;"><label class="kkt-item-label" for="magic-moments-view-decision">观看后互动判断</label><textarea id="magic-moments-view-decision" data-moments-prompt="viewDecision" class="magic-moments-prompt"></textarea></div>
-                        <div class="kkt-item" style="display:block;"><label class="kkt-item-label" for="magic-moments-friend-decision">人脉好友判断</label><textarea id="magic-moments-friend-decision" data-moments-prompt="friendDecision" class="magic-moments-prompt"></textarea></div>
-                    </div>
-
-                    <!-- ===== 后台保活设置 ===== -->
-                    <div style="margin: 20px 0 15px; padding-top: 18px; border-top: 2px solid #f0f0f0; padding-left: 8px;">
-                        <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">运行保障设置</div>
-                        <p style="font-size: 11px; color: #999; margin: 5px 0 0;">提高任务连续性；锁屏或切换应用时仍可能被系统挂起。</p>
-                    </div>
-
-                    <div class="kkt-group">
-                        <div class="kkt-item">
-                            <div class="kkt-item-label">屏幕常亮 (Wake Lock)</div>
-                            <div class="kkt-item-control">
-                                <label class="kkt-switch">
-                                    <input type="checkbox" id="keep-alive-code-enabled">
-                                    <span class="kkt-slider"></span>
-                                </label>
+                    </section>
+                    <section id="magic-room-panel-moments" class="magic-room-panel" role="tabpanel" aria-labelledby="magic-room-tab-moments" data-magic-room-panel="moments" hidden="">
+                        <details class="kkt-group magic-room-card" id="magic-room-moments-prompts">
+                            <summary class="kkt-item magic-moments-summary">
+                            <span class="kkt-item-label">动态能力提示词<span class="kkt-item-hint">仅注入角色已开启的能力；修改对所有预设生效，兼容旧预设。</span></span>
+                            <span class="magic-moments-toggle" aria-hidden="true"><span class="magic-moments-expand">展开编辑</span><span class="magic-moments-collapse">收起</span><span class="magic-moments-chevron"></span></span>
+                        </summary>
+                            <div class="moments-prompt-editor">
+                                <div class="prompt-studio-actions">
+                                    <button type="button" id="moments-prompt-add-item" class="btn btn-small btn-secondary">添加条目</button>
+                                    <button type="button" id="moments-prompt-preview" class="btn btn-small btn-secondary">私聊注入预览</button>
+                                    <button type="button" id="moments-prompt-reset-items" class="btn btn-small btn-secondary">恢复默认条目</button>
+                                </div>
+                                <div id="moments-prompt-status" class="prompt-studio-status" aria-live="polite"></div>
+                                <div id="moments-prompt-item-list" class="prompt-studio-item-list"></div>
+                                <p class="magic-room-order-hint">用上下箭头调整顺序；仅在所选场景和角色权限均满足时注入。修改对所有预设生效，点击底部保存后应用。</p>
+                                <div id="moments-prompt-preview-panel" class="prompt-studio-drawer" hidden>
+                                    <div class="prompt-studio-drawer-head">
+                                        <div><strong>私聊动态上下文预览</strong><p>使用当前未保存的条目；发帖生成、后台判断等条目在对应任务中生效。</p></div>
+                                        <button type="button" id="moments-prompt-close-preview" class="prompt-studio-icon-btn" aria-label="关闭动态预览">×</button>
+                                    </div>
+                                    <select id="moments-prompt-preview-character" class="prompt-studio-preview-character" aria-label="预览动态角色"></select>
+                                    <pre id="moments-prompt-preview-content" class="prompt-studio-preview-content"></pre>
+                                </div>
                             </div>
-                        </div>
-                        <div class="kkt-item">
-                            <div class="kkt-item-label">生成时自动常亮</div>
-                            <div class="kkt-item-control">
-                                <label class="kkt-switch">
-                                    <input type="checkbox" id="keep-alive-auto-wake-enabled">
-                                    <span class="kkt-slider"></span>
-                                </label>
+                        </details>
+                    </section>
+                    <section id="magic-room-panel-runtime" class="magic-room-panel" role="tabpanel" aria-labelledby="magic-room-tab-runtime" data-magic-room-panel="runtime" hidden="">
+                        <div class="kkt-group magic-room-card">
+                            <div class="magic-room-card-heading">
+                                <h2>运行保障</h2>
+                                <p>提高任务连续性；锁屏或切换应用时仍可能被系统挂起。</p>
                             </div>
-                        </div>
-                        <div class="kkt-item">
-                            <div class="kkt-item-label">音频播放保活</div>
-                            <div class="kkt-item-control">
-                                <label class="kkt-switch">
-                                    <input type="checkbox" id="keep-alive-audio-enabled">
-                                    <span class="kkt-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="kkt-item">
-                            <div class="kkt-item-label">配置保活音频</div>
-                            <div class="kkt-item-control">
-                                <button type="button" id="open-keep-alive-audio-btn" class="btn btn-secondary btn-small" style="padding:6px 12px;">配置</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ===== 系统通知设置 ===== -->
-                    <div style="margin: 20px 0 15px; padding-top: 18px; border-top: 2px solid #f0f0f0; padding-left: 8px;">
-                        <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">系统级通知</div>
-                        <p style="font-size: 11px; color: #999; margin: 5px 0 0;">开启后，收到消息时将弹出系统级弹窗通知，类似微信/QQ 的消息提醒。</p>
-                    </div>
-
-                    <div class="kkt-group">
-                        <!-- 总开关 -->
-                        <div class="kkt-item">
-                            <div class="kkt-item-label">启用系统通知</div>
-                            <div class="kkt-item-control">
-                                <label class="kkt-switch">
-                                    <input type="checkbox" id="sysnotif-enabled">
-                                    <span class="kkt-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- 子设置区域 -->
-                        <div id="sysnotif-options" style="display:none;">
-
-                            <!-- 自定义发送方名称 -->
-                            <div class="kkt-item" style="flex-direction: column; align-items: stretch; padding-bottom: 12px;">
-                                <div class="kkt-item-label" style="margin-bottom: 8px;">通知显示名称</div>
-                                <input type="text" id="sysnotif-sender-name" placeholder="留空则使用角色自己的名字"
-                                    style="width:100%; padding:8px 10px; border:1px solid #e0e0e0; border-radius:8px; font-size:13px; box-sizing:border-box; background: #fafafa;">
-                                <p style="font-size:11px; color:#aaa; margin:5px 0 0;">例如填入「微信」「QQ」可模拟系统消息来源名称</p>
-                            </div>
-
-                            <!-- 显示头像 -->
                             <div class="kkt-item">
-                                <div class="kkt-item-label">显示发送方头像</div>
+                                <div class="kkt-item-label">屏幕常亮 (Wake Lock)</div>
                                 <div class="kkt-item-control">
                                     <label class="kkt-switch">
-                                        <input type="checkbox" id="sysnotif-show-avatar">
-                                        <span class="kkt-slider"></span>
-                                    </label>
+                                    <input type="checkbox" id="keep-alive-code-enabled" aria-label="屏幕常亮 (Wake Lock)">
+                                    <span class="kkt-slider"></span>
+                                </label>
                                 </div>
                             </div>
                             <div class="kkt-item">
-                                <div class="kkt-item-label">当前聊天页内通知<p style="font-size:12px;color:#999;margin:4px 0 0;">开启后，即使在聊天详情页内也能收到系统通知</p></div>
+                                <div class="kkt-item-label">生成时自动常亮</div>
                                 <div class="kkt-item-control">
                                     <label class="kkt-switch">
-                                        <input type="checkbox" id="sysnotif-in-chat-enabled">
-                                        <span class="kkt-slider"></span>
-                                    </label>
+                                    <input type="checkbox" id="keep-alive-auto-wake-enabled" aria-label="生成时自动常亮">
+                                    <span class="kkt-slider"></span>
+                                </label>
                                 </div>
                             </div>
-
-                            <!-- 显示消息内容 -->
                             <div class="kkt-item">
-                                <div class="kkt-item-label">显示消息内容预览</div>
+                                <div class="kkt-item-label">音频播放保活</div>
                                 <div class="kkt-item-control">
                                     <label class="kkt-switch">
-                                        <input type="checkbox" id="sysnotif-show-content">
-                                        <span class="kkt-slider"></span>
-                                    </label>
+                                    <input type="checkbox" id="keep-alive-audio-enabled" aria-label="音频播放保活">
+                                    <span class="kkt-slider"></span>
+                                </label>
                                 </div>
                             </div>
-
-                            <!-- 通知权限 -->
-                            <div class="kkt-item" style="flex-direction: column; align-items: stretch; padding-bottom: 10px;">
-                                <div style="display: flex; gap: 10px; margin-bottom: 6px;">
-                                    <button type="button" id="sysnotif-request-permission" class="btn btn-secondary" style="flex: 1; font-size:13px;">
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">配置保活音频</div>
+                                <div class="kkt-item-control">
+                                    <button type="button" id="open-keep-alive-audio-btn" class="btn btn-secondary btn-small">配置</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="kkt-group magic-room-card">
+                            <div class="magic-room-card-heading">
+                                <h2>系统通知</h2>
+                                <p>设置消息通知、内容预览和自定义推送。</p>
+                            </div>
+                            <div class="kkt-item">
+                                <div class="kkt-item-label">启用系统通知</div>
+                                <div class="kkt-item-control">
+                                    <label class="kkt-switch">
+                                    <input type="checkbox" id="sysnotif-enabled" aria-label="启用系统通知">
+                                    <span class="kkt-slider"></span>
+                                </label>
+                                </div>
+                            </div>
+                            <div id="sysnotif-options" style="display: none;">
+                                <div class="kkt-item magic-room-input-row">
+                                    <div class="kkt-item-label">通知显示名称</div>
+                                    <input type="text" id="sysnotif-sender-name" placeholder="留空则使用角色自己的名字" aria-label="通知显示名称">
+                                    <p>例如填入「微信」「QQ」可模拟系统消息来源名称</p>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">显示发送方头像</div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                        <input type="checkbox" id="sysnotif-show-avatar" aria-label="显示发送方头像">
+                                        <span class="kkt-slider"></span>
+                                    </label>
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">当前聊天页内通知<p>开启后，即使在聊天详情页内也能收到系统通知</p></div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                        <input type="checkbox" id="sysnotif-in-chat-enabled" aria-label="当前聊天页内通知">
+                                        <span class="kkt-slider"></span>
+                                    </label>
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">显示消息内容预览</div>
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                        <input type="checkbox" id="sysnotif-show-content" aria-label="显示消息内容预览">
+                                        <span class="kkt-slider"></span>
+                                    </label>
+                                    </div>
+                                </div>
+                                <div class="kkt-item magic-room-permission-row">
+                                    <div>
+                                        <button type="button" id="sysnotif-request-permission" class="btn btn-secondary">
                                         申请系统通知权限
                                     </button>
-                                    <button type="button" id="sysnotif-test-btn" class="btn btn-primary" style="flex: 1; font-size:13px;">
-                                        发送测试通知
+                                        <button type="button" id="sysnotif-test-btn" class="btn btn-primary">
+                                        测试本机通知
                                     </button>
+                                    </div>
+                                    <div id="sysnotif-permission-status"></div>
+                                    <p>iOS 用户需先将应用「添加到主屏幕」，再通过主屏幕图标打开后才能申请权限。</p>
                                 </div>
-                                <div id="sysnotif-permission-status" style="font-size:12px; color:#999; padding: 0 2px;"></div>
-                                <p style="font-size:11px; color:#bbb; margin:5px 0 0; line-height:1.5;">iOS 用户需先将应用「添加到主屏幕」，再通过主屏幕图标打开后才能申请权限。</p>
-                            </div>
-
-                            <!-- 自定义推送服务器 -->
-                            <div class="kkt-item" style="border-top: 1px solid #f5f5f5; padding-top: 10px;">
-                                <div class="kkt-item-label">使用自定义推送服务器
-                                    <span style="font-size:11px; color:#bbb; font-weight:normal;">（选填，适合应用完全关闭时仍需推送）</span>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">使用自定义推送服务器
+                                    <span>（选填，需要另行部署推送服务并登记设备）</span>
                                 </div>
-                                <div class="kkt-item-control">
-                                    <label class="kkt-switch">
-                                        <input type="checkbox" id="sysnotif-custom-server">
+                                    <div class="kkt-item-control">
+                                        <label class="kkt-switch">
+                                        <input type="checkbox" id="sysnotif-custom-server" aria-label="使用自定义推送服务器">
                                         <span class="kkt-slider"></span>
                                     </label>
+                                    </div>
+                                </div>
+                                <div id="sysnotif-server-options" style="display: none;">
+                                    <div class="kkt-item magic-room-input-row">
+                                        <div class="kkt-item-label">OVO 推送服务地址</div>
+                                        <input type="url" id="sysnotif-server-url" placeholder="https://你的推送服务域名" aria-label="推送服务器 URL">
+                                    </div>
+                                    <div class="kkt-item magic-room-input-row">
+                                        <div class="kkt-item-label">客户端 Token</div>
+                                        <input type="password" id="sysnotif-server-key" placeholder="填入配套服务的 PUSH_CLIENT_TOKEN" aria-label="服务器 Key / Token">
+                                    </div>
+                                    <div class="kkt-item magic-room-input-row">
+                                        <p>服务地址填写根地址，不加 /send。连接会保存推送设置并登记本机；收到服务器推送后，即使网页关闭也可显示通知，实际送达受系统和网络影响。角色离线生成消息需另外部署服务端任务。</p>
+                                        <div class="magic-room-push-actions">
+                                            <button type="button" id="sysnotif-server-connect" class="btn btn-secondary">连接并保存推送设置</button>
+                                            <button type="button" id="sysnotif-server-test" class="btn btn-primary">测试服务器推送</button>
+                                            <button type="button" id="sysnotif-server-disconnect" class="btn btn-secondary">断开推送</button>
+                                        </div>
+                                        <p id="sysnotif-server-status" role="status" aria-live="polite">尚未登记设备。保存地址不会自动建立推送订阅。</p>
+                                    </div>
                                 </div>
                             </div>
-
-                            <div id="sysnotif-server-options" style="display:none;">
-                                <div class="kkt-item" style="flex-direction: column; align-items: stretch; padding-bottom: 12px;">
-                                    <div class="kkt-item-label" style="margin-bottom: 8px;">推送服务器 URL</div>
-                                    <input type="url" id="sysnotif-server-url" placeholder="https://your-push-server.com/send"
-                                        style="width:100%; padding:8px 10px; border:1px solid #e0e0e0; border-radius:8px; font-size:13px; box-sizing:border-box; background: #fafafa;">
-                                </div>
-                                <div class="kkt-item" style="flex-direction: column; align-items: stretch; padding-bottom: 12px;">
-                                    <div class="kkt-item-label" style="margin-bottom: 8px;">服务器 Key / Token</div>
-                                    <input type="password" id="sysnotif-server-key" placeholder="填入你的推送服务器鉴权 Key"
-                                        style="width:100%; padding:8px 10px; border:1px solid #e0e0e0; border-radius:8px; font-size:13px; box-sizing:border-box; background: #fafafa;">
-                                </div>
-                            </div>
-
                         </div>
-                    </div>
-
-                    <button type="button" class="btn btn-primary" id="magic-room-save-btn" style="margin-top: 20px; width: 100%;">
-                        <span class="btn-text">保存魔法屋设置</span>
-                    </button>
+                    </section>
                 </div>
             </main>
+            <footer class="magic-room-savebar">
+                <div class="magic-room-savebar-inner">
+                    <p>保活开关即时生效，提示词和通知修改后需保存。</p>
+                    <button type="button" class="btn btn-primary" id="magic-room-save-btn">
+                        <span class="btn-text">保存设置</span>
+                    </button>
+                </div>
+            </footer>
+            <div id="magic-room-presets-modal" style="display: none;">
+                <div>
+                    <h3>提示词预设管理</h3>
+                    <div id="magic-room-presets-list">
+                                        </div>
+                    <div>
+                        <button type="button" id="magic-room-close-modal" class="btn btn-primary">关闭</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="storage-analysis-screen" class="screen">
@@ -297,7 +303,7 @@
                     <h2 id="storage-total-size"
                         style="margin: 4px 0 0 0; font-size: 24px; color: #333; font-weight: 600;">---</h2>
                 </div>
-                <div id="storage-save-status" style="width: 100%; text-align: center;">
+                <div id="storage-save-status" style="width: 100%; text-align: center; margin-bottom: 20px;">
                     <p role="status" hidden>检测到本地保存失败。请先导出备份，再重试保存。</p>
                     <button type="button" id="storage-save-retry" class="btn btn-secondary" style="width: 100%;">重试保存当前数据</button>
                 </div>

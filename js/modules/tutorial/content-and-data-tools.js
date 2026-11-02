@@ -123,19 +123,11 @@ function renderTutorialContent() {
                 signal: activeBackupController.signal
             });
 
-            const url = URL.createObjectURL(compressedBlob);
-            const a = document.createElement('a');
             const now = new Date();
             const date = now.toISOString().slice(0, 10);
             const time = now.toTimeString().slice(0, 8).replace(/:/g, '');
-            a.href = url;
-            a.download = `章鱼喷墨_备份数据_${date}_${time}.ee`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            // 移动浏览器可能会延迟读取 Blob，不能在 click 后立即释放。
-            setTimeout(() => URL.revokeObjectURL(url), 60000);
-            showToast(`聊天记录导出成功（${formatBytes(compressedBlob.size)}）`);
+            await OvoFileDownload.save(compressedBlob, `章鱼喷墨_备份数据_${date}_${time}.ee`);
+
         }catch (e){
             if (e && e.name === 'AbortError') showToast('已取消备份');
             else {
@@ -235,18 +227,11 @@ function renderTutorialContent() {
             await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
             const compressedBlob = await createCompressedBackupBlob({ selectedKeys: selected });
 
-            const url = URL.createObjectURL(compressedBlob);
-            const a = document.createElement('a');
             const now = new Date();
             const date = now.toISOString().slice(0, 10);
             const time = now.toTimeString().slice(0, 8).replace(/:/g, '');
-            a.href = url;
-            a.download = `章鱼喷墨_分类导出_${date}_${time}.ee`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(url), 60000);
-            showToast('分类导出成功');
+            await OvoFileDownload.save(compressedBlob, `章鱼喷墨_分类导出_${date}_${time}.ee`);
+
         } catch (e) {
             showToast(`分类导出失败: ${e.message}`);
             console.error('分类导出错误:', e);

@@ -101,7 +101,8 @@ const MsgVersion = {
                 role: chat.history[i].role,
                 senderId: chat.history[i].senderId,
                 timestamp: chat.history[i].timestamp,
-                parts: chat.history[i].parts ? JSON.parse(JSON.stringify(chat.history[i].parts)) : undefined
+                parts: chat.history[i].parts ? JSON.parse(JSON.stringify(chat.history[i].parts)) : undefined,
+                interactive: chat.history[i].interactive ? JSON.parse(JSON.stringify(chat.history[i].interactive)) : undefined
             });
         }
         if (currentReplies.length > 0) {
@@ -125,7 +126,8 @@ const MsgVersion = {
             role: r.role,
             senderId: r.senderId,
             timestamp: r.timestamp,
-            parts: r.parts ? JSON.parse(JSON.stringify(r.parts)) : undefined
+            parts: r.parts ? JSON.parse(JSON.stringify(r.parts)) : undefined,
+            interactive: r.interactive ? JSON.parse(JSON.stringify(r.interactive)) : undefined
         }));
         chat.history.splice(userMsgIdx + 1, 0, ...newMsgs);
 

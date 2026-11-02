@@ -338,6 +338,7 @@ const selection = archive => new Set(archive.groups.map(group => JSON.stringify(
     w.URL.createObjectURL = blob => { downloaded = blob; return 'blob:test'; }; w.URL.revokeObjectURL = () => {};
     w.HTMLAnchorElement.prototype.click = function () {};
     w.showAppConfirmDialog = async () => { confirmations++; return 'confirm'; };
+    w.eval(fs.readFileSync('js/core/file-download.js', 'utf8'));
     w.eval(coreSource); w.eval(uiSource); w.setupStatusStorageScreen();
     const get = id => w.document.getElementById('status-storage-' + id);
     const change = (id,value) => { get(id).value = value; get(id).dispatchEvent(new w.Event('input',{ bubbles:true })); };

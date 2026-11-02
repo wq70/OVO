@@ -406,7 +406,7 @@ async function moveSelectedWorldBooksToCategory(targetCategory) {
 }
 
 // --- 导出世界书 ---
-function exportWorldBooks(booksToExport, defaultFilename = 'worldbook_export') {
+async function exportWorldBooks(booksToExport, defaultFilename = 'worldbook_export') {
     if (!booksToExport || booksToExport.length === 0) {
         showToast('没有可导出的世界书条目');
         return;
@@ -424,15 +424,7 @@ function exportWorldBooks(booksToExport, defaultFilename = 'worldbook_export') {
         custom_entries: booksToExport
     };
     
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `${defaultFilename}.json`);
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-    
-    showToast(`成功导出 ${booksToExport.length} 个条目`);
+    return OvoFileDownload.save(new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' }), `${defaultFilename}.json`);
 }
 
 function handleExportWorldBookBtnClick() {

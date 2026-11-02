@@ -398,35 +398,12 @@ function openImageViewer(src, msgId = null) {
                     ? (currentIdx < (msgObj._imageVersions?.length || 0) ? msgObj._imageVersions[currentIdx]?.metadata : msgObj.imageGenerationMeta)
                     : null;
                 const downloadSrc = selectedMeta?.originalImageUrl || img.src || src;
-                const mime = selectedMeta?.mimeType || (/^data:([^;,]+)/.exec(downloadSrc)?.[1]) || '';
-                const extension = mime === 'image/jpeg' ? 'jpg' : (mime === 'image/webp' ? 'webp' : 'png');
-                // 判断是不是 base64
-                if (downloadSrc.startsWith('data:')) {
-                    const a = document.createElement('a');
-                    a.href = downloadSrc;
-                    a.download = `OVO_Image_${Date.now()}.${extension}`;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                } else {
-                    // 如果是普通 url，为了避免跨域问题和能在浏览器直接下载，使用 fetch
-                    const response = await fetch(downloadSrc);
-                    const blob = await response.blob();
-                    const dlUrl = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = dlUrl;
-                    const blobExtension = blob.type === 'image/jpeg' ? 'jpg' : (blob.type.split('/')[1] || extension);
-                    a.download = `OVO_Image_${Date.now()}.${blobExtension}`;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                    URL.revokeObjectURL(dlUrl);
-                }
-                showToast('✅ 图片已下载');
+                downloadBtn.disabled = true;
+                await OvoFileDownload.saveImage(downloadSrc, `OVO_Image_${Date.now()}.png`, [img.src || src]);
             } catch (err) {
                 console.error('下载图片失败:', err);
                 showToast('❌ 下载失败，可能是跨域问题，请长按图片保存');
-            }
+            } finally { downloadBtn.disabled = false; }
         };
     }
     

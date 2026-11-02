@@ -1,0 +1,19 @@
+        <div id="music-screen" class="screen" data-theme="light">
+            <div class="music-app">
+                <main class="sp-content" id="music-content"></main>
+                <div class="sp-dock">
+                    <div class="sp-mini" id="music-mini" hidden></div>
+                    <nav class="sp-nav" aria-label="音乐导航">
+                        <button type="button" data-music-page="home" aria-current="page"><span data-music-icon="home"></span><span>首页</span></button>
+                        <button type="button" data-music-page="search"><span data-music-icon="search"></span><span>搜索</span></button>
+                        <button type="button" data-music-page="library"><span data-music-icon="library"></span><span>音乐库</span></button>
+                    </nav>
+                </div>
+                <section id="music-player" class="sp-player" aria-label="正在播放" hidden></section>
+                <div id="music-modal" class="sp-modal" hidden>
+                    <button type="button" class="sp-scrim" data-music-action="close" aria-label="关闭面板"></button>
+                    <section id="music-sheet" class="sp-sheet" role="dialog" aria-modal="true" aria-label="音乐操作"></section>
+                </div>
+                <div id="music-live" class="music-sr-only" role="status" aria-live="polite"></div>
+            </div>
+        </div>

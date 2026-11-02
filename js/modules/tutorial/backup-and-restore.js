@@ -1,6 +1,7 @@
 async function createFullBackupData() {
     const backupData = JSON.parse(JSON.stringify(db));
     const keys = window.globalSettingKeysForBackup || [];
+    if (dexieDB?.musicAssets) backupData.musicAssets = await dexieDB.musicAssets.toArray();
     keys.forEach(k => {
         if (db[k] !== undefined && backupData[k] === undefined) {
             try { backupData[k] = JSON.parse(JSON.stringify(db[k])); } catch (e) { backupData[k] = db[k]; }
@@ -30,6 +31,7 @@ async function createPartialBackupData(selectedKeys) {
     for (const key of selectedKeys) {
         if (key === 'globalSettings') {
             result.globalSettings = {};
+            if (dexieDB?.musicAssets) result.globalSettings.musicAssets = await dexieDB.musicAssets.toArray();
             keys.forEach(k => { result.globalSettings[k] = db[k] !== undefined ? JSON.parse(JSON.stringify(db[k])) : undefined; });
             if (dexieDB?.naiVibeAssets) {
                 result.globalSettings.naiVibeAssets = await dexieDB.naiVibeAssets.toArray();
@@ -62,14 +64,14 @@ function getBackupDataKeys(selectedKeys) {
         allGlobalKeys.forEach(key => {
             if (db[key] !== undefined) keys.add(key);
         });
-        ['naiVibeAssets', 'naiVibeEncodings', 'naiVibeGroups'].forEach(key => keys.add(key));
+        ['naiVibeAssets', 'naiVibeEncodings', 'naiVibeGroups', 'musicAssets'].forEach(key => keys.add(key));
     } else {
         selectedKeys.forEach(key => {
             if (key === 'globalSettings') {
                 allGlobalKeys.forEach(settingKey => {
                     if (db[settingKey] !== undefined) keys.add(settingKey);
                 });
-                ['naiVibeAssets', 'naiVibeEncodings', 'naiVibeGroups'].forEach(vibeKey => keys.add(vibeKey));
+                ['naiVibeAssets', 'naiVibeEncodings', 'naiVibeGroups', 'musicAssets'].forEach(vibeKey => keys.add(vibeKey));
             } else if (key === 'theaterData') {
                 THEATER_DB_KEYS.forEach(theaterKey => {
                     if (db[theaterKey] !== undefined) keys.add(theaterKey);
@@ -130,7 +132,7 @@ async function* createBackupRecordStream(options = {}) {
     });
 
     for (const key of dataKeys) {
-        const value = /^naiVibe(?:Assets|Encodings|Groups)$/.test(key) && dexieDB?.[key]
+        const value = /^(?:naiVibe(?:Assets|Encodings|Groups)|musicAssets)$/.test(key) && dexieDB?.[key]
             ? await dexieDB[key].toArray()
             : db[key];
         if (value === undefined) continue;
@@ -442,6 +444,7 @@ async function ensureImportStorageCapacity(validation, isPartial) {
 
 function getDexieTableForBackupKey(key, staging = false) {
     if (!dexieDB) return null;
+    if (key === 'musicAssets' && dexieDB.musicAssets) return staging ? dexieDB.importMusicAssets : dexieDB.musicAssets;
     if (key === 'characters') return staging ? dexieDB.importCharacters : dexieDB.characters;
     if (key === 'groups') return staging ? dexieDB.importGroups : dexieDB.groups;
     if (key === 'worldBooks') return staging ? dexieDB.importWorldBooks : dexieDB.worldBooks;
@@ -463,7 +466,8 @@ function getImportStagingTables() {
         dexieDB.importGlobalSettings,
         dexieDB.importNaiVibeAssets,
         dexieDB.importNaiVibeEncodings,
-        dexieDB.importNaiVibeGroups
+        dexieDB.importNaiVibeGroups,
+        dexieDB.importMusicAssets
     ].filter(Boolean);
 }
 
@@ -487,7 +491,8 @@ async function commitImportStaging(isPartial) {
         dexieDB.archives,
         dexieDB.naiVibeAssets,
         dexieDB.naiVibeEncodings,
-        dexieDB.naiVibeGroups
+        dexieDB.naiVibeGroups,
+        dexieDB.musicAssets
     ].filter(Boolean);
     const stagingTables = getImportStagingTables();
     await dexieDB.transaction('rw', [...coreTables, ...stagingTables], async () => {
@@ -502,6 +507,7 @@ async function commitImportStaging(isPartial) {
         await copyDexieTableRecords(dexieDB.importNaiVibeAssets, dexieDB.naiVibeAssets);
         await copyDexieTableRecords(dexieDB.importNaiVibeEncodings, dexieDB.naiVibeEncodings);
         await copyDexieTableRecords(dexieDB.importNaiVibeGroups, dexieDB.naiVibeGroups);
+        if (dexieDB.musicAssets && dexieDB.importMusicAssets) await copyDexieTableRecords(dexieDB.importMusicAssets, dexieDB.musicAssets);
         await copyDexieTableRecords(dexieDB.importGlobalSettings, dexieDB.globalSettings);
         await Promise.all(stagingTables.map(table => table.clear()));
     });
@@ -634,7 +640,7 @@ window.importStreamBackupData = importStreamBackupData;
 
 async function stageBackupObject(data, isPartial) {
     await clearImportStaging();
-    const tableKeys = new Set(['characters', 'groups', 'worldBooks', 'myStickers', 'archives', 'naiVibeAssets', 'naiVibeEncodings', 'naiVibeGroups']);
+    const tableKeys = new Set(['characters', 'groups', 'worldBooks', 'myStickers', 'archives', 'naiVibeAssets', 'naiVibeEncodings', 'naiVibeGroups', 'musicAssets']);
     try {
         for (const [key, value] of Object.entries(data)) {
             if (key.startsWith('_export') || key === '__chunks__' || value === undefined) continue;

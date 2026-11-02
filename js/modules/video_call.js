@@ -771,6 +771,7 @@ const VideoCallModule = {
         }
         this.state.callType = type;
         this.state.isCallActive = true;
+        document.dispatchEvent(new CustomEvent('ovo-call-audio', { detail: { active: true } }));
         this.state.hasEnteredCallScene = false;
         this.state.seconds = 0;
         this.state.currentCallContext = [];
@@ -1564,6 +1565,7 @@ const VideoCallModule = {
         this.state.isGenerating = false;
         this.state.isAiSpeaking = false;
         this.state.isCallActive = false;
+        document.dispatchEvent(new CustomEvent('ovo-call-audio', { detail: { active: false } }));
         this.state.isMinimized = false;
         this.state.hasEnteredCallScene = false;
 
@@ -2018,32 +2020,15 @@ const VideoCallModule = {
     },
 
     // === 保存 NovelAI 生成的图片 ===
-    saveNaiImage: function() {
+    saveNaiImage: async function() {
         const imgEl = document.getElementById('vc-nai-bg-img');
         if (!imgEl || !imgEl.src || imgEl.src === '' || imgEl.src === window.location.href) {
             showToast('当前没有可保存的图片');
             return;
         }
 
-        try {
-            const link = document.createElement('a');
-            link.href = imgEl.src;
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-            link.download = `videocall_${timestamp}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            showToast('图片已保存');
-        } catch (err) {
-            console.error('[VideoCall] 保存图片失败:', err);
-            // 如果是 blob/data URL，尝试 open 新窗口
-            try {
-                window.open(imgEl.src, '_blank');
-                showToast('已在新窗口打开图片，请长按保存');
-            } catch (e2) {
-                showToast('保存失败，请截图保存');
-            }
-        }
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        await OvoFileDownload.saveImage(imgEl.src, `videocall_${timestamp}.png`);
     },
 
     // === 收起/展开聊天文本内容 ===

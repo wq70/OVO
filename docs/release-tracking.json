@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "purpose": "维护用发布记账；不是正式更新日志。提前上传不代表这些功能已经计入正式大更新。",
+  "batchId": "early-access-2026-11",
+  "status": "pending-major-release-notes",
+  "rules": [
+    "本批仅提前上传 OVO、TUT、xinOVO，不新增正式版本、不修改各仓库原有的更新日志.txt。",
+    "下次大更新必须合并本文件中尚未记账的功能；不得只按本次上传后的 Git 提交差异整理日志。",
+    "按 features.id 去重；同一功能同步到多个仓库仍只计一次。",
+    "正式写入大更新日志后，将对应功能的 accountedInRelease 设为实际版本或发布日期；已有值的条目不再重复加入。",
+    "既有正式功能以 OVO 原日志为核对基线；TUT、xinOVO 原日志较短，不应因此重复宣告旧功能为新增。"
+  ],
+  "repositoriesBeforeUpload": {
+    "wq70/OVO": {
+      "branch": "main",
+      "head": "d757bf66fe297e90a1ace3d0a9083866c43225d6",
+      "changelogBlob": "b2ebaf62dc78b9f3fdd1203c6fa7dcd23717f123"
+    },
+    "wq70/TUT": {
+      "branch": "main",
+      "head": "238dc501040bfae6bb28288454eebc55e3b08178",
+      "changelogBlob": "efc3cbb40423594730d659ae15b2d5355090761b"
+    },
+    "wq70/xinOVO": {
+      "branch": "main",
+      "head": "72d13320f0f399923ebe9c42056248640c47b775",
+      "changelogBlob": "efc3cbb40423594730d659ae15b2d5355090761b"
+    }
+  },
+  "features": [
+    {
+      "id": "music-app",
+      "summary": "新增音乐应用：搜索与多服务接入、歌单收藏、歌词、队列、小型播放器、本地音频导入导出、角色一起听及备份兼容。",
+      "sources": ["js/modules/music/", "src/html/screens/music.html", "css/modules/music.css"],
+      "accountedInRelease": null
+    },
+    {
+      "id": "interactive-html-messages",
+      "summary": "新增可运行 JavaScript 的 HTML 互动消息，含编辑预览、独立状态、展开查看、示例和模板导入导出，适配聊天上下文与消息操作。",
+      "sources": ["js/modules/interactive-messages.js", "docs/interactive-messages.md"],
+      "accountedInRelease": null
+    },
+    {
+      "id": "character-profile-permissions",
+      "summary": "新增按角色控制自主修改角色备注、给用户的独立备注和双方拍一拍后缀，含 TA 给我的备注设置与权限隔离。",
+      "sources": ["js/modules/character-profile.js", "src/html/screens/chat-settings/basics.html", "src/html/screens/chat-settings/features.html"],
+      "accountedInRelease": null
+    },
+    {
+      "id": "magic-room-redesign",
+      "summary": "重整魔法屋为系统提示词、动态能力、运行与通知，完善提示词条目、动态提示词编辑、预设兼容和移动端布局。",
+      "sources": ["js/settings/magic-room-settings.js", "js/settings/prompt-studio-settings.js", "src/html/screens/magic-storage-peek.html"],
+      "accountedInRelease": null
+    },
+    {
+      "id": "custom-server-push",
+      "summary": "新增自定义 Web Push 服务、设备订阅、鉴权、服务器推送测试与取消订阅；需独立部署服务，尚不包含关闭网页后的 AI 回复生成。",
+      "sources": ["js/core/push-notifications.js", "server/push/", "docs/push-notifications.md"],
+      "accountedInRelease": null
+    },
+    {
+      "id": "per-character-moments-memory",
+      "summary": "新增按角色搜索、单条或批量清除动态记忆，支持已删动态及 Story、隐藏旁白清理、角色隔离和旧请求拦截。此前已提前上传 OVO、xinOVO，仍未计入正式日志，只计一次。",
+      "sources": ["js/modules/moments.js", "scripts/test-moments-memory.mjs"],
+      "accountedInRelease": null
+    },
+    {
+      "id": "cross-platform-file-saving",
+      "summary": "完善跨平台文件导出与 iOS 独立应用保存、失败重试和下载兼容；本地已有修复提交尚未计入正式日志。",
+      "sources": ["js/core/file-download.js", "scripts/test-file-download.mjs"],
+      "accountedInRelease": null
+    }
+  ]
+}

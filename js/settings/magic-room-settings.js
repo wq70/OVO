@@ -4,6 +4,40 @@ function setupMagicRoomApp() {
     const app = document.getElementById('magic-room-screen');
     if (!app) return;
 
+    // Keep every panel mounted so switching categories never discards unsaved edits.
+    const navigation = app.querySelector('.magic-room-nav');
+    if (navigation && navigation.dataset.ready !== 'true') {
+        navigation.dataset.ready = 'true';
+        const tabs = [...navigation.querySelectorAll('[data-magic-room-tab]')];
+        const panels = [...app.querySelectorAll('[data-magic-room-panel]')];
+        const selectTab = tab => {
+            tabs.forEach(button => {
+                const selected = button === tab;
+                button.classList.toggle('active', selected);
+                button.setAttribute('aria-selected', String(selected));
+                button.tabIndex = selected ? 0 : -1;
+            });
+            panels.forEach(panel => { panel.hidden = panel.dataset.magicRoomPanel !== tab.dataset.magicRoomTab; });
+        };
+        navigation.addEventListener('click', event => {
+            const tab = event.target.closest('[data-magic-room-tab]');
+            if (tabs.includes(tab)) selectTab(tab);
+        });
+        navigation.addEventListener('keydown', event => {
+            const current = tabs.indexOf(event.target);
+            if (current < 0) return;
+            let next;
+            if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+            else if (event.key === 'ArrowLeft') next = (current + tabs.length - 1) % tabs.length;
+            else if (event.key === 'Home') next = 0;
+            else if (event.key === 'End') next = tabs.length - 1;
+            else return;
+            event.preventDefault();
+            selectTab(tabs[next]);
+            tabs[next].focus();
+        });
+    }
+
     const enabledSwitch = document.getElementById('magic-room-custom-prompt-enabled');
     const editorSection = document.getElementById('magic-room-prompt-editor');
     const promptTextarea = document.getElementById('magic-room-custom-prompt');
@@ -14,8 +48,7 @@ function setupMagicRoomApp() {
     const importInput = document.getElementById('magic-room-import-input');
     const promptStudioUi = typeof setupPromptStudioEditor === 'function' ? setupPromptStudioEditor() : null;
     const promptPresetIdsMigrated = window.PromptStudio ? window.PromptStudio.ensurePresetIds(db.magicRoom) : false;
-    const momentsPromptFields = [...app.querySelectorAll('[data-moments-prompt]')];
-    momentsPromptFields.forEach(field => { field.value = db.magicRoom?.momentsPrompts?.[field.dataset.momentsPrompt] ?? window.Moments?.promptDefaults?.[field.dataset.momentsPrompt] ?? ''; });
+    const momentsPromptUi = typeof setupMomentsPromptEditor === 'function' ? setupMomentsPromptEditor() : null;
     if (promptPresetIdsMigrated) saveMagicRoomSettings();
 
     // 默认底层提示词模板
@@ -229,7 +262,7 @@ B. 纯线上互动：这是一个完全虚拟的线上聊天。你扮演的角�
             // 兼容单个模板导入
             if (data && data.type === 'ovo-system-prompt-template' && (data.template || Array.isArray(data.items))) {
                 promptTextarea.value = data.template || '';
-                if (promptStudioUi && (data.mode || data.items)) {
+                if (promptStudioUi) {
                     promptStudioUi.loadPreset({ name: data.name || '导入模板', template: data.template, mode: data.mode, items: data.items });
                 }
                 showToast('模板导入成功');
@@ -256,20 +289,13 @@ B. 纯线上互动：这是一个完全虚拟的线上聊天。你扮演的角�
         e.target.value = '';
     });
 
-    exportBtn.addEventListener('click', () => {
+    exportBtn.addEventListener('click', async () => {
         // 如果有预设，优先提示是否导出整个预设库
         if (db.magicRoom && db.magicRoom.presets && db.magicRoom.presets.length > 0) {
             if (confirm('是否导出整个预设库？（点击取消则仅导出当前编辑框内容）')) {
                 const blob = new Blob([JSON.stringify(db.magicRoom.presets, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `系统提示词预设库_${new Date().toISOString().slice(0, 10)}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                showToast('预设库导出成功');
+                await OvoFileDownload.save(blob, `系统提示词预设库_${new Date().toISOString().slice(0, 10)}.json`);
+
                 return;
             }
         }
@@ -285,22 +311,27 @@ B. 纯线上互动：这是一个完全虚拟的线上聊天。你扮演的角�
             items: draft ? draft.items : undefined
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `系统提示词模板_${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showToast('模板导出成功');
+        await OvoFileDownload.save(blob, `系统提示词模板_${new Date().toISOString().slice(0, 10)}.json`);
+
     });
 
     saveBtn.addEventListener('click', async () => {
+        if (pushBusy) return showToast('推送操作进行中，请稍候');
         if (!db.magicRoom) db.magicRoom = {};
+        const previous = db.magicRoom;
+        if (previous.sysNotifPushDeviceId && (!sysnotifEnabled.checked || !sysnotifCustomSrv.checked ||
+            previous.sysNotifServerUrl !== sysnotifSrvUrl.value.trim() || previous.sysNotifServerKey !== sysnotifSrvKey.value.trim())) {
+            try {
+                pushBusy = true;
+                const message = await OvoPush.disconnect(savedPushConfig(), previous.sysNotifPushDeviceId);
+                previous.sysNotifPushDeviceId = '';
+                pushStatus.textContent = message + '。如需推送，请重新连接。';
+            } catch (error) { showToast(error.message); return; }
+            finally { pushBusy = false; }
+        }
         db.magicRoom.customPromptEnabled = enabledSwitch.checked;
         db.magicRoom.customPromptTemplate = promptTextarea.value;
-        db.magicRoom.momentsPrompts = Object.fromEntries(momentsPromptFields.map(field => [field.dataset.momentsPrompt, field.value]));
+        if (momentsPromptUi) momentsPromptUi.saveToDb();
         if (promptStudioUi) promptStudioUi.saveToDb();
         // 保存系统通知设置
         db.magicRoom.sysNotifEnabled      = sysnotifEnabled ? sysnotifEnabled.checked : false;
@@ -328,6 +359,57 @@ B. 纯线上互动：这是一个完全虚拟的线上聊天。你扮演的角�
     const sysnotifSrvKey     = document.getElementById('sysnotif-server-key');
     const sysnotifReqPerm    = document.getElementById('sysnotif-request-permission');
     const sysnotifPermStatus = document.getElementById('sysnotif-permission-status');
+    const pushStatus = document.getElementById('sysnotif-server-status');
+    const pushButtons = ['connect', 'test', 'disconnect'].map(action => document.getElementById('sysnotif-server-' + action));
+    let pushBusy = false;
+    const savedPushConfig = () => ({ url: db.magicRoom?.sysNotifServerUrl || '', key: db.magicRoom?.sysNotifServerKey || '' });
+    const draftPushConfig = () => ({ url: sysnotifSrvUrl.value.trim(), key: sysnotifSrvKey.value.trim() });
+
+    async function pushAction(action) {
+        if (pushBusy) return;
+        pushBusy = true;
+        pushButtons.forEach(button => { if (button) button.disabled = true; });
+        saveBtn.disabled = true;
+        pushStatus.textContent = '正在处理推送请求…';
+        try {
+            if (!window.OvoPush) throw new Error('推送组件未加载，请刷新页面后重试');
+            if (!db.magicRoom) db.magicRoom = {};
+            const mr = db.magicRoom;
+            const values = draftPushConfig();
+            const changed = mr.sysNotifServerUrl !== values.url || mr.sysNotifServerKey !== values.key;
+            if (action !== 'disconnect' && mr.sysNotifPushDeviceId && changed) throw new Error('地址或 Token 已修改，请先断开旧推送连接，再连接新服务');
+            if (action === 'connect') {
+                if (!sysnotifEnabled.checked || !sysnotifCustomSrv.checked) throw new Error('请先开启系统通知和自定义推送服务器');
+                const deviceId = await OvoPush.connect(values);
+                const previous = { ...mr };
+                Object.assign(mr, { sysNotifEnabled: true, sysNotifCustomServer: true, sysNotifServerUrl: values.url, sysNotifServerKey: values.key, sysNotifPushDeviceId: deviceId });
+                try {
+                    if (await saveMagicRoomSettings() === false) throw new Error('推送设置保存失败，请重试连接');
+                } catch (error) {
+                    await OvoPush.disconnect(values, deviceId).catch(() => {});
+                    Object.assign(mr, previous, { sysNotifPushDeviceId: '' });
+                    throw error;
+                }
+                pushStatus.textContent = '设备已登记，推送设置已保存。请测试服务器推送以确认送达。';
+            } else if (action === 'test') {
+                await OvoPush.test(savedPushConfig(), mr.sysNotifPushDeviceId);
+                pushStatus.textContent = '推送服务已受理测试。请以实际收到的“服务器推送测试”通知确认送达；未收到不代表测试通过。';
+            } else {
+                const message = await OvoPush.disconnect(savedPushConfig(), mr.sysNotifPushDeviceId);
+                mr.sysNotifPushDeviceId = '';
+                if (await saveMagicRoomSettings() === false) throw new Error('已取消本机订阅，但设置保存失败，请重试保存');
+                pushStatus.textContent = message;
+            }
+        } catch (error) {
+            pushStatus.textContent = error.message || '推送操作失败，请重试';
+            showToast(pushStatus.textContent);
+        } finally {
+            pushBusy = false;
+            pushButtons.forEach(button => { if (button) button.disabled = false; });
+            saveBtn.disabled = false;
+        }
+    }
+    pushButtons.forEach((button, index) => button?.addEventListener('click', () => pushAction(['connect', 'test', 'disconnect'][index])));
 
     if (sysnotifEnabled) {
         const mr = db.magicRoom || {};
@@ -343,6 +425,7 @@ B. 纯线上互动：这是一个完全虚拟的线上聊天。你扮演的角�
         sysnotifSrvOptions.style.display    = mr.sysNotifCustomServer ? 'block' : 'none';
         sysnotifSrvUrl.value                = mr.sysNotifServerUrl || '';
         sysnotifSrvKey.value                = mr.sysNotifServerKey || '';
+        if (pushStatus && mr.sysNotifPushDeviceId) pushStatus.textContent = '此设备已登记过，请测试服务器推送以确认订阅仍然有效。';
 
         // 更新权限状态提示
         function updateSysNotifPermStatus() {
@@ -401,7 +484,7 @@ B. 纯线上互动：这是一个完全虚拟的线上聊天。你扮演的角�
                 const name = sysnotifSenderName.value.trim() || '章鱼喷墨机';
                 await showSystemNotification({
                     title: name,
-                    body: '这是一条系统级通知的测试消息，如果你看到了它，说明设置成功！',
+                    body: '这是本机通知测试，仅验证本机通知权限，不验证推送服务器。',
                     icon: 'https://i.postimg.cc/Vk042Snv/5F3BCD91056B989330AE34D11901BD6E.png'
                 });
             });

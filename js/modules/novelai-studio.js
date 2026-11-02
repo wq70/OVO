@@ -77,11 +77,7 @@
             repaint();
         };
         el('action').onchange = changeMode; changeMode();
-        const download = work => {
-            const a = document.createElement('a'); a.href = work.imageUrl;
-            a.download = `NovelAI_${work.createdAt}_${work.index || 0}.${/^data:image\/webp/.test(work.imageUrl) ? 'webp' : 'png'}`;
-            a.click();
-        };
+        const download = work => OvoFileDownload.saveImage(work.imageUrl, `NovelAI_${work.createdAt}_${work.index || 0}.png`);
         const render = () => {
             const gallery = el('gallery'); gallery.replaceChildren();
             for (const work of works) {

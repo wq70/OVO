@@ -53,6 +53,39 @@ sandbox.db.moments.settings.interactionVisibility = 'all';
 assert.equal(moments.canSeeInteraction(rolePost, 'char:b', 'npc_c'), true, 'all mode reveals permitted interactions');
 assert.match(moments.promptForCharacter('b'), /路边的花开了/);
 const a = sandbox.db.characters[0];
+// Item editing must preserve legacy text, intentional emptiness and runtime gates.
+sandbox.db.magicRoom = { momentsPrompts: { post: '旧发帖 {{未识别变量}}', story: '', seen: '已看：{{动态列表}}' } };
+const migrated = moments.getPromptItems();
+assert.equal(migrated.length, 13);
+assert.equal(migrated.find(item => item.key === 'post').content, '旧发帖 {{未识别变量}}');
+assert.equal(migrated.find(item => item.key === 'story').content, '');
+const orderedItems = [
+    { id: 'first', key: 'interact', name: '互动', enabled: true, content: '互动排序第一' },
+    { id: 'second', key: 'seen', name: '已看', enabled: true, content: '已看排序第二 {{动态列表}}' },
+    { id: 'off', key: 'interact', name: '停用', enabled: false, content: '停用条目不能注入' },
+    { id: 'gated', key: 'post', name: '发帖', enabled: true, content: '未开启发帖不能注入' },
+    { id: 'task', key: 'postGeneration', name: '正文', enabled: true, content: '正文生成单独使用' }
+];
+sandbox.db.magicRoom.momentsPromptItems = orderedItems;
+const orderedPrompt = moments.promptForCharacter('a');
+assert.ok(orderedPrompt.indexOf('互动排序第一') < orderedPrompt.indexOf('已看排序第二'));
+assert.match(orderedPrompt, /只给甲看的事/);
+assert.doesNotMatch(orderedPrompt, /停用条目不能注入|未开启发帖不能注入|正文生成单独使用|\{\{动态列表\}\}/);
+orderedItems.reverse();
+const reversedPrompt = moments.promptForCharacter('a');
+assert.ok(reversedPrompt.indexOf('已看排序第二') < reversedPrompt.indexOf('互动排序第一'));
+assert.equal(moments.compilePromptRules({ postGeneration: {} }), '正文生成单独使用');
+assert.equal(moments.compilePromptRules({ contacts: { 人脉列表: '{{动态列表}}' } }, [{key:'contacts',enabled:true,content:'{{人脉列表}} {{动态列表}}'}]), '{{动态列表}} {{动态列表}}', 'inserted data must not recursively expand as a variable');
+const previewPrompt = moments.promptForCharacter('a', false, [{key:'interact',enabled:true,content:'仅用于草稿预览'}]);
+assert.match(previewPrompt, /仅用于草稿预览/);
+assert.doesNotMatch(moments.promptForCharacter('a'), /仅用于草稿预览/);
+sandbox.db.magicRoom.momentsPromptItems = [];
+assert.equal(moments.getPromptItems().length, 0, 'deleted rules never reappear through legacy fallback');
+assert.doesNotMatch(moments.promptForCharacter('a'), /MOMENT:like|只给甲看的事/);
+const normalized = moments.normalizePromptItems([{id:'duplicate',key:'post',content:''},{id:'duplicate',key:'story'},{key:'invalid'}]);
+assert.equal(normalized.length, 2);
+assert.notEqual(normalized[0].id, normalized[1].id);
+sandbox.db.magicRoom = {};
 a.momentsSettings.interactEnabled = false;
 assert.equal(moments.promptForCharacter('a'), '', 'all disabled moments abilities inject nothing');
 let blocked = await moments.consumeAiCommands('[MOMENT:like:private]', a);

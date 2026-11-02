@@ -165,6 +165,46 @@
                     <div class="form-group">
                         <textarea id="message-edit-textarea" rows="6" required></textarea>
                     </div>
+                    <div id="message-edit-html-controls" class="form-group ovo-html-editor">
+                        <label for="message-edit-html-mode">显示方式</label>
+                        <select id="message-edit-html-mode">
+                            <option value="auto">自动识别</option>
+                            <option value="text">普通文字</option>
+                            <option value="html">互动页面</option>
+                        </select>
+                        <p id="message-edit-html-hint" class="ovo-interactive-status"></p>
+                        <p id="message-edit-draft-hint" hidden>有未保存的编辑草稿 <button type="button" id="message-edit-restore-draft" class="btn btn-small btn-secondary">恢复草稿</button></p>
+                        <details>
+                            <summary>互动页面的资源与使用说明</summary>
+                            <p>HTML 内可包含 CSS 和 JavaScript。图片和音视频可使用 HTTPS 地址；播放由用户点击。需要外部资源时，在下方填写允许的 HTTPS 来源，每行一个。仅修改此条消息。</p>
+                            <label for="message-edit-html-scripts">脚本库来源</label>
+                            <textarea id="message-edit-html-scripts" rows="2" placeholder="https://cdn.example.com"></textarea>
+                            <label for="message-edit-html-styles">样式与字体来源</label>
+                            <textarea id="message-edit-html-styles" rows="2" placeholder="https://fonts.example.com"></textarea>
+                            <label for="message-edit-html-connect">数据请求来源</label>
+                            <textarea id="message-edit-html-connect" rows="2" placeholder="https://api.example.com"></textarea>
+                            <p>互动进度由页面通过 ovo.state 读取、await ovo.save({...}) 保存。ovo.summarize('结果') 可提供聊天参考；ovo.pickImage() 选择图片；ovo.download('内容','文件名.txt') 导出文字。页面通过 ovo.active 和 ovo:visibility 事件暂停后台动画。预览进度独立，不会覆盖消息。</p>
+                        </details>
+                        <button type="button" id="message-edit-html-preview" class="btn btn-small btn-secondary">运行预览</button>
+                        <details class="ovo-html-template-tools">
+                            <summary>示例与模板分享</summary>
+                            <label for="message-edit-html-example">选择示例会填入代码框</label>
+                            <select id="message-edit-html-example">
+                                <option value="">选择互动示例</option>
+                                <option value="gallery">滑动图集</option>
+                                <option value="flip">翻牌</option>
+                                <option value="draw">抽签</option>
+                                <option value="form">草稿表单</option>
+                                <option value="quiz">小测试</option>
+                                <option value="canvas">接星星小游戏</option>
+                            </select>
+                            <label>导入 HTML 或互动模板 <input id="message-edit-html-import" type="file" accept=".html,.htm,.json,text/html,application/json"></label>
+                            <label><input id="message-edit-html-include-state" type="checkbox"> 导出时包含互动进度及进度中的图片</label>
+                            <p>默认仅导出代码与资源配置。代码里已写入的图片地址会随源码一起导出。</p>
+                            <button type="button" id="message-edit-html-export" class="btn btn-small btn-secondary">导出互动模板</button>
+                        </details>
+                        <div id="message-edit-html-preview-box"></div>
+                    </div>
                     <!-- 新增：时间戳编辑输入框，默认隐藏 -->
                     <div class="form-group" id="message-edit-timestamp-group" style="display: none; margin-top: 10px;">
                         <label for="message-edit-timestamp" style="font-size: 12px; color: #666;">消息时间

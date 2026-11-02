@@ -156,13 +156,10 @@ function openApiManageModal() {
     modal.style.display = 'flex';
 }
 
-function exportApiPresets() {
+async function exportApiPresets() {
     const presets = _getApiPresets();
     const blob = new Blob([JSON.stringify(presets, null, 2)], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'api_presets.json'; document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
+    await OvoFileDownload.save(blob, 'api_presets.json');
 }
 function importApiPresets() {
     const inp = document.createElement('input');
@@ -586,7 +583,7 @@ function setupSubApiPresets(prefix, dbKey, presetsKey) {
     });
     
     // 导出预设
-    exportBtn?.addEventListener('click', () => {
+    exportBtn?.addEventListener('click', async () => {
         const presets = db[presetsKey] || [];
         if (presets.length === 0) {
             showToast('暂无预设可导出');
@@ -595,13 +592,8 @@ function setupSubApiPresets(prefix, dbKey, presetsKey) {
         
         const json = JSON.stringify(presets, null, 2);
         const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${prefix}_api_presets_${Date.now()}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        showToast('预设已导出');
+        await OvoFileDownload.save(blob, `${prefix}_api_presets_${Date.now()}.json`);
+
     });
 }
 

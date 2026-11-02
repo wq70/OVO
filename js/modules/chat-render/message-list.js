@@ -96,7 +96,7 @@ function renderMessages(isLoadMore = false, forceScrollToBottom = false) {
     const end = totalMessages - (currentPage - 1) * pageSize;
     const start = Math.max(0, end - pageSize);
     const messagesToRender = displayHistory.slice(start, end);
-    if (!isLoadMore) messageArea.innerHTML = '';
+    if (!isLoadMore && !window.InteractiveMessages) messageArea.innerHTML = '';
     const fragment = document.createDocumentFragment();
     
     let lastMsgTime = 0;
@@ -218,7 +218,8 @@ function renderMessages(isLoadMore = false, forceScrollToBottom = false) {
     if (existingLoadBtn) existingLoadBtn.remove();
     const existingLoadNewerBtn = document.getElementById('load-newer-btn');
     if (existingLoadNewerBtn) existingLoadNewerBtn.remove();
-    messageArea.prepend(fragment);
+    if (window.InteractiveMessages) window.InteractiveMessages.commit(messageArea, fragment, isLoadMore);
+    else messageArea.prepend(fragment);
     
     if (totalMessages > currentPage * pageSize) {
         const loadMoreButton = document.createElement('button');

@@ -9,6 +9,9 @@ function createMessageBubbleElement(message, isContinuous = false) {
     }
     // 这里需要把 isThinking 从 message 里解构出来
     let {role, content, timestamp, id, transferStatus, giftStatus, stickerData, senderId, quote, isWithdrawn, originalContent, isStatusUpdate, isThinking} = message;
+    if (message.interactive?.mode === 'text' && typeof content === 'string') {
+        content = content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
     // 角色消息中的 {{user}} 替换为当前对话的「我的名字」
     if (role === 'assistant' && chat && chat.myName && typeof content === 'string') {
         content = content.replace(/\{\{user\}\}/g, chat.myName);
@@ -40,6 +43,15 @@ function createMessageBubbleElement(message, isContinuous = false) {
     if ((isStatusUpdate || isThinking || message.isTransferAction) && !debugVisible) return null;
     // 拦截：hiddenFromDisplay 标记的消息（如角色自知上下文消息），不渲染成气泡
     if (message.hiddenFromDisplay && !debugVisible) return null;
+
+    // Explicit interactive pages bypass text-command regexes inside user scripts.
+    if (!isWithdrawn && !isThinking && window.InteractiveMessages?.sourceOf(message)) {
+        return window.InteractiveMessages.messageElement(message, chat, currentChatType, isContinuous);
+    }
+
+    if (message.type === 'profile_update' && window.CharacterProfile) {
+        return window.CharacterProfile.renderMessage(message);
+    }
 
     if (message.type === 'poke' && window.PokeSystem) {
         return window.PokeSystem.renderMessage(message, chat);
@@ -1213,14 +1225,19 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
             bubbleElement.style.backgroundColor = bubbleTheme.bg;
             bubbleElement.style.color = bubbleTheme.text;
         }
-    } else if (message && Array.isArray(message.parts) && message.parts.length > 0 && message.parts[0].type === 'html') {
+    } else if (message && message.interactive?.mode !== 'text' && Array.isArray(message.parts) && message.parts.length > 0 && message.parts[0].type === 'html') {
         bubbleElement = document.createElement('div');
         bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'} html-bubble`;
         let htmlContent = message.parts[0].text;
         htmlContent = htmlContent.replace(/<uwuxjc>/gi, '').replace(/<\/uwuxjc>/gi, '').trim();
         if (htmlContent.includes('<!DOCTYPE html>') || htmlContent.includes('<html')) {
             const processedHtml = processTemplate(htmlContent, chat);
-            bubbleElement.innerHTML = `<iframe srcdoc="${processedHtml.replace(/"/g, '"')}" style="width: 100%; min-width: 250px; height: 350px; border: none; background: white; border-radius: 10px;"></iframe>`;
+            const frame = document.createElement('iframe');
+            frame.setAttribute('sandbox', ''); // Static fallback when the interactive runtime is unavailable.
+            frame.title = 'HTML 消息';
+            frame.style.cssText = 'width:100%;min-width:0;height:350px;border:none;background:white;border-radius:10px';
+            frame.srcdoc = processedHtml;
+            bubbleElement.appendChild(frame);
         } else {
             const processedHtml = processTemplate(htmlContent, chat);
             bubbleElement.innerHTML = DOMPurify.sanitize(processedHtml, { ADD_TAGS: ['style'], ADD_ATTR: ['style'] });

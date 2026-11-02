@@ -300,6 +300,74 @@ if (faceLockGroup?.parentNode) faceLockGroup.parentNode.childNodes = faceLockGro
 else fail('Missing face lock settings group');
 const faceLockEditNote = findNodeById(protectedDocument, 'edit-image-face-lock-note');
 if (faceLockEditNote?.parentNode) faceLockEditNote.parentNode.childNodes = faceLockEditNote.parentNode.childNodes.filter(node => node !== faceLockEditNote);
+// Exclude only the additive interactive-message editor; the existing dialog stays protected.
+const interactiveControls = findNodeById(protectedDocument, 'message-edit-html-controls');
+if (interactiveControls?.parentNode) interactiveControls.parentNode.childNodes = interactiveControls.parentNode.childNodes.filter(node => node !== interactiveControls);
+else fail('Missing interactive message editor controls');
+// Restore only the authorized Magic Room redesign for the release DOM comparison.
+// Check original control contracts; the authorized moments item editor replaces
+// the 13 fixed prompt textareas with fields created for the expanded item.
+const momentsPromptItemIds = ['moments-prompt-add-item', 'moments-prompt-preview', 'moments-prompt-reset-items', 'moments-prompt-status', 'moments-prompt-item-list', 'moments-prompt-preview-panel', 'moments-prompt-preview-character', 'moments-prompt-preview-content', 'moments-prompt-close-preview'];
+const magicRoomBaseline = JSON.parse(read('scripts/fixtures/magic-room-layout-before.json'))['magic-room-screen'];
+const magicRoomBefore = findNodeById(parse(magicRoomBaseline), 'magic-room-screen');
+const magicRoomAfter = findNodeById(protectedDocument, 'magic-room-screen');
+if (!magicRoomAfter) fail('Missing Magic Room screen');
+else {
+    function checkMagicRoomControls(node) {
+        if (node.tagName === 'textarea' && node.attrs?.some(attr => attr.name === 'data-moments-prompt')) return;
+        const id = node.attrs?.find(attr => attr.name === 'id')?.value;
+        if (id) {
+            const current = findNodeById(magicRoomAfter, id);
+            if (!current || current.tagName !== node.tagName) fail(`Missing or changed Magic Room control: ${id}`);
+            else for (const name of ['type', 'accept', 'data-moments-prompt']) {
+                const before = node.attrs.find(attr => attr.name === name)?.value;
+                const after = current.attrs.find(attr => attr.name === name)?.value;
+                if (before !== after) fail(`Changed Magic Room ${name} contract: ${id}`);
+            }
+        }
+        for (const child of node.childNodes || []) checkMagicRoomControls(child);
+    }
+    checkMagicRoomControls(magicRoomBefore);
+    restoreMomentsNode(magicRoomAfter, magicRoomBaseline);
+}
+// Normalize only the authorized disclosure wrapper; keep its prompt fields and text protected.
+const momentsPromptDisclosure = findNodeById(protectedDocument, 'magic-room-moments-prompts');
+if (momentsPromptDisclosure?.tagName === 'details') {
+    momentsPromptDisclosure.tagName = momentsPromptDisclosure.nodeName = 'div';
+    const summary = momentsPromptDisclosure.childNodes.find(node => node.tagName === 'summary');
+    const label = summary?.childNodes.find(node => node.attrs?.some(attr => attr.name === 'class' && attr.value === 'kkt-item-label'));
+    if (!summary || !label) fail('Missing moments prompt disclosure heading');
+    else {
+        summary.tagName = summary.nodeName = 'div';
+        summary.attrs = [{ name: 'class', value: 'kkt-item' }];
+        summary.childNodes = [label];
+        label.tagName = label.nodeName = 'div';
+        const hint = label.childNodes.find(node => node.attrs?.some(attr => attr.name === 'class' && attr.value === 'kkt-item-hint'));
+        if (hint) hint.tagName = hint.nodeName = 'p';
+    }
+}
+// The music app is an additive screen; existing screens retain their release comparison.
+const musicRoot = findNodeById(protectedDocument, 'music-screen');
+if (musicRoot?.parentNode) musicRoot.parentNode.childNodes = musicRoot.parentNode.childNodes.filter(node => node !== musicRoot);
+else fail('Missing music screen');
+function omitMusicStyles(node) {
+    node.childNodes = (node.childNodes || []).filter(child => {
+        if (child.tagName === 'link' && child.attrs?.some(a => a.name === 'href' && a.value === 'css/modules/music.css')) return false;
+        omitMusicStyles(child); return true;
+    });
+}
+omitMusicStyles(protectedDocument);
+// Only omit the five new profile rows; retain every existing setting in the release comparison.
+const characterProfileAdditionIds = ['setting-user-remark', 'setting-allow-character-remark-update', 'setting-allow-user-remark-update', 'setting-allow-character-poke-update', 'setting-allow-user-poke-update'];
+function omitCharacterProfileAdditions(node) {
+    node.childNodes = (node.childNodes || []).filter(child => {
+        const classes = child.attrs?.find(attr => attr.name === 'class')?.value.split(/\s+/) || [];
+        if (classes.includes('kkt-item') && characterProfileAdditionIds.some(id => findNodeById(child, id))) return false;
+        omitCharacterProfileAdditions(child);
+        return true;
+    });
+}
+omitCharacterProfileAdditions(protectedDocument);
 const actualDomSignature = getNonScriptDomSignature(protectedDocument);
 if (actualDomSignature !== protectedDomSignature && actualDomSignature !== preexistingWorkspaceDomSignature) {
     fail(`Assembled non-script DOM differs from the protected release structure: ${actualDomSignature}`);
@@ -312,10 +380,18 @@ const momentsMemoryIds = ['moments-memory-btn', 'moments-memory-screen', 'moment
 for (const id of momentsMemoryIds) if (!textualIds.includes(id)) fail(`Missing moments memory ID: ${id}`);
 for (const id of momentsChatLinkIds) if (!textualIds.includes(id)) fail(`Missing moments chat linkage ID: ${id}`);
 const faceLockAdditionIds = ['setting-face-lock-enabled', 'setting-face-lock-reference', 'setting-face-lock-preview', 'setting-face-lock-empty', 'setting-face-lock-change', 'setting-face-lock-status', 'setting-face-lock-file', 'setting-face-lock-source', 'edit-image-face-lock-note'];
-if (textualIds.length !== 2636 + novelAiAdditionIds.length + statusStorageAdditionIds.length + momentsRedesignIdDelta + momentsChatLinkIds.length + momentsMemoryIds.length + ttsAdditionIds.length + 35 + faceLockAdditionIds.length) fail(`Unexpected assembled ID count after authorized additions: ${textualIds.length}`);
+const interactiveAdditionIds = ['message-edit-html-controls', 'message-edit-html-mode', 'message-edit-html-hint', 'message-edit-draft-hint', 'message-edit-restore-draft', 'message-edit-html-scripts', 'message-edit-html-styles', 'message-edit-html-connect', 'message-edit-html-preview', 'message-edit-html-preview-box', 'message-edit-html-example', 'message-edit-html-import', 'message-edit-html-include-state', 'message-edit-html-export'];
+const magicRoomAdditionIds = ['magic-room-tab-prompts', 'magic-room-tab-moments', 'magic-room-tab-runtime', 'magic-room-panel-prompts', 'magic-room-panel-moments', 'magic-room-panel-runtime', 'prompt-studio-mode-items', 'prompt-studio-mode-source'];
+magicRoomAdditionIds.push('sysnotif-server-connect', 'sysnotif-server-test', 'sysnotif-server-disconnect', 'sysnotif-server-status');
+for (const id of interactiveAdditionIds) if (!textualIds.includes(id)) fail(`Missing interactive editor ID: ${id}`);
+const musicAdditionIds = ['music-screen', 'music-content', 'music-mini', 'music-player', 'music-modal', 'music-sheet', 'music-live'];
+if (textualIds.length !== 2636 + novelAiAdditionIds.length + statusStorageAdditionIds.length + momentsRedesignIdDelta + momentsChatLinkIds.length + momentsMemoryIds.length + ttsAdditionIds.length + 35 + faceLockAdditionIds.length + interactiveAdditionIds.length + magicRoomAdditionIds.length + momentsPromptItemIds.length - 13 + musicAdditionIds.length + characterProfileAdditionIds.length) fail(`Unexpected assembled ID count after authorized additions: ${textualIds.length}`);
 if (duplicateIds.length) fail(`Duplicate assembled IDs: ${duplicateIds.join(', ')}`);
 
 const requiredIds = [
+    ...musicAdditionIds,
+    ...momentsPromptItemIds,
+    ...magicRoomAdditionIds,
     ...faceLockAdditionIds,
     ...ttsAdditionIds,
     ...novelAiAdditionIds,
@@ -346,6 +422,8 @@ const requiredIds = [
     'keep-alive-page-status', 'keep-alive-wake-status', 'keep-alive-task-status',
     'setting-follow-up-enabled', 'setting-follow-up-options', 'setting-follow-up-probability',
     'setting-poke-enabled', 'setting-poke-options', 'setting-poke-char-suffix',
+    'setting-user-remark', 'setting-allow-character-remark-update', 'setting-allow-user-remark-update',
+    'setting-allow-character-poke-update', 'setting-allow-user-poke-update',
     'setting-group-poke-enabled', 'setting-group-poke-options', 'setting-group-poke-member-btn',
 ];
 for (const id of requiredIds) {
