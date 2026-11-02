@@ -71,6 +71,7 @@
                 <section class="moments-settings-card"><h2>互动可见范围</h2><label class="moments-field">谁能看见点赞和评论<select id="moments-interaction-visibility"><option value="mutual">共同人脉可见</option><option value="all">所有可看帖的人可见</option></select></label><p class="moments-hint">发帖者始终能看到自己动态下的全部互动。</p></section>
                 <section class="moments-settings-card"><h2>可见分组</h2><div id="moments-groups-list"></div><div class="moments-inline-actions"><button type="button" id="moments-add-group-btn">＋ 新建分组</button></div><p class="moments-hint">分组只包含聊天角色。发布时会保存当时选中的角色名单。</p></section>
                 <section class="moments-settings-card"><h2>动态管理</h2><p class="moments-hint">搜索、按发布人筛选，或多选清除动态与 Story。</p><div class="moments-inline-actions"><button type="button" id="moments-manage-btn">管理动态</button></div></section>
+                <section class="moments-settings-card"><h2>动态记忆</h2><p class="moments-hint">管理角色看过的动态与活动记录。动态已经删除，也可以清除对应记忆。</p><div class="moments-inline-actions"><button type="button" id="moments-memory-btn">管理动态记忆</button></div></section>
                 <section class="moments-settings-card"><h2>全局动态</h2><p class="moments-hint">主动活动跟随聊天和已开启的后台消息，由 API 决定是否行动；角色的单独设置在聊天设置中覆盖全局。</p><div class="moments-inline-actions"><button type="button" id="moments-controls-btn" class="moments-primary-btn">参与方式与评论回复</button><button type="button" id="moments-generate-now-btn">动态设置</button></div></section>
             </main>
         </div>
@@ -88,6 +89,18 @@
                 <div id="moments-manage-list" class="moments-manage-list"></div>
             </main>
             <div class="moments-manage-footer"><button type="button" id="moments-manage-clear-all">清除全部</button><button type="button" id="moments-manage-delete-selected" disabled>删除选中 (0)</button></div>
+        </div>
+
+        <div id="moments-memory-screen" class="screen moments-screen">
+            <header class="moments-header"><button type="button" class="moments-icon-btn back-btn" data-target="moments-settings-screen" aria-label="返回动态设置"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h1>动态记忆</h1><span class="moments-header-spacer"></span></header>
+            <main class="moments-scroll moments-settings-content moments-manage-content">
+                <label class="moments-field">选择角色<select id="moments-memory-actor" aria-label="选择角色"></select></label>
+                <p class="moments-hint">清除后，这条动态的内容和观看、互动、删除记录不再自动带入该角色，也不再自动观看或参与互动。动态和其他角色的记忆会保留。普通聊天、总结及其他记忆中已经提到的内容需另行删除。</p>
+                <div class="moments-manage-filters"><input id="moments-memory-search" type="search" autocomplete="off" placeholder="搜索动态或记忆内容" aria-label="搜索动态或记忆内容"></div>
+                <div class="moments-manage-toolbar"><span id="moments-memory-count" role="status" aria-live="polite"></span><button type="button" id="moments-memory-select-all">全选结果</button></div>
+                <div id="moments-memory-list"></div>
+            </main>
+            <div class="moments-manage-footer moments-memory-footer"><button type="button" id="moments-memory-clear-all">清除此角色全部</button><button type="button" id="moments-memory-delete-selected" disabled>清除选中 (0)</button></div>
         </div>
 
         <div id="moments-contacts-screen" class="screen moments-screen">

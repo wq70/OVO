@@ -20,7 +20,7 @@ export const phoneHtmlChunks = [
     ['19-forum-social', ['html/screens/forum-social.html', 'html/screens/moments.html']],
     ['20-magic-storage-peek', ['html/screens/magic-storage-peek.html']],
     ['21-video-call', ['html/screens/video-call.html']],
-    ['22-lifestyle', ['html/screens/lifestyle.html']],
+    ['22-lifestyle', ['html/screens/lifestyle.html', 'html/screens/music.html']],
     ['23-node-system', ['html/screens/node-system.html']],
     ['24-mcp', ['html/screens/mcp.html']],
 ];

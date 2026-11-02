@@ -1,4 +1,10 @@
 function generatePrivateSystemPrompt(character, opts) {
+    const base = generatePrivateSystemPromptBase(character, opts);
+    const profile = window.CharacterProfile?.prompt(character);
+    return profile && !base.includes(profile) ? `${base}\n\n${profile}` : base;
+}
+
+function generatePrivateSystemPromptBase(character, opts) {
     const includeMomentsActivity = window.Moments?.isChatLinked?.(character.id) !== false;
     opts = opts || {};
     if (window.PromptStudio && typeof window.PromptStudio.compile === 'function') {

@@ -191,6 +191,9 @@ function extractThinkingBlocks(response) {
 }
 
 async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChatType, isBackground = false, isCharBlockedMonologue = false, replyOptions = {}) {
+    const originalResponse = fullResponse;
+    const protectedPages = fullResponse && window.InteractiveMessages?.protectResponse(fullResponse);
+    if (protectedPages) fullResponse = protectedPages.text;
     const forcedMember = targetChatType === 'group' && replyOptions.memberId ? chat.members.find(member => member.id === replyOptions.memberId) : null;
     if (replyOptions.memberId && !forcedMember) throw new Error('发言成员已不存在');
     if (replyOptions.shouldStop?.()) return;
@@ -198,7 +201,7 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
     const findReplyMember = name => forcedMember
         ? [forcedMember.realName, forcedMember.groupNickname].includes(name) ? forcedMember : null
         : chat.members.find(member => member.realName === name || member.groupNickname === name);
-    const rawResponse = fullResponse;
+    const rawResponse = originalResponse;
     const saveReplyTargetChat = async () => {
         if (targetChatType === 'group' && typeof saveGroup === 'function') return saveGroup(targetChatId);
         if (targetChatType === 'private' && typeof saveCharacter === 'function') return saveCharacter(targetChatId);
@@ -297,6 +300,14 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
             fullResponse = extractedThinking.content;
         }
 
+        // 在思考与互动页面分离后执行资料修改，且先于拍一拍应用新的后缀。
+        if (window.CharacterProfile) {
+            const profileResult = await window.CharacterProfile.consumeAiCommands(fullResponse, chat, targetChatType, replyOptions.shouldStop);
+            fullResponse = profileResult.cleaned;
+            if (!profileResult.ok) return false;
+            profileResult.messages.forEach(message => addMessageBubble(message, targetChatId, targetChatType));
+        }
+
         // 1.75 在思考内容移除后再提取拍一拍，避免误执行思维链中的示例。
         if (window.PokeSystem) {
             const pokeResult = window.PokeSystem.consumeAiCommands(fullResponse, chat, targetChatType);
@@ -331,12 +342,15 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
             playSound(db.globalReceiveSound);
         }
         // ... 后续代码保持不变 ...
+        if (protectedPages) fullResponse = protectedPages.restore(fullResponse);
         console.log('【AI原始返回内容】:', rawResponse);
         let cleanedResponse = fullResponse.replace(/^\[system:.*?\]\s*/, '').replace(/^\(时间:.*?\)\s*/, '');
         const trimmedResponse = cleanedResponse.trim();
         let messages;
 
-        if (trimmedResponse.startsWith('<uwuxjc>') && trimmedResponse.endsWith('</uwuxjc>')) {
+        if (window.InteractiveMessages?.extract(trimmedResponse)) {
+            messages = [{ type: 'html', content: trimmedResponse, char: trimmedResponse.match(/^<uwuxjc\s+char=["']([^"']*)["']/i)?.[1] || null }];
+        } else if (trimmedResponse.startsWith('<uwuxjc>') && trimmedResponse.endsWith('</uwuxjc>')) {
             messages = [{ type: 'html', content: trimmedResponse }];
         } else {
             messages = getMixedContent(fullResponse).filter(item => item.content.trim() !== '');
@@ -349,8 +363,24 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
             if (forcedMember) {
                 if (!window.MemberApiRuntime.allowedItem(item, forcedMember, chat)) continue;
                 item.content = item.content.replace(/^\[unknown的消息[：:]/, `[${forcedMember.realName}的消息：`);
-                if (!item.char && !/^\[/.test(item.content.trim())) item.content = `[${forcedMember.realName}的消息：${item.content}]`;
+                if (item.type !== 'html' && !item.char && !/^\[/.test(item.content.trim())) item.content = `[${forcedMember.realName}的消息：${item.content}]`;
                 if (item.type === 'html') item.char = forcedMember.realName;
+            }
+            if (item.type === 'html' && window.InteractiveMessages?.extract(item.content)) {
+                const sender = targetChatType === 'group' ? findReplyMember(item.char || '') : null;
+                if (targetChatType === 'group' && !sender) continue;
+                const message = {
+                    id: `msg_${Date.now()}_${Math.random()}`, role: 'assistant',
+                    content: item.content.trim(), parts: [{ type: 'html', text: item.content.trim() }],
+                    timestamp: Date.now(), ...(sender ? { senderId: sender.id } : {})
+                };
+                try { window.InteractiveMessages.apply(message, item.content); }
+                catch (error) { showToast(error.message); continue; }
+                if (isCharBlockedMonologue) message.sentWhileCharBlocked = true;
+                chat.history.push(message);
+                addMessageBubble(message, targetChatId, targetChatType);
+                firstMessageProcessed = true;
+                continue;
             }
             // 自动剔除不存在的表情包
             const stickerRegex = /\[(?:.*?的)?表情包[：:](.+?)\]/i;
@@ -919,7 +949,8 @@ async function handleRegenerate() {
                     role: chat.history[i].role,
                     senderId: chat.history[i].senderId,
                     timestamp: chat.history[i].timestamp,
-                    parts: chat.history[i].parts ? JSON.parse(JSON.stringify(chat.history[i].parts)) : undefined
+                    parts: chat.history[i].parts ? JSON.parse(JSON.stringify(chat.history[i].parts)) : undefined,
+                    interactive: chat.history[i].interactive ? JSON.parse(JSON.stringify(chat.history[i].interactive)) : undefined
                 });
             }
             // 避免重复保存相同内容

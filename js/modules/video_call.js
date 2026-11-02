@@ -771,6 +771,7 @@ const VideoCallModule = {
         }
         this.state.callType = type;
         this.state.isCallActive = true;
+        document.dispatchEvent(new CustomEvent('ovo-call-audio', { detail: { active: true } }));
         this.state.hasEnteredCallScene = false;
         this.state.seconds = 0;
         this.state.currentCallContext = [];
@@ -1564,6 +1565,7 @@ const VideoCallModule = {
         this.state.isGenerating = false;
         this.state.isAiSpeaking = false;
         this.state.isCallActive = false;
+        document.dispatchEvent(new CustomEvent('ovo-call-audio', { detail: { active: false } }));
         this.state.isMinimized = false;
         this.state.hasEnteredCallScene = false;
 

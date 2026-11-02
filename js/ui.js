@@ -33,7 +33,7 @@ const switchScreen = (targetId) => {
         customStyles.forEach(style => style.remove());
         
         // 防止串线：仅在返回大厅类主页面时清空当前聊天目标ID，防止影响聊天设置页等二级页面
-        const mainScreens = ['chat-list-screen', 'contacts-screen', 'more-screen', 'phone-screen', 'home-screen', 'forum-screen', 'piggy-bank-screen'];
+        const mainScreens = ['chat-list-screen', 'contacts-screen', 'more-screen', 'phone-screen', 'home-screen', 'forum-screen', 'piggy-bank-screen', 'music-screen'];
         if (mainScreens.includes(targetId)) {
             if (typeof currentChatId !== 'undefined') currentChatId = null;
             if (typeof currentChatType !== 'undefined') currentChatType = null;
@@ -52,6 +52,7 @@ const switchScreen = (targetId) => {
     const targetScreen = document.getElementById(targetId);
     if (targetScreen) targetScreen.classList.add('active');
     if (window.ReplyResilience) window.ReplyResilience.scheduleSessionSave();
+    if (window.MusicApp) window.MusicApp.onScreen(targetId);
     
     // 关闭所有覆盖层和侧边栏
     const overlays = document.querySelectorAll('.modal-overlay, .action-sheet-overlay, .settings-sidebar');

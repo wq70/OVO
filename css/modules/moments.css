@@ -134,6 +134,13 @@
 .moments-manage-footer button:first-child { flex:0 0 95px; }
 .moments-manage-footer button:last-child { flex:1; background:#111; border-color:#111; color:#fff; }
 .moments-manage-footer button:disabled { opacity:.4; cursor:default; }
+.moments-memory-footer button:first-child { flex:0 0 120px; }
+.moments-memory-card { padding:10px; }
+.moments-memory-card .moments-manage-row { margin:0 0 8px; padding:4px 0; border:0; background:transparent; }
+.moments-memory-card .moments-manage-row-main span { white-space:normal; overflow-wrap:anywhere; }
+.moments-memory-card details { margin:10px 0; font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
+.moments-memory-card summary { cursor:pointer; }
+.moments-memory-card ul { padding-left:20px; margin:8px 0; }
 .moments-hint { margin:8px 0 14px; color:#999; font-size:11.5px; line-height:1.5; }
 
 /* 评论输入栏 */

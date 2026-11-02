@@ -1395,6 +1395,7 @@ function loadSettingsToSidebar() {
         if (enableDynamicAgeEl) enableDynamicAgeEl.checked = e.enableDynamicAge || false;
         
         document.getElementById('setting-char-remark').value = e.remarkName;
+        window.CharacterProfile?.loadSettings(e);
         
         const timezoneEl = document.getElementById('setting-char-timezone');
         const timezonePresetEl = document.getElementById('setting-char-timezone-preset');
@@ -2432,6 +2433,8 @@ async function saveSettingsFromSidebar() {
         catch (error) { showToast(error.message); return; }
         try { if (window.Moments) window.Moments.saveCharacterSettings(e); }
         catch (error) { showToast(error.message || '动态设置无效，请检查时间'); return; }
+        try { window.CharacterProfile?.saveSettings(e); }
+        catch (error) { showToast(error.message); return; }
         const avatarPreviewEl = document.getElementById('setting-char-avatar-preview');
         if (avatarPreviewEl) {
             e.avatar = avatarPreviewEl.src;

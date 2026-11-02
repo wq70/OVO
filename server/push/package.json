@@ -1,0 +1,12 @@
+{
+  "name": "ovo-push-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test.mjs",
+    "setup": "node setup.mjs",
+    "start": "node --env-file-if-exists=.env start.mjs"
+  },
+  "engines": { "node": ">=22" },
+  "dependencies": { "web-push": "3.6.7" }
+}

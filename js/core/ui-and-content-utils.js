@@ -764,6 +764,12 @@ function getMixedContent(responseData) {
         i = firstSpecialIndex;
 
         if (responseData[i] === '<') {
+            const interactiveBlock = window.InteractiveMessages?.readBlock(responseData, i);
+            if (interactiveBlock) {
+                results.push({ type: 'html', char: interactiveBlock.char, content: interactiveBlock.content });
+                i = interactiveBlock.end;
+                continue;
+            }
             const tagMatch = responseData.substring(i).match(/^<([a-zA-Z0-9]+)/);
             if (tagMatch) {
                 const tagName = tagMatch[1];
@@ -859,6 +865,11 @@ function getMixedContent(responseData) {
 
 // 过滤聊天记录用于 AI 上下文 (包含状态栏剔除和双语格式化)
 function filterHistoryForAI(chat, historySlice, ignoreContextDisabled = false) {
+    // Only concise page summaries enter model context; executable source stays local.
+    if (window.InteractiveMessages) historySlice = (historySlice || chat.history || []).map(message => {
+        const summary = window.InteractiveMessages.contextText(message);
+        return summary ? { ...message, content: summary, parts: [{ type: 'text', text: summary }], interactive: undefined } : message;
+    });
     const includeMomentsActivity = window.Moments?.isChatLinked?.(chat.id) !== false;
     // 仅复制下方过滤逻辑会改动的消息及 part；图片数据字符串保持引用，避免每次请求复制整份 Base64。
     let filteredHistory = (historySlice || chat.history || []).filter(message => includeMomentsActivity || !message.isMomentsActivity).map(message => ({

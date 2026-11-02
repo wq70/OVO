@@ -81,17 +81,20 @@ window.sendPayResponse = async function(msgId, action) {
 
 
 function addMessageBubble(message, targetChatId, targetChatType) {
+    const interactiveOriginal = window.InteractiveMessages?.sourceOf(message) ? message : null;
+    // Business-command readers get a neutral view; rendering retains the actual page object.
+    if (interactiveOriginal) message = { ...message, content: '[互动页面]' };
     const isChatRoomActive = document.getElementById('chat-room-screen') && document.getElementById('chat-room-screen').classList.contains('active');
     const isViewingTargetChat = !!isChatRoomActive && targetChatId === currentChatId && targetChatType === currentChatType;
     const senderChat = (targetChatType === 'private')
         ? db.characters.find(c => c.id === targetChatId)
         : db.groups.find(g => g.id === targetChatId);
-    const isLowDisturbancePoke = message.type === 'poke' && (
+    const isLowDisturbancePoke = message.type === 'profile_update' || message.type === 'poke' && (
         message.targetId !== 'user_me' || !senderChat || senderChat.pokeNotificationMode !== 'normal'
     );
 
     // 特殊业务动作必须先于界面可见性分支处理，避免后台消息只出现文本、没有同步状态。
-    if (targetChatType === 'private' && senderChat && window.WalletSystem && typeof window.WalletSystem.processFamilyCardActionMessage === 'function') {
+    if (!interactiveOriginal && targetChatType === 'private' && senderChat && window.WalletSystem && typeof window.WalletSystem.processFamilyCardActionMessage === 'function') {
         window.WalletSystem.processFamilyCardActionMessage(message, senderChat);
     }
     
@@ -147,16 +150,8 @@ function addMessageBubble(message, targetChatId, targetChatType) {
     // 如果需要发送系统级通知
     if (shouldShowSystemNotification && mr.sysNotifEnabled && typeof showSystemNotification === 'function') {
         showSystemNotification({ title: notifTitle, body: notifBody, icon: notifIcon });
-        if (mr.sysNotifCustomServer && mr.sysNotifServerUrl) {
-            fetch(mr.sysNotifServerUrl, {
-                method: 'POST',
-                headers: Object.assign(
-                    { 'Content-Type': 'application/json' },
-                    mr.sysNotifServerKey ? { 'Authorization': 'Bearer ' + mr.sysNotifServerKey } : {}
-                ),
-                body: JSON.stringify({ title: notifTitle, body: notifBody })
-            }).catch(() => {});
-        }
+        // Server pushes are sent by server-side tasks to registered devices.
+        // Sending this local notification back through the server would duplicate it.
     }
     
     if (!isViewingTargetChat) {
@@ -428,7 +423,7 @@ function addMessageBubble(message, targetChatId, targetChatType) {
 
             // 标记新消息，允许 NovelAI 自动生图
             if (message.id) _naiAutoGenNewMsgIds.add(message.id);
-            const bubbleElement = createMessageBubbleElement(message, isContinuous);
+            const bubbleElement = createMessageBubbleElement(interactiveOriginal || message, isContinuous);
             if (bubbleElement) {
                 // Check for timestamp display
                 const history = character.history;
@@ -605,7 +600,7 @@ function addMessageBubble(message, targetChatId, targetChatType) {
 
         // 标记新消息，允许 NovelAI 自动生图
         if (message.id) _naiAutoGenNewMsgIds.add(message.id);
-        const bubbleElement = createMessageBubbleElement(message, isContinuous);
+        const bubbleElement = createMessageBubbleElement(interactiveOriginal || message, isContinuous);
         if (bubbleElement) {
             // Check for timestamp display
             const history = group.history;

@@ -434,6 +434,7 @@ const SearchSystem = {
     },
 
     isSpecialMessage(content, msg) {
+        if (window.InteractiveMessages?.sourceOf(msg)) return false;
         if (!content) return true;
         
         const urlRegex = /^(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp|bmp|svg)|data:image\/[a-z]+;base64,)/i;
@@ -462,6 +463,7 @@ const SearchSystem = {
     },
 
     parseMessageContent(content, msg) {
+        if (window.InteractiveMessages?.sourceOf(msg)) return window.InteractiveMessages.contextText(msg);
         if (!content) return '';
         
         // 虽然 filter 阶段已经过滤了大部分特殊消息，

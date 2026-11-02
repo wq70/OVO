@@ -299,6 +299,9 @@ t) 赠送亲属卡: [${character.realName}赠送亲属卡：额度{金额}元；
    if (allWorldBookContent.includes('<orange>')) {
        outputFormats += `\n     m) HTML模块: {HTML内容}。这是一种特殊的、用于展示丰富样式的小卡片消息，格式必须为纯HTML+行内CSS，你可以用它来创造更有趣的互动。`;
    }
+   if (window.InteractiveMessages && (allWorldBookContent.includes('<uwuxjc') || /HTML|互动网页|互动页面|小游戏|滑动图集/i.test(character.history?.at(-1)?.content || ''))) {
+       outputFormats += window.InteractiveMessages.promptGuide();
+   }
    
    return outputFormats;
 }

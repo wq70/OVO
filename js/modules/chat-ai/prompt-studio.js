@@ -409,6 +409,11 @@
         if (!opts.preview && character.themeJustChangedByUser && pieces.some(piece => piece.includes('<chat_themes>'))) {
             character.themeJustChangedByUser = '';
         }
+        const profilePrompt = window.CharacterProfile?.prompt(character);
+        if (profilePrompt) {
+            pieces.push(profilePrompt);
+            details.push({ id: 'capability.character-profile', name: '单聊备注与拍一拍资料', enabled: true, active: true, text: profilePrompt, order: normalized.length });
+        }
         if (opts.historyText) pieces.push(opts.historyText);
         return { prompt: pieces.join('\n\n'), details, unresolved: [...unresolved], variables, preset };
     }

@@ -898,6 +898,9 @@ function generateGroupSystemPrompt(group, opts) {
    if (allWorldBookContent.includes('<orange>')) {
        outputFormats += `\n   - **HTML消息**: \`<orange char="{成员真名}">{HTML内容}</orange>\`。这是一种特殊的、用于展示丰富样式的小卡片消息，你可以用它来创造更有趣的互动。注意要用成员的 **真名** 填充 \`char\` 属性。`;
    }
+   if (window.InteractiveMessages && (allWorldBookContent.includes('<uwuxjc') || /HTML|互动网页|互动页面|小游戏|滑动图集/i.test(group.history?.at(-1)?.content || ''))) {
+       outputFormats += window.InteractiveMessages.promptGuide(true);
+   }
    
     prompt += `4. **你的输出格式 (极其重要)**: 你生成的每一条消息都 **必须** 严格遵循以下格式之一。每条消息占一行。请用成员的 **真名** 填充格式中的 \`{成员真名}\`。\n${outputFormats}\n\n`;
     

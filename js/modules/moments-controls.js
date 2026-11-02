@@ -151,7 +151,7 @@
     function candidates(post, comment, candidateIds, source='userComment', task=null) {
         const t=thread(post,comment,true), target=post.comments?.find(c=>c.id===comment.replyTo);
         return candidateIds.filter(actorId=>{
-            return allowed(actorId,source,post,t) && !commentBlockReason(post,actorId,comment.id,task);
+            return (!adapter.memoryAllowed || adapter.memoryAllowed(post.id,actorId)) && allowed(actorId,source,post,t) && !commentBlockReason(post,actorId,comment.id,task);
         }).sort((a,b)=>Number(b===target?.authorId||comment.mentions?.includes(b))-Number(a===target?.authorId||comment.mentions?.includes(a)));
     }
     function commentMetadata(post, replyTo='', task=null) {
@@ -161,6 +161,7 @@
     }
     function commentBlockReason(post,actorId,replyTo='',task=null) {
         if(actorId==='user')return '';
+        if(adapter.memoryAllowed && !adapter.memoryAllowed(post.id,actorId))return '这条动态的记忆已清除';
         const c=settings(actorId), parent=post.comments?.find(comment=>comment.id===replyTo), t=parent&&thread(post,parent,true);
         if(!(replyTo?c.actions.reply:c.actions.comment))return replyTo?'此对象设置为不回复评论':'此对象设置为不发表评论';
         if(!valid(task)||post.controlsPaused||holder(actorId)?.controlsPaused||t?.paused)return '动态或设置已变化，互动已停止';
@@ -205,6 +206,7 @@
         if (task.publicationKind && task.actorIds?.some(a => !publicationEnabled(a, task.publicationKind, task.source))) return false;
         if (task.ownerActorId && (!adapter.character(task.ownerActorId) || !preferences(task.ownerActorId).contactsEnabled || task.source === 'background' && !adapter.character(task.ownerActorId).autoReply?.enabled)) return false;
         if (task.postId) {
+            if (task.actorIds?.some(actorId => adapter.memoryAllowed && !adapter.memoryAllowed(task.postId, actorId))) return false;
             const post = adapter.post(task.postId), comment = post?.comments?.find(c => c.id === task.commentId);
             if (!post || post.controlsPaused || (post.kind==='story' && post.expiresAt<=Date.now()) || task.actorIds?.some(a=>adapter.visibleTo && !adapter.visibleTo(post,a)) || task.commentId && (!comment || comment.deletedAt || (comment.revision || 0) !== task.revision)) return false;
             if ((post.revision || 0) !== (task.postRevision || 0)) return false;

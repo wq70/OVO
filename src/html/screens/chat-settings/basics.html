@@ -64,6 +64,10 @@
                                             placeholder="点击修改">
                                     </div>
                                 </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label" style="display:block; min-width:0;">允许角色修改自己的备注<p class="kkt-item-hint">只改备注，聊天列表与顶栏同步更新</p></div>
+                                    <div class="kkt-item-control"><label class="kkt-switch"><input type="checkbox" id="setting-allow-character-remark-update"><span class="kkt-slider"></span></label></div>
+                                </div>
                                 <div class="kkt-item" style="flex-direction:column; align-items:stretch; gap:8px;">
                                     <div class="kkt-item-label">角色时区</div>
                                     <div class="kkt-item-control" style="display:flex; align-items:center; gap:5px; width:100%;">
@@ -201,6 +205,14 @@
                                             style="text-align:right; border:none; background:transparent;"
                                             placeholder="点击修改">
                                     </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <label class="kkt-item-label" style="display:block; min-width:0; max-width:52%;" for="setting-user-remark">TA 给我的备注<p class="kkt-item-hint">仅当前角色使用，保留“我的名字”；清空即可移除</p></label>
+                                    <div class="kkt-item-control" style="flex:1; min-width:0; max-width:45%;"><input type="text" id="setting-user-remark" maxlength="24" autocomplete="off" style="text-align:right; border:none; background:transparent; min-width:0; width:100%;" placeholder="尚未设置"></div>
+                                </div>
+                                <div class="kkt-item">
+                                    <div class="kkt-item-label">允许角色修改给我的备注</div>
+                                    <div class="kkt-item-control"><label class="kkt-switch"><input type="checkbox" id="setting-allow-user-remark-update"><span class="kkt-slider"></span></label></div>
                                 </div>
                                 <div class="kkt-item">
                                     <div class="kkt-item-label">我的生日</div>

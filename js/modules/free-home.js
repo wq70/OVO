@@ -1232,7 +1232,7 @@ function freeHomeOpenCreateFolder() {
 function freeHomeOpenApp(appId) {
     if (appId === 'biekan-app') { if (window.McpManager) window.McpManager.open(); return; }
     if (appId === 'piggy-bank-screen') { switchScreen(appId); return; }
-    if (appId === 'music-screen' || appId === 'diary-screen') { showToast('该应用正在开发中，敬请期待！'); return; }
+    if (appId === 'diary-screen') { showToast('该应用正在开发中，敬请期待！'); return; }
     if (appId === 'world-book-screen') renderWorldBookList();
     if (appId === 'customize-screen') renderCustomizeForm();
     if (appId === 'tutorial-screen') {

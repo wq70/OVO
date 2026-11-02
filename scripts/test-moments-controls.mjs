@@ -516,4 +516,14 @@ test.data();assert.equal(legacyTask.status,'cancelled');assert.equal(pendingView
 assert.equal(Object.keys(test.data().schedules).length,0);
 db.moments.controls=savedControls;
 
+// Forgetting a post invalidates queued/in-flight work without pausing other characters.
+const memoryTask=policy.context('view',['char:a'],post);
+const previouslyForgotten=role.momentsSettings.forgottenPostIds;
+role.momentsSettings.forgottenPostIds=[post.id];
+assert.equal(policy.valid(memoryTask),false);
+assert.equal(policy.commentAllowed(post,'char:a'),false);
+assert.ok(!policy.candidates(post,post.comments[0],['char:a']).includes('char:a'));
+if(previouslyForgotten===undefined)delete role.momentsSettings.forgottenPostIds;
+else role.momentsSettings.forgottenPostIds=previouslyForgotten;
+
 console.log('Moments settings and regressions passed: zero-round defaults, finite replies across all entry points, old-data migration, late-response cancellation, retained history, background publishing, owner-triggered NPCs, overrides, user replies, editing, views, reminders and context.');

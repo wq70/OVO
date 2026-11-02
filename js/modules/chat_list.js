@@ -428,7 +428,7 @@ function renderChatList() {
             for (let historyIndex = chat.history.length - 1; historyIndex >= 0; historyIndex--) {
                 const candidate = chat.history[historyIndex];
                 if (candidate.isMomentsActivity && !chat.momentsSettings?.showActivityNarration) continue;
-                if (!invisibleRegex.test(candidate.content)) {
+                if (window.InteractiveMessages?.sourceOf(candidate) || !invisibleRegex.test(candidate.content)) {
                     lastMsg = candidate;
                     break;
                 }
@@ -443,7 +443,9 @@ function renderChatList() {
                 const stickerRegex = /\[.*?的表情包：.*?\]|\[.*?发送的表情包：.*?\]/;
                 const giftRegex = /\[.*?送来的礼物：.*?\]|\[.*?向.*?送来了礼物：.*?\]/;
 
-                if (lastMsg.type === 'poke') {
+                if (window.InteractiveMessages?.sourceOf(lastMsg)) {
+                    lastMessageText = window.InteractiveMessages.contextText(lastMsg);
+                } else if (lastMsg.type === 'poke') {
                     lastMessageText = lastMsg.displayText || '拍一拍';
                 } else if (giftRegex.test(lastMsg.content)) {
                     lastMessageText = '[礼物]';
@@ -531,10 +533,10 @@ function renderChatList() {
         const unreadText = unreadCount > 99 ? '99+' : unreadCount;
 
         li.innerHTML = `
-            <img src="${chat.avatar}" alt="${itemName}" class="chat-avatar ${avatarClass}">
+            <img src="${chat.avatar}" alt="" class="chat-avatar ${avatarClass}">
             <div class="item-details">
                 <div class="item-details-row" style="justify-content: flex-start; align-items: center;">
-                    <div class="item-name">${itemName}</div>
+                    <div class="item-name"></div>
                     ${pinBadgeHTML}
                     ${blockedBadgeHTML}
                     ${blockedByCharBadgeHTML}
@@ -548,6 +550,8 @@ function renderChatList() {
                 <span class="unread-badge ${unreadClass}">${unreadText}</span>
             </div>`;
 
+        li.querySelector('.chat-avatar').alt = itemName || '';
+        li.querySelector('.item-name').textContent = itemName || '';
         chatListContainer.appendChild(li);
     });
 }

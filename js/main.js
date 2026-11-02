@@ -50,7 +50,7 @@ const init = async () => {
         if (navLink) {
             e.preventDefault();
             const target = navLink.getAttribute('data-target');
-            if (target === 'music-screen' || target === 'diary-screen' || target === 'piggy-bank-screen') {
+            if (target === 'diary-screen' || target === 'piggy-bank-screen') {
                 showToast('该应用正在开发中，敬请期待！');
                 return;
             }
@@ -129,6 +129,7 @@ const init = async () => {
     if (window.VideoCallModule) window.VideoCallModule.init();
     if (typeof NodeSystem !== 'undefined') NodeSystem.init();
     if (typeof KeepAliveModule !== 'undefined') KeepAliveModule.init();
+    if (window.MusicApp) await window.MusicApp.init();
     if (window.ReplyResilience) await window.ReplyResilience.init();
     if (window.PokeSystem) window.PokeSystem.init();
 
