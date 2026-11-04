@@ -576,6 +576,7 @@ const loadData = async () => {
             stickerRecognitionApiPresets: [],
             bubbleCssPresets: [],
             chatAppearancePresets: [],
+            chatKeyboardSettings: { enabled: false, automatic: true, extraOffset: 0, manualHeight: 300 },
             myPersonaPresets: [],
             fontPresets: [],
             globalCss: '',

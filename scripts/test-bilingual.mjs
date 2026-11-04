@@ -14,7 +14,7 @@ const context = {
     db, console, Math, Date, structuredClone,
     document: { readyState: 'loading', documentElement: {}, querySelectorAll: () => [], addEventListener(type, callback) { listeners[type] = callback; } },
     MutationObserver: class { observe() {} },
-    getApiConfigForFeature(feature, fallback) { assert.equal(feature, 'moments'); return fallback; },
+    getApiConfigForFeature(feature, fallback) { assert.ok(['moments', 'peek'].includes(feature)); return fallback; },
     isApiConfigReady(config) { return !!config.url && !!config.model && !!config.key; },
     fetchAiResponse: async (_config, body) => { requests.push(body); return '你好，朋友。'; },
     saveGlobalSettings: async keys => { assert.deepEqual(Array.from(keys), ['bilingualTranslations']); return true; }
@@ -38,7 +38,27 @@ assert.equal(requests.length, 1, 'cached translations must not repeat API calls'
 assert.match(bilingual.html('Bonjour, ami.', character, 'moments'), /你好，朋友。/);
 assert.doesNotMatch(bilingual.html('<img src=x>', character, 'moments'), /<img src=x>/);
 
+const peekStorage = fs.readFileSync(new URL('../js/modules/peek/setup-and-storage.js', import.meta.url), 'utf8');
+vm.runInContext(peekStorage, context, { filename: 'setup-and-storage.js' });
+const npcMessage = { sender: 'partner', content: 'Bonjour, ami.' };
+db.bilingualSettings.scopes.peek = true;
+db.bilingualSettings.display = 'both';
+assert.match(context.peekConversationMessageHtml(npcMessage, character), /data-bilingual-display="both"/);
+db.bilingualSettings.peekConversationDisplay = 'inline';
+await bilingual.translate(character, 'peek', npcMessage.content, 'peek');
+const inlineNpc = context.peekConversationMessageHtml(npcMessage, character);
+assert.match(inlineNpc, /Bonjour, ami\.<\/span><span class="bilingual-translation">「你好，朋友。」/);
+assert.match(context.peekConversationMessageHtml({ ...npcMessage, sender: 'char' }, character), /「你好，朋友。」/);
+assert.equal(context.peekConversationMessageHtml({ ...npcMessage, isImpersonated: true }, character), npcMessage.content);
+assert.equal(context.peekConversationMessageHtml({ sender: 'partner', content: '我说的是中文。' }, { ...character, bilingualLanguage: '日语' }), '我说的是中文。');
+assert.equal(npcMessage.content, 'Bonjour, ami.');
+assert.match(bilingual.html(npcMessage.content, character, 'peek'), /data-bilingual-display="both"/);
+assert.doesNotMatch(bilingual.html(npcMessage.content, character, 'moments'), /「你好，朋友。」/);
+db.bilingualSettings.scopes.peek = false;
+assert.equal(context.peekConversationMessageHtml(npcMessage, character), npcMessage.content);
+db.bilingualSettings.scopes.peek = true;
 character.bilingualModeEnabled = false;
 assert.equal(bilingual.enabled(character, 'moments'), false);
 assert.equal(bilingual.prompt(character, 'moments'), '');
+assert.equal(context.peekConversationMessageHtml(npcMessage, character), npcMessage.content);
 console.log('Bilingual content policy and translation cache tests passed.');

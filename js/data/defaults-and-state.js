@@ -164,7 +164,7 @@ const globalSettingKeys = [
     'apiSettings', 'summaryApiSettings', 'backgroundApiSettings', 'supplementPersonaApiSettings', 'peekApiSettings', 'vectorApiSettings', 'apiNodes', 'apiNodeRoutes', 'imageRecognitionEnabled', 'imageRecognitionApiSettings', 'stickerRecognitionApiSettings', 'wallpaper', 'globalChatWallpaper', 'globalCallWallpaper', 'homeScreenMode', 'fontUrl', 'localFontName', 'customIcons', 'customAppNames', 'namePresets',
     'apiPresets', 'summaryApiPresets', 'backgroundApiPresets', 'supplementPersonaApiPresets', 'peekApiPresets', 'vectorApiPresets', 'imageRecognitionApiPresets', 'stickerRecognitionApiPresets', 'bubbleCssPresets', 'chatAppearancePresets', 'myPersonaPresets', 'globalCss',
     'globalCssPresets', 'fontPresets', 'homeSignature', 'forumPosts', 'forumBindings', 'forumUserProfile', 'forumSettings', 'forumApiSettings', 'forumMessages', 'forumStrangerProfiles', 'forumFriendRequests', 'forumPendingRequestFromUser', 'forumAltAccounts', 'forumActiveAccountId', 'forumAccountStates', 'forumRelationships', 'forumKnowledge', 'forumSocialEdges', 'forumStoryThreads', 'forumEvents', 'forumNotifications', 'forumDrafts', 'forumSchemaVersion', 'pomodoroTasks', 'pomodoroSettings', 'pomodoroRecords', 'pomodoroActiveSession', 'insWidgetSettings', 'homeWidgetSettings',
-    'chatFolders', 'moments', 'fontSizeScale', 'activePersonaId', 'moreProfileCardBg', 'statusBarPresets', 'regexFilterPresets', 'themeSettings', 'themePresets', 'savedKeyboardHeight',
+    'chatFolders', 'moments', 'fontSizeScale', 'activePersonaId', 'moreProfileCardBg', 'statusBarPresets', 'regexFilterPresets', 'themeSettings', 'themePresets', 'savedKeyboardHeight', 'chatKeyboardSettings',
     'globalSendSound', 'globalReceiveSound', 'globalMessageSentSound', 'globalIncomingCallSound', 'multiMsgSoundEnabled', 'soundPresets', 'galleryPresets', 'iconPresets', 'homeWidgetPresets', 'widgetWallpaperPresets', 'voicePresets', 'fontBuffer',
     'cotSettings', 'cotPresets', 'hasSeenVideoCallDisclaimer', 'hasSeenVideoCallAvatarHint',
     'favorites', 'piggyBank',
@@ -183,8 +183,33 @@ const globalSettingKeys = [
 ];
 if (typeof window !== 'undefined') window.globalSettingKeysForBackup = globalSettingKeys;
 
-const appVersion = "6.9.5";
+const appVersion = "6.9.6";
 const updateLog = [
+    {
+        version: "6.9.6",
+        date: "2026-11-04",
+        revision: "2026-11-04.1",
+        notes: [
+            "查手机新增按应用保存历史。开启后会保留刷新前的内容，聊天还可以按联系人连续查看。默认关闭，历史可单独清空。",
+            "新增「角色知晓」。在联系人聊天页可手动同步当前对话，或自动同步后续对话，并设置角色每次最多参考多少条。默认关闭，与历史保存分开控制。",
+            "完善查手机生成和翻译设置。可按角色选择 XML 或旧版 JSON，并为指定应用调整生成时参考的主聊天记录条数。查手机对话可单独设置点击查看译文、原文和译文同时显示，或将译文放在原文后的引号里。生成失败时保留已有内容，并提示手动刷新。",
+            "新增 HTML 互动消息。私聊和群聊均可在编辑消息时粘贴带 JavaScript 的 HTML，运行预览后保存。支持展开查看、独立保存互动进度和模板导入导出，内置滑动图集、翻牌、抽签等示例。",
+            "新增角色自主修改备注和拍一拍后缀的权限。角色自己的备注、TA 给我的备注及双方被拍时的后缀，可按角色分别授权，默认关闭。「TA 给我的备注」也可手动查看、修改和清空。",
+            "新增聊天输入框避让。在「主屏幕自定义 → 系统美化」开启后，可随键盘自动调整聊天区域，也可手动设置上移距离。默认关闭。",
+            "完善在线状态设置。可按角色关闭在线状态提示词、手动恢复为「在线」，或设置开新档时重置。",
+            "生图锁脸扩展到 USER。可用当前私聊的 USER 头像或上传的单人照作为参考，用于只拍 USER 的照片。角色和 USER 的参考图分别设置，编辑提示词重新生图时会沿用对应人物的参考。",
+            "新增按角色管理动态记忆。在「动态 → 设置 → 管理动态记忆」可搜索、单条或批量清除所选角色看过的内容，包括已删除的动态和 Story。",
+            "论坛新增自定义提示词和频率设置。帖子与评论、论坛私信可分别补充提示词，自动更新频率也可调节。角色小号可切换「经典私信提示词」，让回复更多围绕角色人设和当前对话。",
+            "魔法屋重新分为「系统提示词」「动态能力」「运行与通知」。切换页签时保留未保存的编辑内容，可调整提示词条目顺序、查看完整源码，并继续使用旧预设。",
+            "「运行与通知」新增 UWU 无声画中画。支持画中画的设备可以开启无声小窗。切换应用后，回复仍可能受系统后台限制。",
+            "新增自定义服务器推送。部署推送服务后，可登记设备、发送测试通知和取消订阅。网页关闭后生成角色回复仍需独立的服务端任务。",
+            "ElevenLabs 语音新增语气标签设置。角色和 USER 可分别选择预设或自定义标签，并控制展开语音文字时是否显示标签。修复带方括号标签的语音内容被截断的问题。",
+            "修复世界书分类和搜索。统一多级分类在列表、批量选择和导出中的范围，改善旧条目和特殊字符的显示。正文格式异常时会提示并保留原始数据。",
+            "改善备份、预设和图片的跨平台保存，完善 iOS 从主屏幕打开应用时的文件保存及失败后的重试流程。",
+            "改善 MCP 的 Termux 连接兼容性。",
+            "开发中｜音乐目前还是雏形。已搭建音乐页面和基础播放流程，曲库接入、播放体验及角色一起听仍在开发中。"
+        ]
+    },
     {
         version: "6.9.5",
         date: "2026-10-02",
@@ -921,6 +946,7 @@ var db = {
     moments: null,
     fontSizeScale: 1.0,
     savedKeyboardHeight: null,
+    chatKeyboardSettings: { enabled: false, automatic: true, extraOffset: 0, manualHeight: 300 },
     activePersonaId: null,
     moreProfileCardBg: 'https://i.postimg.cc/XvFDdTKY/Smart-Select-20251013-023208.jpg',
     statusBarPresets: [],

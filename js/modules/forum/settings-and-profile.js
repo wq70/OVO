@@ -75,6 +75,10 @@ function forumGetActiveFilter() {
 function forumLoadSettings() {
     forumEnsureData();
     const s = db.forumSettings || { postsPerGeneration: 8, commentsPerPost: { min: 4, max: 8 }, autoReplyCount: 3, detailReplyCount: 2 };
+    const publicPrompt = document.getElementById('forum-public-custom-prompt');
+    const privatePrompt = document.getElementById('forum-private-custom-prompt');
+    if (publicPrompt) publicPrompt.value = typeof s.publicCustomPrompt === 'string' ? s.publicCustomPrompt : '';
+    if (privatePrompt) privatePrompt.value = typeof s.privateCustomPrompt === 'string' ? s.privateCustomPrompt : '';
     const postsInput = document.getElementById('forum-posts-count-input');
     const minInput = document.getElementById('forum-comments-min-input');
     const maxInput = document.getElementById('forum-comments-max-input');
@@ -88,16 +92,18 @@ function forumLoadSettings() {
     if (autoReplyInput) autoReplyInput.value = s.autoReplyCount != null ? s.autoReplyCount : 3;
     if (detailReplyInput) detailReplyInput.value = s.detailReplyCount != null ? s.detailReplyCount : 2;
     if (dmCountInput) dmCountInput.value = Math.max(1, Math.min(20, (s.dmPerGeneration != null ? parseInt(s.dmPerGeneration, 10) : 4)));
-    ['proactive', 'romance', 'conflict'].forEach(function(kind) {
-        var key = kind + 'Intensity';
-        var input = document.getElementById('forum-' + kind + '-intensity');
-        var value = document.getElementById('forum-' + kind + '-intensity-value');
-        if (input) {
-            input.value = s[key] != null ? s[key] : (kind === 'conflict' ? 35 : 50);
-            input.oninput = function() { if (value) value.textContent = input.value; };
-        }
-        if (value && input) value.textContent = input.value;
-    });
+    const autoAdvanceFrequency = document.getElementById('forum-proactive-intensity');
+    const autoAdvanceFrequencyLabel = document.getElementById('forum-proactive-intensity-value');
+    if (autoAdvanceFrequency) {
+        autoAdvanceFrequency.value = s.proactiveIntensity ?? 50;
+        autoAdvanceFrequency.oninput = function() {
+            const value = Number(autoAdvanceFrequency.value);
+            const label = value < 34 ? '较慢' : value > 66 ? '较快' : '适中';
+            if (autoAdvanceFrequencyLabel) autoAdvanceFrequencyLabel.textContent = label;
+            autoAdvanceFrequency.setAttribute('aria-valuetext', label);
+        };
+        autoAdvanceFrequency.oninput();
+    }
     var continuityToggle = document.getElementById('forum-continuity-toggle');
     var knowledgeToggle = document.getElementById('forum-knowledge-toggle');
     var quietToggle = document.getElementById('forum-quiet-hours-toggle');
@@ -159,6 +165,8 @@ function forumLoadSettings() {
     }
 
     // 角色小号私信设置
+    const classicCharAltPrompt = document.getElementById('forum-char-alt-classic-prompt');
+    if (classicCharAltPrompt) classicCharAltPrompt.checked = s.classicCharAltDmPrompt === true;
     const charAltEnable = document.getElementById('forum-char-alt-enable');
     const charAltOptions = document.getElementById('forum-char-alt-options');
     const charAltProbSlider = document.getElementById('forum-char-alt-prob-slider');
@@ -233,15 +241,17 @@ function forumSaveSettings() {
     const dmPerGeneration = (dmCountInput && dmCountInput.value != null) ? Math.max(1, Math.min(20, parseInt(dmCountInput.value, 10))) : 4;
     
     db.forumSettings = db.forumSettings || {};
+    const publicPrompt = document.getElementById('forum-public-custom-prompt');
+    const privatePrompt = document.getElementById('forum-private-custom-prompt');
+    if (publicPrompt) db.forumSettings.publicCustomPrompt = publicPrompt.value.trim();
+    if (privatePrompt) db.forumSettings.privateCustomPrompt = privatePrompt.value.trim();
     db.forumSettings.postsPerGeneration = postsCount;
     db.forumSettings.commentsPerPost = { min: commentsMin, max: commentsMax };
     db.forumSettings.autoReplyCount = autoReplyCount;
     db.forumSettings.detailReplyCount = detailReplyCount;
     db.forumSettings.dmPerGeneration = dmPerGeneration;
-    ['proactive', 'romance', 'conflict'].forEach(function(kind) {
-        var input = document.getElementById('forum-' + kind + '-intensity');
-        if (input) db.forumSettings[kind + 'Intensity'] = Math.max(0, Math.min(100, parseInt(input.value, 10) || 0));
-    });
+    const autoAdvanceFrequency = document.getElementById('forum-proactive-intensity');
+    if (autoAdvanceFrequency) db.forumSettings.proactiveIntensity = Number(autoAdvanceFrequency.value);
     var continuityToggle = document.getElementById('forum-continuity-toggle');
     var knowledgeToggle = document.getElementById('forum-knowledge-toggle');
     var quietToggle = document.getElementById('forum-quiet-hours-toggle');
@@ -256,6 +266,8 @@ function forumSaveSettings() {
     const charAltEnable = document.getElementById('forum-char-alt-enable');
     const charAltProbSlider = document.getElementById('forum-char-alt-prob-slider');
     const charAltList = document.getElementById('forum-char-alt-list');
+    const classicCharAltPrompt = document.getElementById('forum-char-alt-classic-prompt');
+    if (classicCharAltPrompt) db.forumSettings.classicCharAltDmPrompt = classicCharAltPrompt.checked;
     db.forumSettings.enableCharAltDm = !!(charAltEnable && charAltEnable.checked);
     db.forumSettings.charAltProbability = (charAltProbSlider && charAltProbSlider.value != null) ? Math.max(0, Math.min(100, parseInt(charAltProbSlider.value, 10))) : 25;
     db.forumSettings.charAltCharIds = [];

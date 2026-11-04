@@ -14,7 +14,7 @@
 .face-lock-reference-row .kkt-item-control { min-width: 0; max-width: 70%; }
 .face-lock-reference-row img { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
 .face-lock-reference-row button { font-size: calc(12px * var(--app-font-scale)); padding: 5px 9px; white-space: nowrap; flex-shrink: 0; }
-.face-lock-reference-row #setting-face-lock-empty { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(12px * var(--app-font-scale)); }
+.face-lock-reference-row .face-lock-empty { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(12px * var(--app-font-scale)); }
 .face-lock-settings [hidden] { display: none !important; }
 
 #chat-settings-screen, #customize-screen {

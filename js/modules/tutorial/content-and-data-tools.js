@@ -604,6 +604,7 @@ function renderTutorialContent() {
                     }
                     if (selectedKeys.includes('peekData') && char.peekData && typeof char.peekData === 'object') {
                         char.peekData = {};
+                        window.PeekMemory?.clearFields(char, null);
                         cleared.push('窥屏数据');
                     }
                     if (selectedKeys.includes('userAvatarLibrary') && Array.isArray(char.userAvatarLibrary)) {

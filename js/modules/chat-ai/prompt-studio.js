@@ -197,6 +197,8 @@
 
     function buildPeekContext(character) {
         const blocks = [];
+        const contactMemory = window.PeekMemory?.prompt(character);
+        if (contactMemory) blocks.push(contactMemory);
         if (character.peekScreenSettings?.charAwarePeek && character.peekViewedByUser?.length) {
             const viewed = character.peekViewedByUser.map(entry => typeof formatPeekContentForPrompt === 'function' ? formatPeekContentForPrompt(entry) : '').filter(Boolean).join('\n');
             if (viewed) blocks.push(`<peek_awareness>\n用户曾偷看过你的手机，并查看了以下内容。请根据人设和对话氛围自然反应：\n${viewed}\n</peek_awareness>`);
@@ -291,7 +293,7 @@
             '天气信息': opts.weatherText || '',
             '角色名': character.realName || '',
             '用户称呼': character.myName || '',
-            '角色状态': character.status || '在线',
+            '角色状态': character.onlineStatusPromptEnabled === false ? '' : character.status || '在线',
             '角色人设': getEffectivePersona(character) || '',
             '用户人设': character.myPersona || '',
             '角色生日': charAge.birthday,
@@ -344,7 +346,12 @@
     }
 
     function renderTemplate(content, variables, unresolved) {
-        return String(content || '').replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (match, key) => {
+        let template = String(content || '');
+        if (variables['角色状态'] === '') {
+            template = template.replace(/你的当前状态是[：:]\s*\{\{\s*角色状态\s*\}\}[。.]?/g, '')
+                .replaceAll('、更新状态、引用、定位', '、引用、定位');
+        }
+        return template.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (match, key) => {
             if (Object.prototype.hasOwnProperty.call(variables, key)) return variables[key] == null ? '' : String(variables[key]);
             unresolved.add(key);
             return match;

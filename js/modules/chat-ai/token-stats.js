@@ -57,7 +57,7 @@ const ChatTokenStats = (() => {
         if (type === 'private') add('charPersona', typeof getEffectivePersona === 'function' ? getEffectivePersona(linked || chat) : chat.persona, (linked || chat).id);
         else (chat.members || []).forEach(m => add('charPersona', m.persona, m.id, m.realName || '群成员'));
         add('userPersona', chat.myPersona || chat.me?.persona);
-        for (const [tag, key] of [['group_memories','groupMemory'], ['past_online_chats','shortTermMemory'], ['alt_shared_memory','altMemory'], ['main_shared_memory','altMemory'], ['peek_awareness','peek'], ['peek_impersonation_awareness','peek'], ['chat_themes','theme']]) {
+        for (const [tag, key] of [['group_memories','groupMemory'], ['past_online_chats','shortTermMemory'], ['alt_shared_memory','altMemory'], ['main_shared_memory','altMemory'], ['peek_contact_memory','peek'], ['peek_awareness','peek'], ['peek_impersonation_awareness','peek'], ['chat_themes','theme']]) {
             for (const m of prompt.matchAll(new RegExp(`<${tag}>[\\s\\S]*?<\\/${tag}>`, 'g'))) add(key, m[0], tag);
         }
         if (chat.memoryMode === 'table' && typeof getMemoryTableContextBlock === 'function') add('tableMemory', getMemoryTableContextBlock(chat));

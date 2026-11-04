@@ -1,12 +1,11 @@
-// 每个角色独立的人物参考；只对明确标记为角色本人单人图的请求生效。
+// 每个角色聊天独立保存角色和用户的人物参考，只用于明确标记的单人图。
 (function () {
     'use strict';
     const clone = value => JSON.parse(JSON.stringify(value || {}));
     const el = id => document.getElementById(id);
     const settingKeys = { gpt: 'gptImageSettings', novelai: 'novelAiSettings', google: 'googleImageSettings', stability: 'stabilityImageSettings' };
     const referenceCache = new Map();
-    let draft = null;
-    let uploadTarget = null;
+    const drafts = new Map();
 
     function provider() {
         const active = db.activeImageProvider;
@@ -23,16 +22,20 @@
 
     function parsePrompt(value) {
         const text = String(value || '');
-        const markers = [...text.matchAll(/\bovo_subject_(self|other)\b/gi)].map(match => match[1].toLowerCase());
+        const markerPattern = /\bovo_subject_(?:self|user|other)\b/gi;
+        const markers = (text.match(markerPattern) || []).map(marker => marker.toLowerCase());
+        const first = markers[0];
         return {
             // 有冲突或缺少主体标记时不猜人物，历史消息保持普通生图行为。
-            subject: markers.length && markers.every(value => value === 'self') ? 'self' : 'other',
-            prompt: text.replace(/\bovo_subject_(?:self|other)\b/gi, '').replace(/[,，]\s*[,，]/g, ', ').replace(/^[,，\s]+|[,，\s]+$/g, '').trim()
+            subject: first && markers.every(marker => marker === first) ? first.slice('ovo_subject_'.length) : 'other',
+            markers,
+            prompt: text.replace(markerPattern, '').replace(/[,，]\s*[,，]/g, ', ').replace(/^[,，\s]+|[,，\s]+$/g, '').trim()
         };
     }
 
-    function subjectInstruction() {
-        return '人物参考内部标记：只有发送者本人单独出镜（自拍、单人人像）时，在 {{英文生图提示词}} 末尾加 , ovo_subject_self；风景、食物、宠物、其他人物、多人合照均加 , ovo_subject_other。标记只写在双花括号内，中文描述不出现标记。';
+    function subjectInstruction(includeUser = false) {
+        const userRule = includeUser ? '用户（USER，你正在聊天的对方）单独出镜时，加 , ovo_subject_user；' : '';
+        return '人物参考内部标记：按实际出镜者判断，每张图只标记一次。发送者本人单独出镜（自拍、单人人像）时，在 {{英文生图提示词}} 末尾加 , ovo_subject_self；' + userRule + '风景、食物、宠物、其他人物、多人合照均加 , ovo_subject_other。标记只写在双花括号内，中文描述不出现标记。';
     }
 
     function messageCharacter(chat, chatType, message) {
@@ -42,12 +45,19 @@
         return (db.characters || []).find(item => item.id === member?.originalCharId) || null;
     }
 
+    function subjectLock(character, subject) {
+        if (subject === 'self') return character?.imageFaceLock;
+        if (subject === 'user') return character?.userImageFaceLock;
+    }
+
     function capture(character, subject, engine = provider()) {
         const settings = clone(db[settingKeys[engine]]);
         settings._hasCharacterContext = true;
         settings._character = character ? { id: character.id, gptArtistPrompt: character.gptArtistPrompt || '', gptImageSizeOverride: character.gptImageSizeOverride || '' } : null;
-        if (character?.imageFaceLock?.enabled && subject === 'self') {
-            settings._faceLock = { characterId: character.id, referenceImage: character.imageFaceLock.referenceImage || '' };
+        const lock = subjectLock(character, subject);
+        if (lock?.enabled) {
+            settings._faceLock = { characterId: character.id, referenceImage: lock.referenceImage || '' };
+            if (subject === 'user') settings._faceLock.subject = 'user';
         }
         if (engine === 'novelai') {
             settings._referenceSnapshot = { vibe: clone(db.novelAiVibeSettings), precise: clone(db.novelAiPreciseReferenceSettings) };
@@ -74,7 +84,7 @@
     async function reference(settings, engine, signal) {
         const lock = settings._faceLock;
         if (!lock) return null;
-        if (!supported(engine, settings)) throw new Error('当前生图模型不支持锁脸，请选择支持人物参考的模型，或关闭该角色的生图锁脸');
+        if (!supported(engine, settings)) throw new Error('当前生图模型不支持锁脸，请选择支持人物参考的模型，或关闭对应的生图锁脸');
         if (!lock.referenceImage) throw new Error('人物参考图已丢失，请在角色设置中重新上传');
         let dataUrl = lock.referenceImage;
         if (!/^data:image\/(?:png|jpeg|webp);base64,/i.test(dataUrl)) {
@@ -87,96 +97,118 @@
         }
         const match = dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=\s]+)$/);
         if (!match) throw new Error('人物参考图无效，请重新上传');
-        return { dataUrl, mimeType: match[1], data: match[2], characterId: lock.characterId };
+        const metadata = { characterId: lock.characterId };
+        if (lock.subject === 'user') metadata.subject = 'user';
+        return { dataUrl, mimeType: match[1], data: match[2], metadata };
     }
 
-    function renderDraft() {
-        if (!draft) return;
-        el('setting-face-lock-enabled').checked = draft.enabled;
-        el('setting-face-lock-reference').hidden = !draft.enabled;
-        const image = el('setting-face-lock-preview');
+    function renderDraft(draft) {
+        const control = draft.control;
+        control('enabled').checked = draft.enabled;
+        control('reference').hidden = !draft.enabled;
+        const image = control('preview');
         image.hidden = !draft.referenceImage;
         if (draft.referenceImage) image.src = draft.referenceImage;
         else image.removeAttribute('src');
-        el('setting-face-lock-empty').hidden = !!draft.referenceImage;
-        el('setting-face-lock-change').textContent = draft.referenceImage ? '更换' : '上传参考图';
-        el('setting-face-lock-change').disabled = draft.busy;
-        el('setting-face-lock-enabled').disabled = draft.busy;
+        control('empty').hidden = !!draft.referenceImage;
+        control('change').textContent = draft.referenceImage ? '更换' : '上传参考图';
+        control('change').disabled = draft.busy;
+        control('enabled').disabled = draft.busy;
         const engine = provider();
         const settings = { ...db[settingKeys[engine]] };
         if (engine === 'novelai' && el('novelai-model')?.value) settings.model = el('novelai-model').value;
-        el('setting-face-lock-status').textContent = draft.busy ? '正在保存参考图片…'
+        control('status').textContent = draft.busy ? '正在处理参考图片…'
             : !engine ? '请先在 API 设置中启用生图服务。'
             : !supported(engine, settings) ? '当前模型不支持锁脸，请在 API 设置中选择支持人物参考的模型。'
-            : engine === 'novelai' ? '锁脸图片使用角色参考，不叠加全局参考与 VIBE；参考图片可能额外计费。'
+            : engine === 'novelai' ? '锁脸图片使用此人物参考，不叠加全局参考与 VIBE；参考图片可能额外计费。'
             : '当前模型可使用人物参考；第三方接口需支持图片输入，参考图片可能额外计费。';
     }
 
-    async function setReference(source, target = draft) {
-        if (!target || target.busy) return;
+    async function setReference(source, target) {
+        if (target.busy) return;
         target.busy = true;
-        renderDraft();
+        renderDraft(target);
         try {
             const image = await normalizeImage(source);
-            if (draft !== target) return;
+            if (drafts.get(target.key) !== target) return;
             target.referenceImage = image;
             showToast('参考图已选定，保存设置后生效');
         } catch (error) {
-            if (draft === target) showToast(error.message || '无法读取参考图，请重新上传');
+            if (drafts.get(target.key) === target) showToast(error.message || '无法读取参考图，请重新上传');
         } finally {
             target.busy = false;
-            if (draft === target) renderDraft();
+            if (drafts.get(target.key) === target) renderDraft(target);
         }
     }
 
-    function loadSettings(character) {
-        if (!el('setting-face-lock-enabled')) return;
-        draft = { characterId: character.id, enabled: !!character.imageFaceLock?.enabled, referenceImage: character.imageFaceLock?.referenceImage || '', busy: false };
-        const toggle = el('setting-face-lock-enabled');
+    function loadDraft(character, key, prefix, getAvatar) {
+        const control = suffix => el(prefix + suffix);
+        const toggle = control('enabled');
+        if (!toggle) return;
+        const lock = character[key];
+        const draft = { key, control, characterId: character.id, enabled: !!lock?.enabled, referenceImage: lock?.referenceImage || '', busy: false };
+        drafts.set(key, draft);
         toggle.onchange = async () => {
-            if (!draft || draft.characterId !== character.id) return;
             draft.enabled = toggle.checked;
-            renderDraft();
+            renderDraft(draft);
             if (draft.enabled && !draft.referenceImage) {
-                const avatar = el('setting-char-avatar-preview')?.getAttribute('src') || character.avatar;
-                if (avatar) await setReference(avatar);
+                const avatar = getAvatar();
+                if (avatar) await setReference(avatar, draft);
             }
         };
-        const file = el('setting-face-lock-file');
-        const menu = el('setting-face-lock-source');
-        el('setting-face-lock-change').onclick = () => {
-            if (!draft || draft.busy) return;
-            if (!draft.referenceImage) { uploadTarget = draft; file.click(); }
+        const file = control('file');
+        const menu = control('source');
+        // 保留文件选择器打开时的草稿，切换聊天后丢弃旧文件选择。
+        const openFile = () => {
+            file.faceLockDraft = draft;
+            file.click();
+        };
+        control('change').onclick = () => {
+            if (draft.busy) return;
+            if (!draft.referenceImage) openFile();
             else { menu.value = ''; window.openCenteredSelect(menu); }
         };
         menu.onchange = () => {
-            if (menu.value === 'upload') { uploadTarget = draft; file.click(); }
+            if (menu.value === 'upload') openFile();
             if (menu.value === 'avatar') {
-                const avatar = el('setting-char-avatar-preview')?.getAttribute('src') || character.avatar;
-                if (avatar) setReference(avatar);
-                else showToast('当前角色没有头像，请上传参考图');
+                const avatar = getAvatar();
+                if (avatar) setReference(avatar, draft);
+                else showToast('当前没有头像，请上传参考图');
             }
             menu.value = '';
         };
         file.onchange = () => {
-            if (file.files?.[0] && uploadTarget === draft) setReference(file.files[0], uploadTarget);
+            if (file.files?.[0] && file.faceLockDraft === draft) setReference(file.files[0], draft);
             file.value = '';
-            uploadTarget = null;
+            file.faceLockDraft = null;
         };
+        renderDraft(draft);
+    }
+
+    function loadSettings(character) {
+        drafts.clear();
+        loadDraft(character, 'imageFaceLock', 'setting-face-lock-',
+            () => el('setting-char-avatar-preview')?.getAttribute('src') || character.avatar);
+        loadDraft(character, 'userImageFaceLock', 'setting-user-face-lock-',
+            () => el('setting-my-avatar-preview')?.getAttribute('src') || character.myAvatar);
         const modelSelect = el('novelai-model');
         if (modelSelect && !modelSelect.dataset.faceLockBound) {
             modelSelect.dataset.faceLockBound = 'true';
-            modelSelect.addEventListener('change', renderDraft);
+            modelSelect.addEventListener('change', () => drafts.forEach(renderDraft));
         }
-        renderDraft();
     }
 
     function saveSettings(character) {
-        if (!draft || draft.characterId !== character.id) return;
-        if (draft.busy) throw new Error('参考图还在处理，请稍后保存');
-        if (draft.enabled && !draft.referenceImage) throw new Error('请先上传人物参考图，或关闭生图锁脸');
-        character.imageFaceLock = { enabled: draft.enabled, referenceImage: draft.referenceImage };
+        const currentDrafts = [...drafts.values()].filter(draft => draft.characterId === character.id);
+        for (const draft of currentDrafts) {
+            const label = draft.key === 'userImageFaceLock' ? 'USER' : '角色';
+            if (draft.busy) throw new Error(label + '参考图还在处理，请稍后保存');
+            if (draft.enabled && !draft.referenceImage) throw new Error('请先上传' + label + '参考图，或关闭对应的生图锁脸');
+        }
+        for (const { key, enabled, referenceImage } of currentDrafts) {
+            if (enabled || referenceImage || character[key]) character[key] = { enabled, referenceImage };
+        }
     }
 
-    window.OvoFaceLock = { provider, supported, parsePrompt, subjectInstruction, messageCharacter, capture, reference, loadSettings, saveSettings };
+    window.OvoFaceLock = { provider, supported, parsePrompt, subjectInstruction, messageCharacter, subjectLock, capture, reference, loadSettings, saveSettings };
 })();

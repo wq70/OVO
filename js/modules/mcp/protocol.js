@@ -2,6 +2,11 @@
     'use strict';
 
     const HANDSHAKE_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
+    const TERMUX_PREFERRED_VERSION = '2025-06-18';
+    const TERMUX_HANDSHAKE_VERSIONS = [
+        TERMUX_PREFERRED_VERSION,
+        ...HANDSHAKE_VERSIONS.filter(version => version !== TERMUX_PREFERRED_VERSION)
+    ];
     const BLOCKED_HEADERS = new Set([
         'host', 'origin', 'cookie', 'content-length', 'accept', 'content-type',
         'authorization', 'mcp-session-id', 'mcp-protocol-version', 'last-event-id'
@@ -172,8 +177,10 @@
 
         async function initialize(signal) {
             if (!connection.endpoint) throw new Error('请先填写 MCP 端点。');
+            // Match the first handshake used by 330 for Termux bridges.
+            const versions = connection.type === 'termux' ? TERMUX_HANDSHAKE_VERSIONS : HANDSHAKE_VERSIONS;
             let lastError;
-            for (const protocolVersion of HANDSHAKE_VERSIONS) {
+            for (const protocolVersion of versions) {
                 try {
                     const result = await rawRequest('initialize', {
                         protocolVersion,

@@ -208,7 +208,7 @@
                                         <span class="kkt-item-label">人物参考</span>
                                         <div class="kkt-item-control">
                                             <img id="setting-face-lock-preview" alt="当前人物参考图" hidden>
-                                            <span id="setting-face-lock-empty">未选择</span>
+                                            <span class="face-lock-empty" id="setting-face-lock-empty">未选择</span>
                                             <button type="button" id="setting-face-lock-change" class="btn btn-small btn-neutral">更换</button>
                                         </div>
                                     </div>
@@ -219,6 +219,32 @@
                                 <select id="setting-face-lock-source" aria-label="更换人物参考" hidden>
                                     <option value="" disabled>选择图片来源</option>
                                     <option value="avatar">使用当前头像</option>
+                                    <option value="upload">上传图片</option>
+                                </select>
+                            </div>
+
+                            <div class="kkt-group face-lock-settings">
+                                <div class="kkt-item">
+                                    <label for="setting-user-face-lock-enabled" class="kkt-item-label">USER 生图锁脸</label>
+                                    <label class="kkt-switch"><input type="checkbox" id="setting-user-face-lock-enabled" aria-label="USER 生图锁脸"><span class="kkt-slider"></span></label>
+                                </div>
+                                <p class="face-lock-tip">用于本私聊中只有 USER 单独出镜的生图照片。</p>
+                                <div id="setting-user-face-lock-reference" hidden>
+                                    <div class="kkt-item face-lock-reference-row">
+                                        <span class="kkt-item-label">USER 参考图</span>
+                                        <div class="kkt-item-control">
+                                            <img id="setting-user-face-lock-preview" alt="当前 USER 参考图" hidden>
+                                            <span class="face-lock-empty" id="setting-user-face-lock-empty">未选择</span>
+                                            <button type="button" id="setting-user-face-lock-change" class="btn btn-small btn-neutral">更换</button>
+                                        </div>
+                                    </div>
+                                    <p class="face-lock-tip">默认取本聊天的 USER 头像，也可上传单人参考图。换头像后仍使用已保存的参考图。</p>
+                                    <p id="setting-user-face-lock-status" class="face-lock-tip" role="status" aria-live="polite"></p>
+                                </div>
+                                <input type="file" id="setting-user-face-lock-file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+                                <select id="setting-user-face-lock-source" aria-label="更换 USER 参考图" hidden>
+                                    <option value="" disabled>选择图片来源</option>
+                                    <option value="avatar">使用当前 USER 头像</option>
                                     <option value="upload">上传图片</option>
                                 </select>
                             </div>

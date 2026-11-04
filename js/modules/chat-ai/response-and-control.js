@@ -561,6 +561,9 @@ async function handleAiReplyContent(fullResponse, chat, targetChatId, targetChat
                     playSound(db.globalReceiveSound);
                 }
             }
+            if (targetChatType === 'private'
+                && (chat.onlineStatusPromptEnabled === false || chat.onlineStatusResetAt >= replyOptions.apiStartedAt)
+                && isChatStatusUpdate(item.content)) continue;
             firstMessageProcessed = true;
 
             const aiWithdrawRegex = /\[(.*?)撤回了一条消息：([\s\S]*?)\]/;

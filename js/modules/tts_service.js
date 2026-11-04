@@ -24,6 +24,10 @@ const LANGUAGE_BOOST_MAP = {
     pl: 'Polish'
 };
 
+const ELEVEN_BRACKET_TEXT = /\[([^\[\]\r\n]*)\]|［([^［］\r\n]*)］/g;
+const ELEVEN_CUSTOM_TAG = /^[a-z]+(?:[ \t,'-]+[a-z]+)*$/i;
+const ELEVEN_PRESET_TAG = /^(?:whispers?|whispering|laughs?|laughing|chuckles?|sighs?|sighing|gasps?|excited|sad|angry|curious|sarcastic|crying|shouts?|shouting|nervous|calm|happy|thoughtful|cheerfully|pauses?|short pause|long pause|hesitates?|hesitant|soft|gentle|low|embarrassed|mischievously|clears throat|exhales)$/i;
+
 const TTSService = {
     // 角色 TTS 配置（从 localStorage 加载）
     config: {
@@ -42,6 +46,8 @@ const TTSService = {
         volcFormat: 'mp3',
         elevenApiKey: '',
         elevenModel: 'eleven_multilingual_v2',
+        elevenTagMode: 'preset',
+        elevenShowTagsInTranscript: false,
         elevenVoiceId: '',
         elevenUrl: 'https://api.elevenlabs.io'
     },
@@ -63,6 +69,8 @@ const TTSService = {
         volcFormat: 'mp3',
         elevenApiKey: '',
         elevenModel: 'eleven_multilingual_v2',
+        elevenTagMode: 'preset',
+        elevenShowTagsInTranscript: false,
         elevenVoiceId: '',
         elevenUrl: 'https://api.elevenlabs.io'
     },
@@ -670,14 +678,33 @@ const TTSService = {
             });
     },
 
+    formatVoiceTranscript: function(text, forUser = false) {
+        const cfg = forUser ? this.userConfig : this.config;
+        if (cfg.provider !== 'elevenlabs' || cfg.elevenShowTagsInTranscript === true) return text;
+        return text.replace(ELEVEN_BRACKET_TEXT, (whole, ascii, wide) =>
+            ELEVEN_CUSTOM_TAG.test((ascii ?? wide).trim()) ? '' : whole
+        ).trim();
+    },
+
     // 清理文本（移除特殊标记、旁白、双语翻译）
     cleanText: function(text, cfg = this.config) {
         if (!text) return '';
         
         // 移除方括号内容（如 [系统消息]）
-        const expressiveEleven = cfg.provider === 'elevenlabs' && /^eleven_v[34](?:_|$)/.test(cfg.elevenModel || '');
-        const elevenTags = /^(?:whispers?|whispering|laughs?|laughing|chuckles?|sighs?|sighing|gasps?|excited|sad|angry|curious|sarcastic|crying|shouting|nervous|calm|happy|thoughtful|cheerfully)$/i;
-        let cleaned = text.replace(/\[(.*?)\]/g, (whole, tag) => expressiveEleven && elevenTags.test(tag.trim()) ? whole : '');
+        let cleaned;
+        if (cfg.provider === 'elevenlabs') {
+            const supportsTags = /^eleven_v[34](?:_|$)/.test(cfg.elevenModel || '');
+            cleaned = text.replace(ELEVEN_BRACKET_TEXT, (_whole, ascii, wide) => {
+                if (!supportsTags) return '';
+                const tag = (ascii ?? wide).trim();
+                const keep = cfg.elevenTagMode === 'custom'
+                    ? ELEVEN_CUSTOM_TAG.test(tag)
+                    : tag.split(',').every(part => ELEVEN_PRESET_TAG.test(part.trim()));
+                return keep ? '[' + tag + ']' : '';
+            });
+        } else {
+            cleaned = text.replace(/\[(.*?)\]/g, '');
+        }
         
         // 移除圆括号和中文括号内容（旁白）
         const expressiveMinimax = (cfg.provider || 'minimax') === 'minimax' && /^speech-2\.8-/.test(cfg.model || '');

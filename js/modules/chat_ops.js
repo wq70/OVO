@@ -1291,18 +1291,24 @@ function setupDeleteHistoryChunk() {
     });
 }
 
-// 重新计算并更新角色状态
-function recalculateChatStatus(chat) {
-    if (!chat || !chat.history) return;
-    
-    // 仅针对私聊且非群聊
-    // 注意：虽然函数参数叫 chat，但在调用处需确保是 private 类型或者在这里判断
-    // 由于群聊没有状态栏，这里主要针对 private
-    // 但为了通用性，我们可以检查 chat.realName 是否存在
-    
-    if (!chat.realName) return; // 简单判断，群聊通常没有单人的 realName 用于状态更新（群聊逻辑不同）
+function setChatStatus(chat, status) {
+    chat.status = status;
+    if (currentChatId === chat.id) {
+        const statusText = document.getElementById('chat-room-status-text');
+        if (statusText) statusText.textContent = status || '在线';
+    }
+}
 
-    const updateStatusRegex = new RegExp(`\\[${chat.realName}更新状态为：(.*?)\\]`);
+function resetChatStatus(chat) {
+    chat.onlineStatusResetAt = Date.now();
+    setChatStatus(chat, '在线');
+}
+
+// 编辑或删除消息后，只从本次重置之后的消息恢复状态。
+function recalculateChatStatus(chat) {
+    if (!chat?.realName || !chat.history) return;
+    const escapedName = chat.realName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const updateStatusRegex = new RegExp(`\\[${escapedName}更新状态为[：:](.*?)\\]`);
     let foundStatus = '在线'; // 默认状态
 
     // 倒序遍历历史记录
@@ -1310,24 +1316,16 @@ function recalculateChatStatus(chat) {
         const msg = chat.history[i];
         // 忽略被撤回的消息
         if (msg.isWithdrawn || window.InteractiveMessages?.sourceOf(msg)) continue;
+        if (chat.onlineStatusResetAt && !(msg.timestamp > chat.onlineStatusResetAt)) continue;
 
-        const match = msg.content.match(updateStatusRegex);
+        const match = msg.content?.match(updateStatusRegex);
         if (match) {
             foundStatus = match[1];
             break; // 找到最近的一个状态，停止遍历
         }
     }
 
-    // 更新状态
-    chat.status = foundStatus;
-    
-    // 如果当前正在该聊天室，实时更新 UI
-    if (currentChatId === chat.id) {
-        const statusTextEl = document.getElementById('chat-room-status-text');
-        if (statusTextEl) {
-            statusTextEl.textContent = foundStatus;
-        }
-    }
+    setChatStatus(chat, foundStatus);
 }
 
 // 快捷插入文本功能

@@ -965,7 +965,7 @@ textarea.free-home-field { min-height: 84px; resize: vertical; }
 @media (max-width: 350px) { .free-home-page { padding-inline: 7px; } .free-home-grid { gap: 5px; } .free-home-widget-content { padding: 9px; border-radius: 15px; } }
 @media (prefers-reduced-motion: reduce) { .free-home-track, .free-home-tile { transition: none; } .free-home-editing .free-home-tile { animation: none !important; } }
 
-.free-home-custom-frame { display:block; width:100%; height:100%; min-width:0; min-height:0; border:0; border-radius:12px; background:#fff; }
+.free-home-custom-frame { display:block; width:100%; height:100%; min-width:0; min-height:0; border:0; border-radius:12px; }
 .free-home-kind-custom { padding:4px; box-sizing:border-box; }
 .free-home-editing .free-home-custom-frame, .free-home-placing .free-home-custom-frame { pointer-events:none; }
 .free-home-code-examples { display:flex; flex-wrap:wrap; gap:6px; }

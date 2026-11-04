@@ -5,6 +5,7 @@ import { webcrypto } from 'node:crypto';
 
 const source = await readFile(new URL('../js/modules/mcp/protocol.js', import.meta.url), 'utf8');
 const calls = [];
+const termuxEndpoint = 'http://127.0.0.1:8765/mcp';
 let sessionNumber = 0;
 let expireToolSessionOnce = true;
 
@@ -18,6 +19,12 @@ const fetchMock = async (url, options = {}) => {
   calls.push({ url, options, request });
   if (options.method === 'DELETE') return jsonResponse(null, 204);
   if (request.method === 'initialize') {
+    if (url === termuxEndpoint && request.params.protocolVersion !== '2025-06-18') {
+      return jsonResponse({
+        jsonrpc: '2.0', id: request.id,
+        error: { code: -32000, message: 'Unsupported protocol version' }
+      });
+    }
     sessionNumber += 1;
     return jsonResponse({
       jsonrpc: '2.0', id: request.id,
@@ -70,6 +77,7 @@ const client = context.window.McpProtocol.createClient({ connection, getSecret: 
 await client.initialize();
 assert.equal(connection.sessionId, 'session-1');
 assert.equal(connection.serverInfo.name, 'Mock MCP');
+assert.equal(calls[0].request.params.protocolVersion, '2025-11-25');
 
 const discovered = await client.discover();
 assert.deepEqual(Array.from(discovered.tools, item => item.name), ['first', 'second']);
@@ -93,6 +101,17 @@ assert.equal(events[0].data.method, 'notifications/tools/list_changed');
 assert.throws(() => context.window.McpProtocol.normalizeHeaders({ Authorization: 'forbidden' }), /不允许覆盖/);
 
 await client.close();
+
+const termuxConnection = { id: 'termux', type: 'termux', transport: 'bridge', endpoint: termuxEndpoint };
+const termuxClient = context.window.McpProtocol.createClient({ connection: termuxConnection });
+await termuxClient.initialize();
+const termuxCapabilities = await termuxClient.discover();
+assert.deepEqual(Array.from(termuxCapabilities.tools, tool => tool.name), ['first', 'second']);
+const termuxResult = await termuxClient.request('tools/call', { name: 'first', arguments: {} });
+assert.equal(termuxResult.content[0].text, 'done');
+const termuxCalls = calls.filter(call => call.url === termuxEndpoint);
+assert.equal(termuxCalls[0].request.params.protocolVersion, '2025-06-18');
+assert.equal(termuxCalls.find(call => call.request.method === 'tools/call').options.headers['MCP-Protocol-Version'], '2025-06-18');
 
 const orchestratorSource = await readFile(new URL('../js/modules/chat-ai/mcp-orchestrator.js', import.meta.url), 'utf8');
 const executed = [];

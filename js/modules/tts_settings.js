@@ -126,7 +126,9 @@ const TTSSettings = {
             const prefix = type === 'user' ? 'elevenlabs-user-' : 'elevenlabs-';
             const read = suffix => document.getElementById(prefix + suffix)?.value?.trim() || '';
             return { elevenApiKey: read('api-key'), elevenModel: read('model') || 'eleven_multilingual_v2',
-                elevenVoiceId: read('voice-id'), elevenUrl: read('url') || 'https://api.elevenlabs.io' };
+                elevenVoiceId: read('voice-id'), elevenUrl: read('url') || 'https://api.elevenlabs.io',
+                elevenTagMode: read('tag-mode') === 'custom' ? 'custom' : 'preset',
+                elevenShowTagsInTranscript: document.getElementById(prefix + 'show-tags')?.checked === true };
         },
 
         loadElevenFields: function(type, config) {
@@ -138,6 +140,10 @@ const TTSSettings = {
                 if (input) input.value = value;
             });
             this.setSelectValue(document.getElementById(prefix + 'model'), config.elevenModel || 'eleven_multilingual_v2');
+            const tagMode = document.getElementById(prefix + 'tag-mode');
+            if (tagMode) tagMode.value = config.elevenTagMode === 'custom' ? 'custom' : 'preset';
+            const showTags = document.getElementById(prefix + 'show-tags');
+            if (showTags) showTags.checked = config.elevenShowTagsInTranscript === true;
         },
 
         loadElevenModels: async function(type) {

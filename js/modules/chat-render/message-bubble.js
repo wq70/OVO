@@ -1,3 +1,13 @@
+function extractVoiceMessageText(content) {
+    const prefix = /\[(?:.+?)的语音[：:]/.exec(content);
+    if (!prefix) return null;
+    const start = prefix.index + prefix[0].length;
+    const closingBracket = findClosingSquareBracket(content, prefix.index);
+    // Preserve the legacy fallback for messages with unbalanced brackets.
+    const end = closingBracket >= start ? closingBracket : content.indexOf(']', start);
+    return end > start ? content.slice(start, end).trim() : null;
+}
+
 function createMessageBubbleElement(message, isContinuous = false) {
     const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
     const showDebugContent = currentChatType === 'private' && !!chat.showDebugContent;
@@ -569,7 +579,6 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
     const sentStickerRegex = /\[(?:.+?)发送的表情包[：:](.+?)\]/i;
     const receivedStickerRegex = /\[(?:.*?的)?表情包[：:](.+?)\]/i;
     
-    const voiceRegex = /\[(?:.+?)的语音[：:]([\s\S]+?)\]/;
     const photoVideoRegex = /\[(?:.+?)发来的照片\/视频[：:]([\s\S]+?)\]/;
     const privateSentTransferRegex = /\[.*?给你转账[：:]([\d.,]+)元[；;]备注[：:](.*?)\]/;
     const privateReceivedTransferRegex = /\[.*?的转账[：:]([\d.,]+)元[；;]备注[：:](.*?)\]/;
@@ -601,7 +610,7 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
     
     const sentStickerMatch = content.match(sentStickerRegex);
     const receivedStickerMatch = content.match(receivedStickerRegex);
-    const voiceMatch = content.match(voiceRegex);
+    const voiceText = extractVoiceMessageText(content);
     const photoVideoMatch = content.match(photoVideoRegex);
     const privateSentTransferMatch = content.match(privateSentTransferRegex);
     const privateReceivedTransferMatch = content.match(privateReceivedTransferRegex);
@@ -959,17 +968,18 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
             bubbleElement.className = 'forum-share-card forum-share-comment-card';
             bubbleElement.innerHTML = `<div class="forum-share-header"><svg viewBox="0 0 24 24"><path d="M21,3H3A2,2 0 0,0 1,5V19A2,2 0 0,0 3,21H21A2,2 0 0,0 23,19V5A2,2 0 0,0 21,3M21,19H3V5H21V19M8,11H16V9H8V11M8,15H13V13H8V15Z" /></svg><span>来自论坛的评论分享</span></div><div class="forum-share-content"><div class="forum-share-title">${postTitle}</div><div class="forum-share-summary">${contentShort}</div><div class="forum-share-comment-block"><span class="forum-share-comment-author">${commentAuthor}</span>：<span class="forum-share-comment-text">${commentContent}</span></div></div>`;
         }
-    } else if (voiceMatch) {
+    } else if (voiceText !== null) {
         bubbleElement = document.createElement('div');
         bubbleElement.className = 'voice-bubble';
+        bubbleElement.dataset.voiceText = voiceText;
         if (!chat.useCustomBubbleCss) {
             bubbleElement.style.backgroundColor = bubbleTheme.bg;
             bubbleElement.style.color = bubbleTheme.text;
         }
-        bubbleElement.innerHTML = `<svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg><svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg><span class="duration">${calculateVoiceDuration(voiceMatch[1].trim())}"</span>`;
+        bubbleElement.innerHTML = `<svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg><svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg><span class="duration">${calculateVoiceDuration(voiceText)}"</span>`;
         const transcriptDiv = document.createElement('div');
         transcriptDiv.className = 'voice-transcript';
-        transcriptDiv.textContent = voiceMatch[1].trim();
+        transcriptDiv.textContent = window.TTSService?.formatVoiceTranscript(voiceText, isSent) ?? voiceText;
         wrapper.appendChild(transcriptDiv);
     } else if (photoVideoMatch) {
         const pvContent = photoVideoMatch[1].trim();

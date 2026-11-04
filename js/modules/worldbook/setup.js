@@ -158,6 +158,7 @@ function setupWorldBookApp() {
         if (currentEditingWorldBookId) {
             const book = db.worldBooks.find(wb => wb.id === currentEditingWorldBookId);
             if (book) {
+                if (!worldBookCanEdit(book)) return;
                 book.name = name;
                 book.content = content;
                 book.position = position;
@@ -175,7 +176,7 @@ function setupWorldBookApp() {
                 alwaysOn, keywords, weight
             });
         }
-        await saveData();
+        if (await saveData() === false) return;
         showToast('世界书条目已保存');
         renderWorldBookList();
         switchScreen('world-book-screen');
@@ -187,7 +188,7 @@ function setupWorldBookApp() {
         if (isWorldBookMultiSelectMode) {
             if (e.target.matches('.category-checkbox')) {
                 const category = e.target.dataset.category;
-                const booksInCategory = db.worldBooks.filter(b => (b.category || '未分类') === category);
+                const booksInCategory = db.worldBooks.filter(b => worldBookInCategory(b, category));
                 const bookIdsInCategory = booksInCategory.map(b => b.id);
                 const shouldSelectAll = e.target.checked;
 
@@ -224,15 +225,16 @@ function setupWorldBookApp() {
             if (worldBookItem && !e.target.closest('.action-btn')) {
                 const book = db.worldBooks.find(wb => wb.id === worldBookItem.dataset.id);
                 if (book) {
+                    if (!worldBookCanEdit(book)) return;
                     currentEditingWorldBookId = book.id;
                     worldBookIdInput.value = book.id;
                     worldBookNameInput.value = book.name;
                     worldBookContentInput.value = book.content;
-                    worldBookCategoryInput.value = book.category || '';
+                    worldBookCategoryInput.value = typeof book.category === 'string' ? book.category : '';
                     if (worldBookTagsInput) {
                         worldBookTagsInput.value = Array.isArray(book.tags) ? book.tags.join(', ') : '';
                     }
-                    document.querySelector(`input[name="world-book-position"][value="${book.position}"]`).checked = true;
+                    document.querySelector(`input[name="world-book-position"][value="${['before', 'middle', 'after'].includes(book.position) ? book.position : 'before'}"]`).checked = true;
                     document.getElementById('world-book-global').checked = book.isGlobal || false;
                     
                     const alwaysOn = book.alwaysOn !== false;
@@ -289,9 +291,7 @@ function setupWorldBookApp() {
                 if (searchInput && searchInput.value.trim()) {
                     const searchKeyword = searchInput.value.trim().toLowerCase();
                     filteredBooks = filteredBooks.filter(b => {
-                        return (b.name || '').toLowerCase().includes(searchKeyword) ||
-                               (b.content || '').toLowerCase().includes(searchKeyword) ||
-                               (b.category || '未分类').toLowerCase().includes(searchKeyword);
+                        return worldBookMatchesSearch(b, searchKeyword);
                     });
                 }
                 
@@ -357,9 +357,9 @@ function setupWorldBookApp() {
         deleteCategoryAndEntriesBtn.addEventListener('click', async () => {
             if (!pendingWbCategoryDelete) return;
             const cat = pendingWbCategoryDelete.category;
-            const idsToDelete = db.worldBooks.filter(wb => (wb.category || '未分类') === cat).map(wb => wb.id);
+            const idsToDelete = db.worldBooks.filter(wb => worldBookInCategory(wb, cat)).map(wb => wb.id);
             await dexieDB.worldBooks.bulkDelete(idsToDelete);
-            db.worldBooks = db.worldBooks.filter(wb => (wb.category || '未分类') !== cat);
+            db.worldBooks = db.worldBooks.filter(wb => !worldBookInCategory(wb, cat));
             db.characters.forEach(char => {
                 if (char.worldBookIds) char.worldBookIds = char.worldBookIds.filter(id => !idsToDelete.includes(id));
             });
@@ -376,7 +376,7 @@ function setupWorldBookApp() {
             if (!pendingWbCategoryDelete) return;
             const cat = pendingWbCategoryDelete.category;
         db.worldBooks.forEach(book => {
-            if ((book.category || '未分类') === cat) book.category = '';
+            if (worldBookInCategory(book, cat)) book.category = '';
         });
         await saveData();
         renderWorldBookList();
@@ -411,10 +411,7 @@ function setupWorldBookApp() {
         detailSelectAllBtn.addEventListener('click', () => {
             const listItems = document.querySelectorAll('#world-book-detail-list-container .world-book-item');
             if (listItems.length > 0) {
-                let filteredBooks = db.worldBooks.filter(b => {
-                    const cat = b.category || '未分类';
-                    return cat === currentWorldBookCategory || cat.startsWith(`${currentWorldBookCategory}/`);
-                });
+                let filteredBooks = db.worldBooks.filter(b => worldBookInCategory(b, currentWorldBookCategory));
                 
                 const filterSelect = document.getElementById('world-book-detail-filter-select');
                 if (filterSelect && filterSelect.value !== 'all') {
@@ -425,8 +422,7 @@ function setupWorldBookApp() {
                 if (searchInput && searchInput.value.trim()) {
                     const searchKeyword = searchInput.value.trim().toLowerCase();
                     filteredBooks = filteredBooks.filter(b => {
-                        return (b.name || '').toLowerCase().includes(searchKeyword) ||
-                               (b.content || '').toLowerCase().includes(searchKeyword);
+                        return worldBookMatchesSearch(b, searchKeyword);
                     });
                 }
 
@@ -472,15 +468,16 @@ function setupWorldBookApp() {
                 if (worldBookItem && !e.target.closest('.action-btn')) {
                     const book = db.worldBooks.find(wb => wb.id === worldBookItem.dataset.id);
                     if (book) {
+                        if (!worldBookCanEdit(book)) return;
                         currentEditingWorldBookId = book.id;
                         worldBookIdInput.value = book.id;
                         worldBookNameInput.value = book.name;
                         worldBookContentInput.value = book.content;
-                        worldBookCategoryInput.value = book.category || '';
+                        worldBookCategoryInput.value = typeof book.category === 'string' ? book.category : '';
                         if (worldBookTagsInput) {
                             worldBookTagsInput.value = Array.isArray(book.tags) ? book.tags.join(', ') : '';
                         }
-                        document.querySelector(`input[name="world-book-position"][value="${book.position}"]`).checked = true;
+                        document.querySelector(`input[name="world-book-position"][value="${['before', 'middle', 'after'].includes(book.position) ? book.position : 'before'}"]`).checked = true;
                         document.getElementById('world-book-global').checked = book.isGlobal || false;
                         
                         const alwaysOn = book.alwaysOn !== false;

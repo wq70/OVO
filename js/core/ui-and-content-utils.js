@@ -688,7 +688,7 @@ function calculateVoiceDuration(text) {
 }
 
 // 模板处理函数：替换头像、名字等变量
-function processTemplate(html, char) {
+function processTemplate(html, char, { css = false } = {}) {
     if (!html || !char) return html;
     let processed = html;
     
@@ -720,6 +720,8 @@ function processTemplate(html, char) {
     processed = processed.replace(/{{char_name}}/g, charName);
     processed = processed.replace(/{{char_remark}}/g, charRemark);
     processed = processed.replace(/{{user_remark}}/g, userName); // user_remark 等同于 user_name
+    const userRemarkName = (isPrivate && char.userRemarkName) || userName;
+    processed = processed.replace(/{{user_remark_name}}/g, () => css ? CSS.escape(userRemarkName) : userRemarkName);
 
     // 标签替换 (支持可选的 style 和 class 属性)
     // <user-avatar class="..." style="..."> -> <img src="..." class="uwu-user-avatar ..." style="...">
@@ -735,6 +737,15 @@ function processTemplate(html, char) {
 }
 
 // 解析混合内容 (文本+HTML)
+function findClosingSquareBracket(text, start) {
+    let depth = 0;
+    for (let index = start; index < text.length; index++) {
+        if (text[index] === '[') depth++;
+        else if (text[index] === ']' && --depth === 0) return index;
+    }
+    return -1;
+}
+
 function getMixedContent(responseData) {
     const results = [];
     let i = 0;
@@ -808,18 +819,7 @@ function getMixedContent(responseData) {
         }
         
         if (responseData[i] === '[') {
-            let endBracket = -1;
-            let bracketCount = 0;
-            for (let j = i; j < responseData.length; j++) {
-                if (responseData[j] === '[') bracketCount++;
-                else if (responseData[j] === ']') {
-                    bracketCount--;
-                    if (bracketCount === 0) {
-                        endBracket = j;
-                        break;
-                    }
-                }
-            }
+            const endBracket = findClosingSquareBracket(responseData, i);
 
             if (endBracket !== -1) {
                 let text = responseData.substring(i, endBracket + 1);
@@ -864,6 +864,10 @@ function getMixedContent(responseData) {
 }
 
 // 过滤聊天记录用于 AI 上下文 (包含状态栏剔除和双语格式化)
+function isChatStatusUpdate(content) {
+    return typeof content === 'string' && /^\[[^\[\]\r\n]+更新状态为[：:][^\[\]]*\]$/.test(content.trim());
+}
+
 function filterHistoryForAI(chat, historySlice, ignoreContextDisabled = false) {
     // Only concise page summaries enter model context; executable source stays local.
     if (window.InteractiveMessages) historySlice = (historySlice || chat.history || []).map(message => {
@@ -878,6 +882,11 @@ function filterHistoryForAI(chat, historySlice, ignoreContextDisabled = false) {
     }));
     if (!ignoreContextDisabled) {
         filteredHistory = filteredHistory.filter(m => !m.isContextDisabled);
+    }
+    if (chat.onlineStatusPromptEnabled === false || chat.onlineStatusResetAt) {
+        filteredHistory = filteredHistory.filter(message => message.role !== 'assistant'
+            || !isChatStatusUpdate(message.content)
+            || (chat.onlineStatusPromptEnabled !== false && message.timestamp > chat.onlineStatusResetAt));
     }
 
     // 头像操作消息：转换为 system 格式供 AI 理解

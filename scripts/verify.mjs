@@ -3,7 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import vm from 'node:vm';
-import { parse } from 'parse5';
+import { parse, parseFragment } from 'parse5';
 import {
     bodyHtmlChunks,
     loaderInitScript,
@@ -242,6 +242,7 @@ omitNovelAiAdditions(protectedDocument);
 // 只排除授权的状态栏入口，并还原两项提醒文案以比较既有布局。
 // 继续使用原保护基线，不接受其他页面的结构变化。
 const statusStorageAdditionIds = ['storage-status-open', 'setting-status-storage-open', 'storage-save-status', 'storage-save-retry'];
+const onlineStatusControlIds = ['setting-online-status-prompt', 'reset-online-status-btn', 'setting-reset-status-on-new-game'];
 function omitStatusStorageAdditions(node) {
     node.childNodes = (node.childNodes || []).filter(child => {
         const id = child.attrs?.find(attr => attr.name === 'id')?.value;
@@ -249,6 +250,7 @@ function omitStatusStorageAdditions(node) {
         const classes = child.attrs?.find(attr => attr.name === 'class')?.value.split(/\s+/) || [];
         if (classes.includes('kkt-item')) {
             if (findNodeById(child, 'setting-status-storage-open')) return false;
+            if (onlineStatusControlIds.some(controlId => findNodeById(child, controlId))) return false;
             const oldLabel = findNodeById(child, 'setting-status-retention-limit') ? '本地保留状态栏条数'
                 : findNodeById(child, 'setting-status-retention-unlimited') ? '不限本地保留条数' : null;
             const label = child.childNodes?.find(item => item.attrs?.some(attr => attr.name === 'class' && attr.value === 'kkt-item-label'));
@@ -262,7 +264,7 @@ omitStatusStorageAdditions(protectedDocument);
 // Exclude only the authorized additive TTS controls; keep the release baseline
 // protecting every old provider, field, preset and unrelated screen.
 const ttsAdditionIds = ['test-user-tts-btn', ...['elevenlabs-', 'elevenlabs-user-'].flatMap(prefix =>
-    ['tts-config-wrap', 'api-key', 'model', 'load-models', 'voice-id', 'select-voice', 'url'].map(suffix => prefix + suffix))];
+    ['tts-config-wrap', 'api-key', 'model', 'load-models', 'voice-id', 'select-voice', 'url', 'tag-mode', 'show-tags'].map(suffix => prefix + suffix))];
 function omitTtsAdditions(node) {
     const ownId = node.attrs?.find(attr => attr.name === 'id')?.value;
     if (['minimax-group-id', 'minimax-user-group-id'].includes(ownId)) {
@@ -294,10 +296,13 @@ for (const [id, markup] of Object.entries(pomodoroLayoutBaseline)) {
 const pomodoroHistoryNode = findNodeById(protectedDocument, 'pomodoro-history-modal');
 if (pomodoroHistoryNode?.parentNode) pomodoroHistoryNode.parentNode.childNodes = pomodoroHistoryNode.parentNode.childNodes.filter(node => node !== pomodoroHistoryNode);
 // 只排除本次授权新增的锁脸设置和编辑提示，继续保护全部既有节点。
-let faceLockGroup = findNodeById(protectedDocument, 'setting-face-lock-enabled');
-while (faceLockGroup && !faceLockGroup.attrs?.some(attr => attr.name === 'class' && attr.value.split(/\s+/).includes('face-lock-settings'))) faceLockGroup = faceLockGroup.parentNode;
-if (faceLockGroup?.parentNode) faceLockGroup.parentNode.childNodes = faceLockGroup.parentNode.childNodes.filter(node => node !== faceLockGroup);
-else fail('Missing face lock settings group');
+const faceLockPrefixes = ['setting-face-lock-', 'setting-user-face-lock-'];
+for (const prefix of faceLockPrefixes) {
+    let faceLockGroup = findNodeById(protectedDocument, prefix + 'enabled');
+    while (faceLockGroup && !faceLockGroup.attrs?.some(attr => attr.name === 'class' && attr.value.split(/\s+/).includes('face-lock-settings'))) faceLockGroup = faceLockGroup.parentNode;
+    if (faceLockGroup?.parentNode) faceLockGroup.parentNode.childNodes = faceLockGroup.parentNode.childNodes.filter(node => node !== faceLockGroup);
+    else fail('Missing face lock settings group: ' + prefix);
+}
 const faceLockEditNote = findNodeById(protectedDocument, 'edit-image-face-lock-note');
 if (faceLockEditNote?.parentNode) faceLockEditNote.parentNode.childNodes = faceLockEditNote.parentNode.childNodes.filter(node => node !== faceLockEditNote);
 // Exclude only the additive interactive-message editor; the existing dialog stays protected.
@@ -368,6 +373,53 @@ function omitCharacterProfileAdditions(node) {
     });
 }
 omitCharacterProfileAdditions(protectedDocument);
+// Exclude only the new peek conversation display setting from the release DOM comparison.
+const peekConversationDisplayId = 'setting-bilingual-peek-conversation-display';
+const peekConversationDisplayRow = findNodeById(protectedDocument, peekConversationDisplayId)?.parentNode;
+if (peekConversationDisplayRow?.tagName === 'label' && peekConversationDisplayRow.parentNode) {
+    const parent = peekConversationDisplayRow.parentNode;
+    parent.childNodes = parent.childNodes.filter(node => node !== peekConversationDisplayRow);
+} else fail('Missing peek conversation display setting row');
+// Exclude only the additive chat context settings from the protected DOM comparison.
+const peekContextIds = ['peek-chat-context-settings', 'peek-context-title', 'peek-context-limit'];
+const peekContextCard = findNodeById(protectedDocument, peekContextIds[0]);
+if (peekContextCard?.parentNode && peekContextIds.slice(1).every(id => findNodeById(peekContextCard, id))) {
+    const parent = peekContextCard.parentNode;
+    parent.childNodes = parent.childNodes.filter(node => node !== peekContextCard);
+} else fail('Missing peek chat context settings');
+const peekResponseFormat = findNodeById(protectedDocument, 'peek-response-format');
+const peekResponseFormatRow = peekResponseFormat?.parentNode;
+if (peekResponseFormat?.tagName === 'select' && peekResponseFormatRow?.parentNode) {
+    const parent = peekResponseFormatRow.parentNode;
+    parent.childNodes = parent.childNodes.filter(node => node !== peekResponseFormatRow);
+} else fail('Missing peek response format selector');
+const forumClassicPromptIds = ['forum-char-alt-classic-row', 'forum-char-alt-classic-prompt', 'forum-char-alt-classic-description'];
+const classicPromptRow = findNodeById(protectedDocument, forumClassicPromptIds[0]);
+const classicPromptDescription = findNodeById(protectedDocument, forumClassicPromptIds[2]);
+if (classicPromptRow?.parentNode && classicPromptDescription?.parentNode === classicPromptRow.parentNode && findNodeById(classicPromptRow, forumClassicPromptIds[1])) {
+    const parent = classicPromptRow.parentNode;
+    parent.childNodes = parent.childNodes.filter(node => node !== classicPromptRow && node !== classicPromptDescription);
+} else fail('Missing classic forum DM prompt controls');
+const forumCustomPromptIds = ['forum-custom-prompt-settings', 'forum-public-custom-prompt', 'forum-private-custom-prompt'];
+const forumCustomPromptGroup = findNodeById(protectedDocument, forumCustomPromptIds[0]);
+if (forumCustomPromptGroup?.parentNode && forumCustomPromptIds.slice(1).every(id => findNodeById(forumCustomPromptGroup, id)?.tagName === 'textarea')) {
+    const parent = forumCustomPromptGroup.parentNode;
+    parent.childNodes = parent.childNodes.filter(node => node !== forumCustomPromptGroup);
+} else fail('Missing forum custom prompt fields');
+// Normalize the forum's former intensity controls for comparison with the protected baseline.
+const autoAdvanceFrequency = findNodeById(protectedDocument, 'forum-proactive-intensity');
+const autoAdvanceFrequencyRow = autoAdvanceFrequency?.parentNode?.parentNode;
+const retiredForumIntensityIds = ['forum-romance-intensity', 'forum-conflict-intensity'].flatMap(id => [id, `${id}-value`]);
+if (autoAdvanceFrequencyRow?.parentNode && retiredForumIntensityIds.every(id => !findNodeById(protectedDocument, id))) {
+    const parent = autoAdvanceFrequencyRow.parentNode;
+    const legacyRows = [['proactive', '主动互动强度', 50], ['romance', '恋爱剧情倾向', 50], ['conflict', '冲突剧情强度', 35]].map(([kind, label, value]) => {
+        const id = `forum-${kind}-intensity`;
+        const [row] = parseFragment(`<div class="kkt-item"><div class="kkt-item-label">${label}</div><div class="kkt-item-control forum-range-control"><input type="range" id="${id}" min="0" max="100" value="${value}"><span id="${id}-value">${value}</span></div></div>`).childNodes;
+        row.parentNode = parent;
+        return row;
+    });
+    parent.childNodes.splice(parent.childNodes.indexOf(autoAdvanceFrequencyRow), 1, ...legacyRows);
+} else fail('Missing forum auto-update frequency or found retired intensity controls');
 const actualDomSignature = getNonScriptDomSignature(protectedDocument);
 if (actualDomSignature !== protectedDomSignature && actualDomSignature !== preexistingWorkspaceDomSignature) {
     fail(`Assembled non-script DOM differs from the protected release structure: ${actualDomSignature}`);
@@ -379,16 +431,19 @@ const momentsChatLinkIds = ['setting-moments-chat-linked', 'setting-moments-chat
 const momentsMemoryIds = ['moments-memory-btn', 'moments-memory-screen', 'moments-memory-actor', 'moments-memory-search', 'moments-memory-count', 'moments-memory-select-all', 'moments-memory-list', 'moments-memory-clear-all', 'moments-memory-delete-selected'];
 for (const id of momentsMemoryIds) if (!textualIds.includes(id)) fail(`Missing moments memory ID: ${id}`);
 for (const id of momentsChatLinkIds) if (!textualIds.includes(id)) fail(`Missing moments chat linkage ID: ${id}`);
-const faceLockAdditionIds = ['setting-face-lock-enabled', 'setting-face-lock-reference', 'setting-face-lock-preview', 'setting-face-lock-empty', 'setting-face-lock-change', 'setting-face-lock-status', 'setting-face-lock-file', 'setting-face-lock-source', 'edit-image-face-lock-note'];
+const faceLockControls = ['enabled', 'reference', 'preview', 'empty', 'change', 'status', 'file', 'source'];
+const faceLockAdditionIds = [...faceLockPrefixes.flatMap(prefix => faceLockControls.map(control => prefix + control)), 'edit-image-face-lock-note'];
 const interactiveAdditionIds = ['message-edit-html-controls', 'message-edit-html-mode', 'message-edit-html-hint', 'message-edit-draft-hint', 'message-edit-restore-draft', 'message-edit-html-scripts', 'message-edit-html-styles', 'message-edit-html-connect', 'message-edit-html-preview', 'message-edit-html-preview-box', 'message-edit-html-example', 'message-edit-html-import', 'message-edit-html-include-state', 'message-edit-html-export'];
 const magicRoomAdditionIds = ['magic-room-tab-prompts', 'magic-room-tab-moments', 'magic-room-tab-runtime', 'magic-room-panel-prompts', 'magic-room-panel-moments', 'magic-room-panel-runtime', 'prompt-studio-mode-items', 'prompt-studio-mode-source'];
 magicRoomAdditionIds.push('sysnotif-server-connect', 'sysnotif-server-test', 'sysnotif-server-disconnect', 'sysnotif-server-status');
+magicRoomAdditionIds.push('uwu-pip-video', 'uwu-pip-toggle', 'uwu-pip-status');
 for (const id of interactiveAdditionIds) if (!textualIds.includes(id)) fail(`Missing interactive editor ID: ${id}`);
 const musicAdditionIds = ['music-screen', 'music-content', 'music-mini', 'music-player', 'music-modal', 'music-sheet', 'music-live'];
-if (textualIds.length !== 2636 + novelAiAdditionIds.length + statusStorageAdditionIds.length + momentsRedesignIdDelta + momentsChatLinkIds.length + momentsMemoryIds.length + ttsAdditionIds.length + 35 + faceLockAdditionIds.length + interactiveAdditionIds.length + magicRoomAdditionIds.length + momentsPromptItemIds.length - 13 + musicAdditionIds.length + characterProfileAdditionIds.length) fail(`Unexpected assembled ID count after authorized additions: ${textualIds.length}`);
+if (textualIds.length !== 2636 + novelAiAdditionIds.length + statusStorageAdditionIds.length + onlineStatusControlIds.length + momentsRedesignIdDelta + momentsChatLinkIds.length + momentsMemoryIds.length + ttsAdditionIds.length + 35 + faceLockAdditionIds.length + interactiveAdditionIds.length + magicRoomAdditionIds.length + momentsPromptItemIds.length - 13 + musicAdditionIds.length + characterProfileAdditionIds.length + 1 + peekContextIds.length + 1 + forumClassicPromptIds.length + forumCustomPromptIds.length - retiredForumIntensityIds.length) fail(`Unexpected assembled ID count after authorized additions: ${textualIds.length}`);
 if (duplicateIds.length) fail(`Duplicate assembled IDs: ${duplicateIds.join(', ')}`);
 
 const requiredIds = [
+    ...onlineStatusControlIds,
     ...musicAdditionIds,
     ...momentsPromptItemIds,
     ...magicRoomAdditionIds,
@@ -412,7 +467,7 @@ const requiredIds = [
     'moments-result-dialog', 'moments-result-content', 'moments-friend-dialog', 'moments-friend-send', 'magic-room-moments-prompts',
     'moments-ai-batch-btn', 'moments-batch-dialog', 'moments-batch-review', 'moments-comment-edit-dialog',
     'moments-character-name-source', 'moments-character-nickname-awareness', 'moments-contact-nickname-awareness',
-    'setting-bilingual-language', 'setting-bilingual-global-display',
+    'setting-bilingual-language', 'setting-bilingual-global-display', peekConversationDisplayId,
     'setting-auto-expand-translation', 'setting-group-auto-expand-translation',
     'memory-table-screen', 'forum-screen', 'peek-screen', 'node-system-screen',
     'peek-clear-modal', 'peek-clear-real-orders', 'peek-clear-cancel', 'peek-clear-confirm',

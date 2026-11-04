@@ -120,7 +120,7 @@ const init = async () => {
     setupHeartPhotoModal();
     setupMoreCardBgModal();
     if (typeof setupShopSystem === 'function') setupShopSystem();
-    // if (typeof initKeyboardDetection === 'function') initKeyboardDetection();
+    if (window.ChatKeyboardLayout) window.ChatKeyboardLayout.init();
     if (window.BatteryInteraction) window.BatteryInteraction.init();
     if (typeof initMoreMenu === 'function') initMoreMenu();
     if (typeof setupPhoneScreen === 'function') setupPhoneScreen();

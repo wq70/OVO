@@ -247,6 +247,14 @@
         <div id="peek-wallpaper-modal" class="modal-overlay">
             <div class="modal-window" style="max-height: 80vh; overflow-y: auto;">
                 <h3>“偷看”页面自定义</h3>
+                <div class="form-group">
+                    <label for="peek-response-format">AI 回复格式</label>
+                    <select id="peek-response-format">
+                        <option value="xml">XML（默认）</option>
+                        <option value="json">JSON（旧版格式）</option>
+                    </select>
+                    <p class="peek-context-hint">按角色保存，下次生成或刷新时生效。</p>
+                </div>
                 <div class="collapsible-section open">
                     <div class="collapsible-header">
                         <h4>页面壁纸</h4>
@@ -304,6 +312,28 @@
                         <p style="font-size: 12px; color: #888; margin: 4px 0 0 0;">开启后，消息中的联系人会有基础人设，你可以在对话里冒充角色发消息并让对方回复</p>
                     </div>
                 </div>
+                <details id="peek-chat-context-settings" class="collapsible-section peek-context-settings">
+                    <summary class="collapsible-header">
+                        <h4 id="peek-context-title">聊天上下文</h4>
+                        <span class="collapsible-arrow" aria-hidden="true">▼</span>
+                    </summary>
+                    <div class="collapsible-content">
+                        <p class="peek-context-hint">设置生成查手机内容时，AI 能参考多少条你和角色的聊天记录。</p>
+                        <div class="form-group peek-context-limit">
+                            <label for="peek-context-limit">发送给 AI 的聊天记录</label>
+                            <div class="peek-context-number">
+                                <input id="peek-context-limit" type="number" min="1" step="1" inputmode="numeric" value="10" required>
+                                <span aria-hidden="true">条</span>
+                            </div>
+                        </div>
+                        <fieldset>
+                            <legend>生效应用 <output class="peek-context-count"></output></legend>
+                            <label class="peek-context-all"><input type="checkbox"> 全选应用</label>
+                            <div class="peek-context-apps"></div>
+                        </fieldset>
+                        <p class="peek-context-hint">未选应用按默认规则最多取 10 条。保存后在首次生成或刷新时生效。</p>
+                    </div>
+                </details>
                 <div class="collapsible-section">
                     <div class="collapsible-header">
                         <h4>刷新条数</h4>

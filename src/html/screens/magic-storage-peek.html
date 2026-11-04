@@ -133,6 +133,24 @@
                         </details>
                     </section>
                     <section id="magic-room-panel-runtime" class="magic-room-panel" role="tabpanel" aria-labelledby="magic-room-tab-runtime" data-magic-room-panel="runtime" hidden="">
+                        <div class="kkt-group magic-room-card uwu-pip-card">
+                            <div class="magic-room-card-heading">
+                                <h2>无声画中画</h2>
+                                <p>让 UWU 留在小窗里，陪你等下一条回复。</p>
+                            </div>
+                            <div class="uwu-pip-content">
+                                <div class="uwu-pip-preview">
+                                    <video id="uwu-pip-video" playsinline webkit-playsinline loop preload="auto" aria-label="UWU 内置无声动效"></video>
+                                    <span class="uwu-pip-badge">内置 · 无声</span>
+                                </div>
+                                <button type="button" id="uwu-pip-toggle" class="btn btn-primary" aria-pressed="false" aria-describedby="uwu-pip-status">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><rect x="11" y="11" width="7" height="6" rx="1"/><path d="M7 8h3M7 8v3"/></svg>
+                                    <span>开启小窗</span>
+                                </button>
+                                <p id="uwu-pip-status" class="uwu-pip-status" role="status" aria-live="polite">点击开启系统小窗，可随时关闭。</p>
+                                <p class="uwu-pip-note">切换应用后，回复仍可能受系统后台限制。</p>
+                            </div>
+                        </div>
                         <div class="kkt-group magic-room-card">
                             <div class="magic-room-card-heading">
                                 <h2>运行保障</h2>

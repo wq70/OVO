@@ -31,11 +31,7 @@ function renderWorldBookList(expandedCategory = null) {
     if (searchInput && searchInput.value.trim()) {
         searchKeyword = searchInput.value.trim().toLowerCase();
         filteredBooks = filteredBooks.filter(b => {
-            const nameMatch = (b.name || '').toLowerCase().includes(searchKeyword);
-            const contentMatch = (b.content || '').toLowerCase().includes(searchKeyword);
-            const categoryMatch = (b.category || '未分类').toLowerCase().includes(searchKeyword);
-            const tagsMatch = Array.isArray(b.tags) && b.tags.some(t => (t || '').toLowerCase().includes(searchKeyword));
-            return nameMatch || contentMatch || categoryMatch || tagsMatch;
+            return worldBookMatchesSearch(b, searchKeyword);
         });
     }
 
@@ -45,12 +41,10 @@ function renderWorldBookList(expandedCategory = null) {
     }
 
     // 解析多级分类 (支持 / 分隔)
-    const categoryTree = {};
+    const categoryTree = Object.create(null);
     
     filteredBooks.forEach(book => {
-        let categoryPath = book.category || '未分类';
-        categoryPath = categoryPath.trim().replace(/^[\/\\]+|[\/\\]+$/g, ''); // 移除首尾斜杠
-        if (!categoryPath) categoryPath = '未分类';
+        const categoryPath = worldBookCategoryPath(book.category);
         
         const parts = categoryPath.split(/[\/\\]/).map(p => p.trim()).filter(p => p);
         if (parts.length === 0) parts.push('未分类');
@@ -59,7 +53,7 @@ function renderWorldBookList(expandedCategory = null) {
         for (let i = 0; i < parts.length; i++) {
             const part = parts[i];
             if (!currentLevel[part]) {
-                currentLevel[part] = { _books: [], _children: {} };
+                currentLevel[part] = { _books: [], _children: Object.create(null) };
             }
             if (i === parts.length - 1) {
                 currentLevel[part]._books.push(book);
@@ -94,11 +88,11 @@ function renderWorldBookList(expandedCategory = null) {
             
             if (allBookIds.length > 0) {
                 const allSelected = allBookIds.every(id => selectedWorldBookIds.has(id));
-                checkboxHTML = `<input type="checkbox" class="category-checkbox" data-category="${fullPath}" ${allSelected ? 'checked' : ''} style="margin-right: 12px;">`;
+                checkboxHTML = `<input type="checkbox" class="category-checkbox" data-category="${worldBookEscape(fullPath)}" ${allSelected ? 'checked' : ''} style="margin-right: 12px;">`;
             }
         }
         
-        const categoryNameEscaped = nodeName.replace(/</g, '<').replace(/>/g, '>');
+        const categoryNameEscaped = worldBookEscape(nodeName);
         
         // 统计该分类及其所有子分类下的总条目数
         let totalCount = 0;
@@ -139,7 +133,7 @@ function renderWorldBookList(expandedCategory = null) {
         header.addEventListener('click', (ev) => {
             if (ev.target.type === 'checkbox' || ev.target.closest('.action-btn')) return;
             currentWorldBookCategory = fullPath;
-            document.getElementById('world-book-detail-title').textContent = categoryNameEscaped;
+            document.getElementById('world-book-detail-title').textContent = nodeName;
             renderWorldBookDetailList(fullPath);
             switchScreen('world-book-detail-screen');
         });
@@ -160,7 +154,7 @@ function renderWorldBookList(expandedCategory = null) {
                     const newFullPath = `${parentPrefix}${trimmed}`;
                     
                     db.worldBooks.forEach(book => {
-                        let cat = book.category || '未分类';
+                        let cat = worldBookCategoryPath(book.category);
                         if (cat === oldFullPath || cat.startsWith(`${oldFullPath}/`)) {
                             book.category = cat.replace(oldFullPath, newFullPath);
                         }
@@ -182,7 +176,7 @@ function renderWorldBookList(expandedCategory = null) {
                     ev.stopPropagation();
                     let count = 0;
                     db.worldBooks.forEach(b => {
-                        let cat = b.category || '未分类';
+                        let cat = worldBookCategoryPath(b.category);
                         if (cat === fullPath || cat.startsWith(`${fullPath}/`)) count++;
                     });
                     
@@ -290,10 +284,7 @@ function renderWorldBookDetailList(categoryPath) {
     });
     itemSortables = [];
 
-    let filteredBooks = db.worldBooks.filter(b => {
-        const cat = b.category || '未分类';
-        return cat === categoryPath || cat.startsWith(`${categoryPath}/`);
-    });
+    let filteredBooks = db.worldBooks.filter(b => worldBookInCategory(b, categoryPath));
 
     // 应用搜索和筛选
     const searchInput = document.getElementById('world-book-detail-search-input');
@@ -311,11 +302,7 @@ function renderWorldBookDetailList(categoryPath) {
     if (searchInput && searchInput.value.trim()) {
         const searchKeyword = searchInput.value.trim().toLowerCase();
         filteredBooks = filteredBooks.filter(b => {
-            const nameMatch = (b.name || '').toLowerCase().includes(searchKeyword);
-            const contentMatch = (b.content || '').toLowerCase().includes(searchKeyword);
-            const categoryMatch = (b.category || '未分类').toLowerCase().includes(searchKeyword);
-            const tagsMatch = Array.isArray(b.tags) && b.tags.some(t => (t || '').toLowerCase().includes(searchKeyword));
-            return nameMatch || contentMatch || categoryMatch || tagsMatch;
+            return worldBookMatchesSearch(b, searchKeyword);
         });
     }
 
@@ -346,36 +333,36 @@ function renderWorldBookDetailList(categoryPath) {
             metaHTML += '<span style="font-size:10px;color:#fff;background:var(--primary-color);padding:2px 6px;border-radius:4px;margin-right:4px;">常驻</span>';
         }
         if (book.weight !== undefined) {
-            metaHTML += `<span style="font-size:10px;color:#666;background:#eee;padding:2px 6px;border-radius:4px;margin-right:4px;">权重:${book.weight}</span>`;
+            metaHTML += `<span style="font-size:10px;color:#666;background:#eee;padding:2px 6px;border-radius:4px;margin-right:4px;">权重:${worldBookEscape(book.weight)}</span>`;
         }
         
         let tagsHTML = '';
         if (Array.isArray(book.tags) && book.tags.length > 0) {
-            tagsHTML = `<div class="item-tags" style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px;">${book.tags.map(t => `<span style="font-size:11px;color:var(--primary-color);background:rgba(255,128,171,0.1);padding:3px 8px;border-radius:12px;">#${t}</span>`).join('')}</div>`;
+            tagsHTML = `<div class="item-tags" style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px;">${book.tags.map(t => `<span style="font-size:11px;color:var(--primary-color);background:rgba(255,128,171,0.1);padding:3px 8px;border-radius:12px;">#${worldBookEscape(t)}</span>`).join('')}</div>`;
         }
         
         let keywordHTML = '';
         if (book.alwaysOn === false && Array.isArray(book.keywords) && book.keywords.length > 0) {
-            keywordHTML = `<div style="font-size:12px;color:#888;margin-top:6px; background:#f9f9f9; padding:4px 8px; border-radius:6px; display:inline-block;"><span style="color:#666;">🔑</span> ${book.keywords.join(', ')}</div>`;
+            keywordHTML = `<div style="font-size:12px;color:#888;margin-top:6px; background:#f9f9f9; padding:4px 8px; border-radius:6px; display:inline-block;"><span style="color:#666;">🔑</span> ${worldBookEscape(book.keywords.join(', '))}</div>`;
         }
 
         // 显示子分类路径
         let subCategoryHTML = '';
-        if (book.category && book.category !== categoryPath) {
-            const relPath = book.category.replace(categoryPath + '/', '');
-            subCategoryHTML = `<div style="font-size:11px; color:#999; margin-bottom:4px;">📂 ${relPath}</div>`;
+        if (worldBookCategoryPath(book.category) !== worldBookCategoryPath(categoryPath)) {
+            const relPath = worldBookCategoryPath(book.category).replace(categoryPath + '/', '');
+            subCategoryHTML = `<div style="font-size:11px; color:#999; margin-bottom:4px;">📂 ${worldBookEscape(relPath)}</div>`;
         }
         
         li.innerHTML = `
             <div class="item-details" style="padding: 12px; ${isWorldBookMultiSelectMode ? 'padding-left: 45px;' : ''}">
                 ${subCategoryHTML}
                 <div class="item-name" style="margin-bottom: 6px; font-size: 15px; font-weight: 600; color: #333;">
-                    ${book.name}
+                    ${worldBookEscape(book.name)}
                     ${book.isGlobal ? ' <span style="display:inline-block;background:#4CAF50;color:white;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;">全局</span>' : ''}
                     ${disabledBadge}
                 </div>
                 <div style="margin-bottom: 8px;">${metaHTML}</div>
-                <div class="item-preview" style="color: #666; font-size: 13px; line-height: 1.5; background: #fafafa; padding: 10px; border-radius: 8px; margin-top: 8px;">${book.content.replace(/\n/g, '<br>')}</div>
+                <div class="item-preview" style="color: #666; font-size: 13px; line-height: 1.5; background: #fafafa; padding: 10px; border-radius: 8px; margin-top: 8px;">${typeof book.content === 'string' ? worldBookEscape(book.content).replace(/\n/g, '<br>') : '<span role="status">正文格式异常，原始数据已保留。请先导出备份核对内容。</span>'}</div>
                 ${keywordHTML}
                 ${tagsHTML}
             </div>
@@ -452,15 +439,13 @@ function renderCategorizedWorldBookList(container, books, selectedIds, idPrefix)
 
     // 选择世界书界面也支持多级分类渲染（这里为了简化展示，将多级路径拍平展示）
     const groupedBooks = books.reduce((acc, book) => {
-        let category = book.category || '未分类';
-        category = category.trim().replace(/^[\/\\]+|[\/\\]+$/g, '');
-        if (!category) category = '未分类';
+        const category = worldBookCategoryPath(book.category);
         if (!acc[category]) {
             acc[category] = [];
         }
         acc[category].push(book);
         return acc;
-    }, {});
+    }, Object.create(null));
 
     const sortedCategories = Object.keys(groupedBooks).sort((a, b) => {
         if (a === '未分类') return 1;
@@ -478,7 +463,7 @@ function renderCategorizedWorldBookList(container, books, selectedIds, idPrefix)
         groupEl.innerHTML = `
             <div class="world-book-category-header">
                 <input type="checkbox" class="category-checkbox" ${allInCategorySelected ? 'checked' : ''}>
-                <span class="category-name">${category}</span>
+                <span class="category-name">${worldBookEscape(category)}</span>
                 <span class="category-arrow">▼</span>
             </div>
             <ul class="world-book-items-list">
@@ -487,7 +472,7 @@ function renderCategorizedWorldBookList(container, books, selectedIds, idPrefix)
                     return `
                         <li class="world-book-select-item">
                             <input type="checkbox" class="item-checkbox" id="${idPrefix}-${book.id}" value="${book.id}" ${isChecked ? 'checked' : ''}>
-                            <label for="${idPrefix}-${book.id}">${book.name}</label>
+                            <label for="${idPrefix}-${book.id}">${worldBookEscape(book.name)}</label>
                         </li>
                     `;
                 }).join('')}

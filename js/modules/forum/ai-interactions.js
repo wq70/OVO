@@ -67,7 +67,7 @@ async function forumGenerateStrangerDMs() {
             var url = apiSettings.url;
             if (url.endsWith('/')) url = url.slice(0, -1);
             var temperature = apiSettings.temperature !== undefined ? apiSettings.temperature : 0.9;
-            var requestBody = { model: apiSettings.model, messages: [{ role: 'user', content: systemPrompt }], temperature: temperature };
+            var requestBody = { model: apiSettings.model, messages: [{ role: 'user', content: systemPrompt + forumCustomPromptSection('privateCustomPrompt') }], temperature: temperature };
             var endpoint = url + '/v1/chat/completions';
             var headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiSettings.key };
             var contentStr = await fetchAiResponse(apiSettings, requestBody, headers, endpoint);
@@ -222,15 +222,21 @@ async function forumGenerateAIDMReply() {
         const npcName = (npcProfile && npcProfile.name) || targetUserId.replace(/^npc_/, '');
         const npcPosts = (db.forumPosts || []).filter(p => p.authorId === targetUserId || p.npcId === targetUserId);
         
-        const worldContext = getForumGenerationContext();
+        const useClassicAltPrompt = !!npcProfile?.linkedCharId && db.forumSettings?.classicCharAltDmPrompt === true;
+        const worldContext = getForumGenerationContext({ forPrivateMessage: true, includeCommunityContext: !useClassicAltPrompt });
         
         let npcContext = `这是一个名叫"${npcName}"的论坛用户。`;
-        if (npcProfile && npcProfile.basicPersona) {
+        if (!useClassicAltPrompt && npcProfile?.basicPersona) {
             npcContext += `\n\n基础人设:\n${npcProfile.basicPersona}`;
         }
         if (npcProfile && npcProfile.linkedCharId) {
             const linkedChar = (db.characters || []).find(c => c.id === npcProfile.linkedCharId);
-            npcContext += `\n\n【双重身份，仅供扮演决策】\n真实身份：${linkedChar ? linkedChar.realName : '已绑定角色'}\n真实人格：${npcProfile.privatePersona || (linkedChar && linkedChar.persona) || ''}\n公开伪装：${npcProfile.publicPersona || npcProfile.basicPersona || ''}\n伪装规则：${npcProfile.disguisePersona || '未被可靠识破前维持陌生网友身份，只允许细微习惯形成破绽，不得无故自曝。'}`;
+            const persona = linkedChar ? (linkedChar.persona || '').trim() : (npcProfile.privatePersona || npcProfile.basicPersona || '').trim();
+            if (useClassicAltPrompt) {
+                npcContext += `\n\n基础人设（仅用于扮演）：\n${persona || '按已有对话保持角色口吻。'}\n用这个角色本来的口吻和性格，以论坛网名聊天。根据当前对话和已有关系自然表现情绪。没有可靠证据时，维持马甲，也不要把陌生账号认定为熟人。`;
+            } else {
+                npcContext += `\n\n【角色与马甲】\n你正在用「${npcName}」这个网名聊天。你的真实身份是${linkedChar?.realName || '已绑定角色'}。\n你的真实性格和设定：${persona}\n你的公开身份：${npcProfile.publicPersona || npcProfile.basicPersona || ''}\n未被识破前守住马甲，但你本来的语气、态度和习惯可以自然流露。被明确识破时，按你的性格决定怎么回应。`;
+            }
             npcContext += BilingualContent.prompt(linkedChar, 'forum', '小号发给用户的私信，不要因此暴露真实身份');
         }
         if (npcPosts.length > 0) {
@@ -282,9 +288,10 @@ async function forumGenerateAIDMReply() {
         
         const replyCount = (db.forumSettings && db.forumSettings.detailReplyCount) || 2;
         const relationship = forumGetRelationship(targetUserId, generationJob.accountId);
-        const relationshipContext = Object.assign({}, relationship);
-        delete relationshipContext.events;
         const knownFacts = db.forumSettings.enableKnowledgeBoundaries === false ? [] : (db.forumKnowledge || []).filter(k => k.ownerId === targetUserId && k.accountId === generationJob.accountId && !k.denied).slice(-12);
+        const knowledgeContext = knownFacts.map(k => k.source === 'public_writing_analysis'
+            ? '当前账号的公开写法与另一个账号相似。这只是线索，不能据此认定身份。'
+            : '[' + k.source + '] ' + k.fact).join('\n');
         
         const systemPrompt = `你正在扮演论坛用户"${npcName}"，根据以下信息生成${replyCount}条连续的私信回复。
 
@@ -301,23 +308,16 @@ ${userContext}
 ${conversationText}
 
 ===== 关系与认知边界 =====
-当前关系状态：${JSON.stringify(relationshipContext)}
-你有来源、允许知道的事实：${knownFacts.length ? knownFacts.map(k => '[' + k.source + '] ' + k.fact).join('\n') : '暂无额外事实。只能使用公开资料和本次对话，不得读取其他账号或私密资料。'}
-互动偏好：主动程度 ${db.forumSettings.proactiveIntensity}/100；恋爱剧情倾向 ${db.forumSettings.romanceIntensity}/100；冲突剧情强度 ${db.forumSettings.conflictIntensity}/100。数值只调节出现概率与表达力度，不能覆盖人格、关系基础、知情范围与用户边界。
+当前关系：${forumRelationshipSummary(relationship)}
+角色只知道公开资料、当前账号的对话和以下已知事实。世界观背景用于保持设定一致，其他账号的私密内容不能当作角色亲历的事。${knowledgeContext ? '\n' + knowledgeContext : '暂无额外事实。'}
 
-===== 好友状态（重要） =====
+请用你平时说话的方式接着聊。留意对方刚说的话，也记得你们前面聊过什么。亲近、戒备或不满可以从具体的话和经历里自然流露。回复像真实私信一样简短，每条只说当下想说的内容。
+
+===== 好友状态 =====
 当前是否已是好友：${forumIsFriend(targetUserId) ? '是' : '否'}。
-用户是否已点击「添加好友」并发送了好友申请（等待你同意）：${forumHasPendingFriendRequestFromUser(targetUserId) ? '是' : '否'}。
-- 若用户**已发送**好友申请：请在本轮回复中表示同意加好友（如「好呀」「通过啦」等），系统会在本轮后自动加为好友。
-- 若用户**尚未发送**好友申请（只是聊天里说想加好友）：请勿说「通过了」「已同意」等，应说「好呀，你点一下右上角添加好友吧」或「好呀，你加我还是我加你？」引导用户去点按钮发送申请。
-
-请以"${npcName}"的口吻和风格，根据世界观设定、Ta发过的帖子内容和人设，生成${replyCount}条自然、符合角色性格的私信回复。回复应该简短自然，就像真实的私信对话一样，可以分多条发送，每条独立表达一个想法或情绪。
-
-【关于加好友的极度慎重规则】
-是否提出加好友，必须**极其慎重地根据你的人设性格以及当前聊天的深度来决定**：
-1. 若你的性格偏内向、谨慎、高冷、防备心重，或者目前只是初次搭讪、聊得还不深（低于10个回合），**绝对不要**轻易提出加好友。
-2. 若你是伪装身份的“角色小号”，更应注重伪装和试探，把加好友当作一个比较重大的决定，不要因过于主动而暴露破绽。
-3. 只有当你的性格极度开朗自来熟，或者双方已经聊得非常投机、有明确继续深入交往的必要时，才能在回复中自然地表达加好友意愿（例如："我们要不要加个好友？"），并在JSON中设置 "suggestFriend": true；否则，请务必设置 "suggestFriend": false。
+是否有用户通过按钮发来的待处理申请：${forumHasPendingFriendRequestFromUser(targetUserId) ? '是' : '否'}。
+收到申请时，按你的人设和当下的关系决定同意、拒绝或暂缓，回复正文要和决定一致。如果对方只是提到想加好友，可以回应这个想法，但不能说申请已经通过。
+还不是好友且没有待处理申请时，若你确实想在这次对话里提出加好友，把 suggestFriend 设为 true。其余情况设为 false。
 
 返回XML标签格式:
 <result>
@@ -329,7 +329,7 @@ ${conversationText}
   <friendDecision>none</friendDecision>
   <relationshipReason>本轮关系变化的简短原因</relationshipReason>
 </result>
-friendDecision 只能是 none、accept、reject、defer。仅当用户确实已发送好友申请时才决定 accept/reject/defer；必须服从角色人格、边界、信任和聊天深度，不得一律同意。
+friendDecision 对应 none（没有待处理申请）、accept（同意）、reject（拒绝）、defer（暂缓）。
 `;
         
         let url = apiSettings.url;
@@ -339,7 +339,7 @@ friendDecision 只能是 none、accept、reject、defer。仅当用户确实已�
         
         const requestBody = {
             model: apiSettings.model,
-            messages: [{ role: "user", content: systemPrompt }],
+            messages: [{ role: "user", content: systemPrompt + forumCustomPromptSection('privateCustomPrompt') }],
             temperature: temperature
         };
         
@@ -499,7 +499,7 @@ ${repliedNpcHint}
         
         const requestBody = {
             model: apiSettings.model,
-            messages: [{ role: "user", content: systemPrompt }],
+            messages: [{ role: "user", content: systemPrompt + forumCustomPromptSection('publicCustomPrompt') }],
             temperature: temperature
         };
         

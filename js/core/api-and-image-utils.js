@@ -1,6 +1,7 @@
 async function fetchAiResponse(settings, requestBody, headers, endpoint, forceStream = false, requestOptions = null) {
     if (settings?._roleBinding && !settings._roleAttempt) {
-        const candidates = [settings, ...(settings._roleBinding.fallbackConfigs || [])];
+        const fallbacks = requestOptions?.allowRoleFallback === false ? [] : settings._roleBinding.fallbackConfigs || [];
+        const candidates = [settings, ...fallbacks];
         let lastError;
         for (let index = 0; index < candidates.length; index++) {
             const candidate = candidates[index];
@@ -278,11 +279,14 @@ function openImageViewer(src, msgId = null) {
             // 去掉 {{ }} 包装以便于编辑
             const tagMatch = originalPrompt.match(/\{\{([\s\S]+?)\}\}/);
             if (tagMatch) originalPrompt = tagMatch[1].trim();
-            const subjectMarkers = originalPrompt.match(/\bovo_subject_(?:self|other)\b/gi) || [];
-            if (window.OvoFaceLock) originalPrompt = window.OvoFaceLock.parsePrompt(originalPrompt).prompt;
+            const faceLock = window.OvoFaceLock;
+            const parsedPrompt = faceLock?.parsePrompt(originalPrompt);
+            if (parsedPrompt) originalPrompt = parsedPrompt.prompt;
             const referenceNote = document.getElementById('edit-image-face-lock-note');
-            const referenceCharacter = window.OvoFaceLock?.messageCharacter(chatObj, currentChatType, msgObj);
-            if (referenceNote) referenceNote.hidden = !(referenceCharacter?.imageFaceLock?.enabled && subjectMarkers.length && subjectMarkers.every(value => value.toLowerCase() === 'ovo_subject_self'));
+            const referenceCharacter = faceLock?.messageCharacter(chatObj, currentChatType, msgObj);
+            const subject = parsedPrompt?.subject;
+            const lock = subject === 'user' && currentChatType !== 'private' ? null : faceLock?.subjectLock(referenceCharacter, subject);
+            if (referenceNote) referenceNote.hidden = !lock?.enabled;
 
             textarea.value = originalPrompt;
             editModal.classList.add('visible');
@@ -294,12 +298,12 @@ function openImageViewer(src, msgId = null) {
             cancelBtn.onclick = closeEditModal;
 
             confirmBtn.onclick = () => {
-                const newPrompt = textarea.value.trim();
+                const newPrompt = faceLock ? faceLock.parsePrompt(textarea.value).prompt : textarea.value.trim();
                 if (!newPrompt) {
                     if (typeof showToast === 'function') showToast('提示词不能为空');
                     return;
                 }
-                const markedPrompt = [newPrompt, ...subjectMarkers].join(', ');
+                const markedPrompt = [newPrompt, ...(parsedPrompt?.markers || [])].join(', ');
 
                 // 更新消息内容，保留消息包装格式
                 if (pvMatch) {
@@ -353,7 +357,7 @@ function openImageViewer(src, msgId = null) {
                 if (activeMeta?.model) logText += `\n模型: ${activeMeta.model}`;
                 if (activeMeta?.size) logText += `\n尺寸/比例: ${activeMeta.size}`;
                 if (activeMeta?.seed != null) logText += `\nSeed: ${activeMeta.seed}`;
-                if (activeMeta?.faceLock) logText += '\n人物参考: 已使用角色参考';
+                if (activeMeta?.faceLock) logText += activeMeta.faceLock.subject === 'user' ? '\n人物参考: 已使用 USER 参考' : '\n人物参考: 已使用角色参考';
                 if (activeMeta?.vibeGroup) logText += `\nVIBE 组: ${activeMeta.vibeGroup}（${activeMeta.vibeCount || 0} 个）`;
                 if (activeMeta?.correlationId) logText += `\n请求 ID: ${activeMeta.correlationId}`;
                 logText += `\n\n[提取的提示词]\n${finalPrompt}`;
@@ -1089,7 +1093,7 @@ async function generateGptImage(prompt, overrideSettings = {}, signal = null) {
     }
 
     console.log('[GPT Image] ✅ 生图成功');
-    return { imageUrl, provider: 'gpt', model, size, atmosphere: merged.atmosphere, faceLock: faceReference ? { characterId: faceReference.characterId } : null };
+    return { imageUrl, provider: 'gpt', model, size, atmosphere: merged.atmosphere, faceLock: faceReference?.metadata || null };
 }
 
 /**
@@ -1103,7 +1107,7 @@ async function generateImageDispatch(prompt, signal = null, context = null) {
         const generators = { gpt: generateGptImage, novelai: generateNovelAiImage, google: generateGoogleImage, stability: generateStabilityImage };
         const generator = generators[context.provider];
         if (!generator) throw new Error('未开启任何生图引擎，请先在 API 设置中启用一个生图平台');
-        if (context.settings._faceLock && !window.OvoFaceLock.supported(context.provider, context.settings)) throw new Error('当前生图模型不支持锁脸，请选择支持人物参考的模型，或关闭该角色的生图锁脸');
+        if (context.settings._faceLock && !window.OvoFaceLock.supported(context.provider, context.settings)) throw new Error('当前生图模型不支持锁脸，请选择支持人物参考的模型，或关闭对应的生图锁脸');
         return generator(prompt, context.settings, signal);
     }
     const enabled = {
@@ -1434,7 +1438,7 @@ async function generateNovelAiImage(prompt, overrideSettings = {}, signal = null
     return {
         imageUrl: imageDataUrl, originalImageUrl: imageDataUrl, images: imageResults.length ? imageResults : [{ imageUrl: imageDataUrl, seed: commonSeed, index: 0 }], provider: 'novelai', model: requestBody.model,
         size: resolution, seed: imageResults[0]?.seed ?? commonSeed, vibeGroup: vibe.groupName || '', vibeCount: vibe.images.length,
-        faceLock: faceReference ? { characterId: faceReference.characterId } : null,
+        faceLock: faceReference?.metadata || null,
         mimeType: /^data:([^;,]+)/.exec(imageDataUrl)?.[1] || '', correlationId,
         requestSnapshot: {
             input: requestBody.input, model: requestBody.model, action: requestBody.action,
@@ -1488,7 +1492,7 @@ async function generateGoogleImage(prompt, overrideSettings = {}, signal = null)
     return {
         imageUrl: `data:${mimeType};base64,${inline.data}`,
         provider: 'google', model, size: settings.aspectRatio || '', atmosphere: merged.atmosphere,
-        faceLock: faceReference ? { characterId: faceReference.characterId } : null
+        faceLock: faceReference?.metadata || null
     };
 }
 

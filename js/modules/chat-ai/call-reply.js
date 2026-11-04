@@ -188,7 +188,8 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate, options
         systemPrompt += `${worldBooksMiddle}\n`;
     }
     systemPrompt += `<char_settings>\n`;
-    systemPrompt += `1. 你的角色名是：${chat.realName}。我的称呼是：${chat.myName}。你的当前状态是：${chat.status}。\n`;
+    const statusPrompt = chat.onlineStatusPromptEnabled === false ? '' : `你的当前状态是：${chat.status}。`;
+    systemPrompt += `1. 你的角色名是：${chat.realName}。我的称呼是：${chat.myName}。${statusPrompt}\n`;
     systemPrompt += `2. 你的角色设定是：${getEffectivePersona(chat)}\n`;
     if ((chat.source === 'forum' || chat.source === 'peek') && (chat.supplementPersonaEnabled || chat.supplementPersonaAiEnabled)) {
         systemPrompt += `3. 在对话中可根据与用户的互动逐步丰富、补充你的人设（用户可在设置中查看并编辑「已补齐的人设」）。\n`;

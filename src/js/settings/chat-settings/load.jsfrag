@@ -550,6 +550,8 @@ function loadSettingsToSidebar() {
         document.getElementById('setting-timestamp-style').value = e.timestampStyle || 'bubble';
         document.getElementById('setting-timestamp-format').value = e.timestampFormat || 'hm';
         document.getElementById('setting-show-status').checked = e.showStatus !== false;
+        document.getElementById('setting-online-status-prompt').checked = e.onlineStatusPromptEnabled !== false;
+        document.getElementById('setting-reset-status-on-new-game').checked = e.resetStatusOnNewGame !== false;
         document.getElementById('setting-show-status-update-msg').checked = e.showStatusUpdateMsg || false;
         document.getElementById('setting-show-reminder-msg').checked = e.showReminderMsg !== false;
         document.getElementById('setting-avatar-system-enabled').checked = e.avatarSystemEnabled || false;
@@ -624,6 +626,7 @@ function loadSettingsToSidebar() {
                 
                 // 清空记录与状态
                 char.history = [];
+                if (char.resetStatusOnNewGame !== false) resetChatStatus(char);
                 char.tokens = 0;
                 if (char.memory) {
                     char.memory.journal = [];

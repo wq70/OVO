@@ -237,7 +237,7 @@ function forumEnsureData() {
     if (!Array.isArray(db.forumDrafts)) db.forumDrafts = [];
     if (!Array.isArray(db.forumAltAccounts)) db.forumAltAccounts = [];
     if (!db.forumSettings || typeof db.forumSettings !== 'object') db.forumSettings = {};
-    var defaultSettings = { preserveNpcPosts: true, activeFeed: 'all', proactiveIntensity: 50, romanceIntensity: 50, conflictIntensity: 35, contentSafety: 'balanced', quietHoursEnabled: false, quietHoursStart: '23:00', quietHoursEnd: '08:00', autoAdvanceOnOpen: false, enableRelationshipContinuity: true, enableKnowledgeBoundaries: true, enableCommunityContinuity: true };
+    var defaultSettings = { preserveNpcPosts: true, activeFeed: 'all', proactiveIntensity: 50, contentSafety: 'balanced', quietHoursEnabled: false, quietHoursStart: '23:00', quietHoursEnd: '08:00', autoAdvanceOnOpen: false, enableRelationshipContinuity: true, enableKnowledgeBoundaries: true, enableCommunityContinuity: true };
     Object.keys(defaultSettings).forEach(function(k) { if (db.forumSettings[k] === undefined) db.forumSettings[k] = defaultSettings[k]; });
 
     Object.keys(db.forumStrangerProfiles).forEach(function(id) { db.forumStrangerProfiles[id] = forumNormalizeNpcProfile(db.forumStrangerProfiles[id], id); });
@@ -397,6 +397,12 @@ function forumEvaluateIdentityEvidence(accountId) {
         rel.identitySuspicion = Math.max(rel.identitySuspicion || 0, Math.min(92, Math.round((similarity - 45) * 1.6)));
         forumAddKnowledge(npcId, accountId, evidenceText, 'public_writing_analysis', similarity, accountId);
     });
+}
+
+function forumCustomPromptSection(setting) {
+    const value = db.forumSettings?.[setting];
+    const prompt = typeof value === 'string' ? value.trim() : '';
+    return prompt ? `\n\n===== 自定义论坛提示词 =====\n口吻、题材和互动节奏按以下偏好处理。身份、知情范围和输出格式仍按本次任务的要求执行。\n${prompt}` : '';
 }
 
 function forumRelationshipSummary(rel) {

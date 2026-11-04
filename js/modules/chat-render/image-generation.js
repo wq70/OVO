@@ -14,7 +14,8 @@ window._scheduleBackgroundNaiGen = function(msgId, chatId, chatType, pvContent) 
     const taskChat = chatType === 'private' ? db.characters.find(c => c.id === chatId) : db.groups.find(g => g.id === chatId);
     const taskMessage = taskChat?.history?.find(message => message.id === msgId);
     const taskCharacter = window.OvoFaceLock?.messageCharacter(taskChat, chatType, taskMessage);
-    const imageContext = window.OvoFaceLock?.capture(taskCharacter, parsedPrompt?.subject);
+    const subject = chatType !== 'private' && parsedPrompt?.subject === 'user' ? 'other' : parsedPrompt?.subject;
+    const imageContext = window.OvoFaceLock?.capture(taskCharacter, subject);
     if (imageContext && chatType === 'group') imageContext.settings._character = null;
     _naiAutoGenQueue.push(async () => {
         // 设置 AbortController 并支持可配置的超时时间

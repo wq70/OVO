@@ -367,12 +367,56 @@ function setupChatSettings() {
         showToast('已恢复默认通话背景');
     });
     
+    for (const [id, field] of [
+        ['setting-online-status-prompt', 'onlineStatusPromptEnabled'],
+        ['setting-reset-status-on-new-game', 'resetStatusOnNewGame']
+    ]) {
+        document.getElementById(id)?.addEventListener('change', async (event) => {
+            const input = event.currentTarget;
+            const character = db.characters.find(c => c.id === currentChatId);
+            if (!character) return;
+            const previous = character[field];
+            character[field] = input.checked;
+            input.disabled = true;
+            try {
+                if (!await saveCharacter(character.id)) {
+                    character[field] = previous;
+                    if (currentChatId === character.id) input.checked = previous !== false;
+                    showToast('在线状态设置保存失败');
+                }
+            } finally {
+                input.disabled = false;
+            }
+        });
+    }
+
+    document.getElementById('reset-online-status-btn')?.addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        const character = db.characters.find(c => c.id === currentChatId);
+        if (!character) return;
+        const previousStatus = character.status;
+        const previousResetAt = character.onlineStatusResetAt;
+        resetChatStatus(character);
+        button.disabled = true;
+        try {
+            if (!await saveCharacter(character.id)) {
+                character.onlineStatusResetAt = previousResetAt;
+                if (character.status === '在线') setChatStatus(character, previousStatus);
+                showToast('在线状态重置失败');
+                return;
+            }
+            showToast('角色状态已恢复为「在线」');
+        } finally {
+            button.disabled = false;
+        }
+    });
+
     document.getElementById('clear-chat-history-btn')?.addEventListener('click', async () => {
         const character = db.characters.find(c => c.id === currentChatId);
         if (!character) return;
         if (confirm(`你确定要清空与“${character.remarkName}”的所有聊天记录吗？这个操作是不可恢复的！`)) {
             character.history = [];
-            character.status = '在线';
+            resetChatStatus(character);
             // 清除拉黑相关记忆
             character.blockHistory = [];
             character.friendRequests = [];
@@ -390,9 +434,6 @@ function setupChatSettings() {
             await saveCharacter(currentChatId);
             renderMessages(false, true);
             renderChatList();
-            if (currentChatId === character.id) {
-                document.getElementById('chat-room-status-text').textContent = '在线';
-            }
             showToast('聊天记录已清空');
         }
     });
@@ -432,6 +473,7 @@ function setupChatSettings() {
             delete exportChar.friendRequests;
             delete exportChar.userFriendRequests;
             delete exportChar.phoneControlHistory;
+            delete exportChar.userImageFaceLock;
 
             const pngDataUrl = await writeOvoPngMetadata(base64Image, exportChar);
             await OvoFileDownload.saveImage(pngDataUrl, `OVO角色卡_${character.remarkName || character.realName || '未命名'}_${new Date().toISOString().slice(0, 10)}.png`);
@@ -453,6 +495,7 @@ function setupChatSettings() {
         delete exportChar.friendRequests;
         delete exportChar.userFriendRequests;
         delete exportChar.phoneControlHistory;
+        delete exportChar.userImageFaceLock;
 
         const jsonStr = JSON.stringify(exportChar, null, 2);
         const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -1927,6 +1970,8 @@ function loadSettingsToSidebar() {
         document.getElementById('setting-timestamp-style').value = e.timestampStyle || 'bubble';
         document.getElementById('setting-timestamp-format').value = e.timestampFormat || 'hm';
         document.getElementById('setting-show-status').checked = e.showStatus !== false;
+        document.getElementById('setting-online-status-prompt').checked = e.onlineStatusPromptEnabled !== false;
+        document.getElementById('setting-reset-status-on-new-game').checked = e.resetStatusOnNewGame !== false;
         document.getElementById('setting-show-status-update-msg').checked = e.showStatusUpdateMsg || false;
         document.getElementById('setting-show-reminder-msg').checked = e.showReminderMsg !== false;
         document.getElementById('setting-avatar-system-enabled').checked = e.avatarSystemEnabled || false;
@@ -2001,6 +2046,7 @@ function loadSettingsToSidebar() {
                 
                 // 清空记录与状态
                 char.history = [];
+                if (char.resetStatusOnNewGame !== false) resetChatStatus(char);
                 char.tokens = 0;
                 if (char.memory) {
                     char.memory.journal = [];

@@ -1,11 +1,14 @@
 function generatePrivateSystemPrompt(character, opts) {
     const base = generatePrivateSystemPromptBase(character, opts);
     const profile = window.CharacterProfile?.prompt(character);
-    return profile && !base.includes(profile) ? `${base}\n\n${profile}` : base;
+    const contactMemory = window.PeekMemory?.prompt(character);
+    return [base, profile && !base.includes(profile) ? profile : '',
+        contactMemory && !base.includes('<peek_contact_memory>') ? contactMemory : ''].filter(Boolean).join('\n\n');
 }
 
 function generatePrivateSystemPromptBase(character, opts) {
     const includeMomentsActivity = window.Moments?.isChatLinked?.(character.id) !== false;
+    const includeOnlineStatus = character.onlineStatusPromptEnabled !== false;
     opts = opts || {};
     if (window.PromptStudio && typeof window.PromptStudio.compile === 'function') {
         const studioResult = window.PromptStudio.compile(character, opts);
@@ -125,7 +128,10 @@ function generatePrivateSystemPromptBase(character, opts) {
         template = template.replace(/\{\{世界书_后\}\}/g, worldBooksAfter || '');
         template = template.replace(/\{\{角色名\}\}/g, character.realName || '');
         template = template.replace(/\{\{用户称呼\}\}/g, character.myName || '');
-        template = template.replace(/\{\{角色状态\}\}/g, character.status || '在线');
+        if (!includeOnlineStatus) {
+            template = template.replace(/你的当前状态是[：:]\s*\{\{\s*角色状态\s*\}\}[。.]?/g, '');
+        }
+        template = template.replace(/\{\{\s*角色状态\s*\}\}/g, includeOnlineStatus ? character.status || '在线' : '');
         template = template.replace(/\{\{角色人设\}\}/g, getEffectivePersona(character) || '');
         template = template.replace(/\{\{用户人设\}\}/g, character.myPersona || '');
         template = template.replace(/\{\{共同回忆\}\}/g, commonMemories || '');
@@ -153,7 +159,7 @@ function generatePrivateSystemPromptBase(character, opts) {
         } else {
             template += `\n<Chatting Guidelines>\n17. **对话节奏**: 你需要模拟真人的聊天习惯，你可以一次性生成多条短消息。每次回复3-8条消息之内，**关键规则**：请保持回复消息数量的**随机性和多样性**。\n`;
         }
-        template += `18. **特殊消息格式的使用原则**：(1)请把语音、撤回、转账、商城互动、更新状态、引用、定位等特殊格式视为增强互动的“调味剂”，遵循**自然、主动、多样化触发逻辑。同种格式不要重复频繁发送，不同格式不要用户不提就一直不发**。\n(2)注意在本回合消息列里，特殊消息插入位置的随机性，每轮必须和上一回合插入位置不同。\n`;
+        template += `18. **特殊消息格式的使用原则**：(1)请把语音、撤回、转账、商城互动、${includeOnlineStatus ? '更新状态、' : ''}引用、定位等特殊格式视为增强互动的“调味剂”，遵循**自然、主动、多样化触发逻辑。同种格式不要重复频繁发送，不同格式不要用户不提就一直不发**。\n(2)注意在本回合消息列里，特殊消息插入位置的随机性，每轮必须和上一回合插入位置不同。\n`;
         template += `19. 🌟**防复读对话**🌟：在本轮回复中，你**必须**区别于过往聊天记录而去变换句式和词汇，**绝对不要**重复或模仿历史记录中的文本结构，保持自然、随机和多样性。\n`;
         template += `</Chatting Guidelines>\n`;
         template += `20. 不要主动终止聊天进程，除非我明确提出。保持你的人设，自然地进行对话。`;
@@ -471,7 +477,8 @@ function generatePrivateSystemPromptBase(character, opts) {
         prompt += `${worldBooksMiddle}\n`;
     }
     prompt += `<char_settings>\n`;
-    prompt += `1. 你的角色名是：${character.realName}。我的称呼是：${character.myName}。你的当前状态是：${character.status || '在线'}。\n`;
+    const statusPrompt = includeOnlineStatus ? `你的当前状态是：${character.status || '在线'}。` : '';
+    prompt += `1. 你的角色名是：${character.realName}。我的称呼是：${character.myName}。${statusPrompt}\n`;
     if (linkedChar) {
         prompt += `2. 【双重身份与伪装规则】\n`;
         prompt += `你当前正在使用论坛小号（网名：${character.realName}）与我聊天。但你的【真实身份】其实是：${linkedChar.realName}。\n`;
@@ -651,6 +658,9 @@ function generatePrivateSystemPromptBase(character, opts) {
         const charBlockContext = buildCharBlockMemoryContext(character);
         if (charBlockContext) prompt += '\n' + charBlockContext + '\n';
     }
+
+    const contactMemory = window.PeekMemory?.prompt(character);
+    if (contactMemory) prompt += '\n' + contactMemory + '\n';
 
     // 窥屏知晓：若用户偷看过手机并点进过应用，向角色注入「用户刚刚/在xx时间偷看过手机」及查看过的应用内容摘要
     if (character.peekScreenSettings?.charAwarePeek && character.peekViewedByUser && character.peekViewedByUser.length > 0) {
@@ -870,7 +880,7 @@ function generatePrivateSystemPromptBase(character, opts) {
         prompt += `17. **对话节奏**: 你需要模拟真人的聊天习惯，你可以一次性生成多条短消息。每次回复3-8条消息之内，**关键规则**：请保持回复消息数量的**随机性和多样性**。\n`;
     }
     
-    prompt += `18. **特殊消息格式的使用原则**：(1)请把语音、撤回、转账、商城互动、更新状态、引用、定位等特殊格式视为增强互动的“调味剂”，遵循**自然、主动、多样化触发逻辑。同种格式不要重复频繁发送，不同格式不要用户不提就一直不发**。\n(2)注意在本回合消息列里，特殊消息插入位置的随机性，每轮必须和上一回合插入位置不同。\n`;
+    prompt += `18. **特殊消息格式的使用原则**：(1)请把语音、撤回、转账、商城互动、${includeOnlineStatus ? '更新状态、' : ''}引用、定位等特殊格式视为增强互动的“调味剂”，遵循**自然、主动、多样化触发逻辑。同种格式不要重复频繁发送，不同格式不要用户不提就一直不发**。\n(2)注意在本回合消息列里，特殊消息插入位置的随机性，每轮必须和上一回合插入位置不同。\n`;
     prompt += `19. 🌟**防复读对话**🌟：在本轮回复中，你**必须**区别于过往聊天记录而去变换句式和词汇，**绝对不要**重复或模仿历史记录中的文本结构，保持自然、随机和多样性。\n`;
     prompt += `</Chatting Guidelines>\n`
 

@@ -1,76 +1,108 @@
 // --- 偷看手机功能 (js/modules/peek.js) ---
 
+function getPeekResponseFormat(character) {
+    return character?.peekScreenSettings?.responseFormat === 'json' ? 'json' : 'xml';
+}
+
+function parsePeekResponse(content, format) {
+    if (format !== 'json') return parseXmlToJson(content);
+    if (typeof content !== 'string' || !content.trim()) {
+        throw new Error('AI 没有返回可解析的正文，请手动刷新。');
+    }
+
+    const source = content.trim();
+    const fenced = source.match(/^\s*```json[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]*```[ \t]*$/im);
+    // 旧版也允许 JSON 对象前后带少量说明文字。
+    const jsonText = fenced?.[1] ?? (/^[\[<]/.test(source) ? source : source.match(/\{[\s\S]*\}/)?.[0]);
+    try {
+        const parsed = JSON.parse(jsonText);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    } catch {
+        // 用统一的错误提示，避免把角色正文写到报错里。
+    }
+    throw new Error('JSON 解析错误：AI 返回的内容不是有效的 JSON 对象，请手动刷新。');
+}
+
 function parseXmlToJson(xmlString) {
-    const match = xmlString.match(/<result>([\s\S]*?)<\/result>/i);
-    const xmlContent = match ? match[0] : xmlString;
+    if (typeof xmlString !== 'string' || !xmlString.trim()) {
+        throw new Error('AI 没有返回可解析的正文，请手动刷新。');
+    }
+
+    const source = xmlString.trim();
+    const fenced = source.match(/^```(?:xml)?[ \t]*\r?\n([\s\S]*?)\r?\n?```$/i);
+    let xmlContent = fenced ? fenced[1] : source;
+    let resultStart = -1;
+    let resultDepth = 0;
+    // CDATA、注释和处理指令里的标签只是内容，不能作为结果的边界。
+    const resultTags = /<!\[CDATA\[[\s\S]*?\]\]>|<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<result\s*>|<\/result\s*>/gi;
+    for (const tag of xmlContent.matchAll(resultTags)) {
+        if (/^<result/i.test(tag[0])) {
+            if (resultDepth++ === 0) resultStart = tag.index;
+        } else if (/^<\/result/i.test(tag[0]) && resultDepth > 0 && --resultDepth === 0) {
+            xmlContent = xmlContent.slice(resultStart, tag.index + tag[0].length);
+            break;
+        }
+    }
+    if (resultDepth > 0) throw new Error('XML 解析错误：AI 返回的 XML 内容不完整，请手动刷新。');
 
     const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
-    
-    const parseError = xmlDoc.getElementsByTagName("parsererror");
-    if (parseError.length > 0) {
-        throw new Error("XML 解析错误: " + parseError[0].textContent);
+    let xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+    if (xmlDoc.getElementsByTagName('parsererror').length) {
+        // 仅转义文本节点中裸露的 &，保留标签、实体及 CDATA 原文。
+        const fixed = xmlContent.replace(/<!\[CDATA\[[\s\S]*?\]\]>|<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<(?:[^<>"']|"[^"]*"|'[^']*')*>|[^<]+/g, part =>
+            part.startsWith('<') ? part : part.replace(/&(?!(?:#\d+|#x[\da-fA-F]+|[\w:.-]+);)/g, '&amp;'));
+        if (fixed !== xmlContent) xmlDoc = parser.parseFromString(fixed, 'text/xml');
+        if (resultStart === -1 && xmlDoc.getElementsByTagName('parsererror').length) {
+            // 接受省略外层 <result> 的完整 XML 字段。根节点间的说明文字仍视为格式错误。
+            const wrapped = parser.parseFromString(`<result>${fixed}</result>`, 'text/xml');
+            if (!wrapped.getElementsByTagName('parsererror').length && wrapped.documentElement.children.length > 1 &&
+                Array.from(wrapped.documentElement.childNodes).every(node => node.nodeType === Node.ELEMENT_NODE ||
+                    node.nodeType === Node.COMMENT_NODE || (node.nodeType === Node.TEXT_NODE && !node.textContent.trim()))) {
+                xmlDoc = wrapped;
+            }
+        }
+        if (xmlDoc.getElementsByTagName('parsererror').length) {
+            throw new Error('XML 解析错误：AI 返回的内容无法解析为有效 XML，请手动刷新。');
+        }
     }
 
     function parseNode(node) {
-        if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.CDATA_SECTION_NODE) {
-            let text = node.textContent.trim();
+        if (!node.children.length) {
+            const text = node.textContent.trim();
             if (text === 'true') return true;
             if (text === 'false') return false;
             if (!isNaN(text) && text !== '') return Number(text);
             return text;
         }
 
-        if (node.nodeType === Node.ELEMENT_NODE) {
-            const children = Array.from(node.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE || ((n.nodeType === Node.TEXT_NODE || n.nodeType === Node.CDATA_SECTION_NODE) && n.textContent.trim() !== ''));
-            
-            if (children.length === 0) return "";
-            
-            if (children.length === 1 && (children[0].nodeType === Node.TEXT_NODE || children[0].nodeType === Node.CDATA_SECTION_NODE)) {
-                return parseNode(children[0]);
-            }
-
-            const obj = {};
-            const isArrayMap = {};
-
-            children.forEach(child => {
-                if (child.nodeType === Node.ELEMENT_NODE) {
-                    const name = child.nodeName;
-                    if (obj[name] !== undefined) {
-                        if (!isArrayMap[name]) {
-                            obj[name] = [obj[name]];
-                            isArrayMap[name] = true;
-                        }
-                        obj[name].push(parseNode(child));
-                    } else {
-                        obj[name] = parseNode(child);
-                    }
-                }
-            });
-
-            for (const key in obj) {
-                if (typeof obj[key] === 'object' && !Array.isArray(obj[key]) && obj[key] !== null) {
-                    const subKeys = Object.keys(obj[key]);
-                    if (subKeys.length === 1) {
-                        const subKey = subKeys[0];
-                        const listKeys = ['item', 'entry', 'photo', 'memo', 'thought', 'post', 'conversation', 'reply', 'message', 'comment'];
-                        if (key.endsWith('s') || listKeys.includes(subKey) || key === 'history' || key === 'trajectory') {
-                            if (Array.isArray(obj[key][subKey])) {
-                                obj[key] = obj[key][subKey];
-                            } else {
-                                obj[key] = [obj[key][subKey]];
-                            }
-                        }
-                    }
-                }
-            }
-            return obj;
+        const obj = {};
+        const repeated = new Set();
+        for (const child of node.children) {
+            const name = child.nodeName;
+            if (name === '__proto__') continue;
+            const value = parseNode(child);
+            if (repeated.has(name)) obj[name].push(value);
+            else if (Object.hasOwn(obj, name)) {
+                obj[name] = [obj[name], value];
+                repeated.add(name);
+            } else obj[name] = value;
         }
-        return null;
+
+        const listKeys = ['item', 'entry', 'photo', 'memo', 'thought', 'post', 'conversation', 'reply', 'message', 'comment'];
+        for (const [key, value] of Object.entries(obj)) {
+            if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+            const subKeys = Object.keys(value);
+            if (subKeys.length !== 1) continue;
+            const subKey = subKeys[0];
+            if (key.endsWith('s') || listKeys.includes(subKey) || key === 'history' || key === 'trajectory') {
+                obj[key] = Array.isArray(value[subKey]) ? value[subKey] : [value[subKey]];
+            }
+        }
+        return obj;
     }
 
     const result = parseNode(xmlDoc.documentElement);
-    return xmlDoc.documentElement.nodeName === 'result' ? result : { [xmlDoc.documentElement.nodeName]: result };
+    return xmlDoc.documentElement.nodeName.toLowerCase() === 'result' ? result : { [xmlDoc.documentElement.nodeName]: result };
 }
 
 /** 当前打开的偷看对话（代发消息时用于发送/API回复） */
@@ -215,12 +247,33 @@ function setupPeekFeature() {
         }
     });
 
-    document.getElementById('save-peek-settings-btn')?.addEventListener('click', async () => {
+    const contextSettings = document.getElementById('peek-chat-context-settings');
+    contextSettings.addEventListener('change', e => {
+        const selectAll = contextSettings.querySelector('.peek-context-all input');
+        if (e.target === selectAll) {
+            contextSettings.querySelectorAll('.peek-context-apps input').forEach(input => {
+                input.checked = selectAll.checked;
+            });
+        }
+        updatePeekContextSelection(contextSettings);
+    });
+
+    document.getElementById('save-peek-settings-btn')?.addEventListener('click', async e => {
         const character = db.characters.find(c => c.id === currentChatId);
         if (!character) {
             showToast('错误：未找到当前角色');
             return;
         }
+
+        const contextInput = contextSettings.querySelector('input[type="number"]');
+        const contextLimit = contextInput.valueAsNumber;
+        if (!Number.isSafeInteger(contextLimit) || contextLimit < 1) {
+            showToast('聊天记录条数请输入大于 0 的整数');
+            contextSettings.open = true;
+            contextInput.focus();
+            return;
+        }
+        const contextApps = Array.from(contextSettings.querySelectorAll('.peek-context-apps input:checked'), input => input.value);
 
         if (!character.peekScreenSettings) {
             character.peekScreenSettings = { wallpaper: '', customIcons: {}, unlockAvatar: '', unlockCommentsEnabled: false, charAwarePeek: false, impersonateEnabled: false, refreshCounts: {}, browserDetailEnabled: false, browserDetailWords: { min: 200, max: 500 } };
@@ -270,14 +323,31 @@ function setupPeekFeature() {
         character.peekScreenSettings.browserDetailWords.min = parseNum('peek-browser-detail-min-words', 200);
         character.peekScreenSettings.browserDetailWords.max = parseNum('peek-browser-detail-max-words', 500);
 
-        await saveData();
+        const settings = character.peekScreenSettings;
+        const previousContext = settings.chatContext;
+        const previousFormat = settings.responseFormat;
+        const saveButton = e.currentTarget;
+        saveButton.disabled = true;
+        settings.chatContext = { limit: contextLimit, apps: contextApps };
+        settings.responseFormat = document.getElementById('peek-response-format').value === 'json' ? 'json' : 'xml';
+        try {
+            if (await saveData() === false) {
+                if (previousContext === undefined) delete settings.chatContext;
+                else settings.chatContext = previousContext;
+                if (previousFormat === undefined) delete settings.responseFormat;
+                else settings.responseFormat = previousFormat;
+                return;
+            }
+        } finally {
+            saveButton.disabled = false;
+        }
         renderPeekScreen(); 
         showToast('已保存！');
         peekWallpaperModal.classList.remove('visible');
     });
 
     peekWallpaperModal.addEventListener('click', (e) => {
-        const header = e.target.closest('.collapsible-header');
+        const header = e.target.closest('.collapsible-header:not(summary)');
         if (header) {
             header.parentElement.classList.toggle('open');
         }
@@ -291,7 +361,7 @@ function setupPeekFeature() {
             const char = db.characters.find(c => c.id === currentChatId);
             const cachedData = char ? char.peekData.messages : null;
             if (cachedData && cachedData.conversations) {
-                const conversation = cachedData.conversations.find(c => c.partnerName === partnerName);
+                const conversation = cachedData.conversations.find(c => chatItem.dataset.partnerId ? c.partnerId === chatItem.dataset.partnerId : c.partnerName === partnerName);
                 if (conversation) {
                     const idx = cachedData.conversations.indexOf(conversation);
                     normalizePeekConversation(conversation, idx);
@@ -376,31 +446,40 @@ async function refreshAllPeekApps() {
     showToast('开始批量刷新…');
 
     let successCount = 0;
-    let failCount = 0;
+    const failedApps = [];
+    const refreshButton = document.getElementById('refresh-all-peek-apps-btn');
+    if (refreshButton) refreshButton.disabled = true;
 
-    for (let i = 0; i < allAppIds.length; i++) {
-        const appId = allAppIds[i];
-        const appName = peekScreenApps[appId].name;
+    try {
+        for (let i = 0; i < allAppIds.length; i++) {
+            const appId = allAppIds[i];
+            const appName = peekScreenApps[appId].name;
 
-        showToast(`正在刷新 ${appName}… (${i + 1}/${allAppIds.length})`);
+            showToast(`正在刷新 ${appName}… (${i + 1}/${allAppIds.length})`);
 
-        try {
-            await generateAndRenderPeekContent(appId, { forceRefresh: true });
-            successCount++;
-            await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (error) {
-            console.error(`刷新 ${appName} 失败:`, error);
-            failCount++;
+            try {
+                const updated = await generateAndRenderPeekContent(appId, {
+                    forceRefresh: true, background: true, characterId: char.id
+                });
+                if (updated) successCount++;
+                else failedApps.push(appName);
+            } catch (error) {
+                console.error(`刷新 ${appName} 失败:`, error);
+                failedApps.push(appName);
+            }
+            if (i < allAppIds.length - 1) await new Promise(resolve => setTimeout(resolve, 500));
         }
+    } finally {
+        if (refreshButton) refreshButton.disabled = false;
     }
 
-    if (failCount === 0) {
+    if (failedApps.length === 0) {
         showToast(`✓ 全部刷新完成！已更新 ${successCount} 个应用`);
     } else {
-        showToast(`刷新完成！成功: ${successCount}，失败: ${failCount}`);
+        showToast(`刷新完成，成功 ${successCount} 个，失败 ${failedApps.length} 个（${failedApps.join('、')}）。`);
     }
 
-    renderPeekScreen();
+    if (currentChatId === char.id) renderPeekScreen();
 }
 
 function getPeekRealOrderIds(char) {
@@ -425,6 +504,13 @@ function peekBilingualText(text, originalHtml) {
     return character && typeof BilingualContent !== 'undefined' ? BilingualContent.html(text, character, 'peek', 'peek', originalHtml == null ? {} : { originalHtml }) : originalHtml ?? peekEscapeHtml(text).replace(/\n/g, '<br>');
 }
 
+function peekConversationMessageHtml(message, character, text = message?.content) {
+    const originalHtml = peekEscapeHtml(text).replace(/\n/g, '<br>');
+    if (!message || message.isImpersonated || typeof BilingualContent === 'undefined') return originalHtml;
+    const peekSpeaker = message.sender === 'char' ? 'char' : 'partner';
+    return BilingualContent.html(text, character, 'peek', 'peek', { originalHtml, peekSpeaker });
+}
+
 function hasPeekRealOrders(char) {
     return getPeekRealOrderIds(char).size > 0
         || (char.walletLedger?.transactions || []).some(item => item.source === 'shop');
@@ -437,6 +523,12 @@ function getPeekClearRevision(charId, appId) {
 
 let peekClearInProgress = false;
 async function clearPeekStoredData(char, appIds, clearOrders) {
+    return window.PeekMemory
+        ? window.PeekMemory.serialize(char, () => clearPeekStoredDataImpl(char, appIds, clearOrders))
+        : clearPeekStoredDataImpl(char, appIds, clearOrders);
+}
+
+async function clearPeekStoredDataImpl(char, appIds, clearOrders) {
     if (peekClearInProgress) return false;
     peekClearInProgress = true;
     const previous = {
@@ -447,6 +539,7 @@ async function clearPeekStoredData(char, appIds, clearOrders) {
         piggyBank: clearOrders && db.piggyBank ? JSON.parse(JSON.stringify(db.piggyBank)) : db.piggyBank
     };
     const markedMessages = [];
+    const undoMemory = window.PeekMemory?.clearFields(char, appIds);
     try {
         (appIds === null ? Object.keys(peekScreenApps) : appIds).forEach(appId => {
             const key = `${char.id}:${appId}`;
@@ -487,6 +580,7 @@ async function clearPeekStoredData(char, appIds, clearOrders) {
         if (!saved) throw new Error('数据保存失败');
         return true;
     } catch (error) {
+        undoMemory?.();
         char.peekData = previous.peekData;
         char.peekViewedByUser = previous.peekViewedByUser;
         char.lastPeekViewedAt = previous.lastPeekViewedAt;
@@ -605,9 +699,28 @@ async function deleteAllPeekData() {
     document.getElementById('peek-data-management-modal').classList.remove('visible');
 }
 
+function updatePeekContextSelection(settings) {
+    const total = settings.querySelectorAll('.peek-context-apps input').length;
+    const selected = settings.querySelectorAll('.peek-context-apps input:checked').length;
+    const selectAll = settings.querySelector('.peek-context-all input');
+    selectAll.checked = total > 0 && selected === total;
+    selectAll.indeterminate = selected > 0 && selected < total;
+    settings.querySelector('.peek-context-count').textContent = `已选 ${selected}/${total}`;
+}
+
 function renderPeekSettings() {
     const character = db.characters.find(c => c.id === currentChatId);
     const peekSettings = character?.peekScreenSettings || { wallpaper: '', customIcons: {}, unlockAvatar: '', unlockCommentsEnabled: false, charAwarePeek: false, impersonateEnabled: false, refreshCounts: {} };
+    document.getElementById('peek-response-format').value = getPeekResponseFormat(character);
+
+    const contextSettings = document.getElementById('peek-chat-context-settings');
+    const { limit, apps } = peekSettings.chatContext || {};
+    contextSettings.querySelector('input[type="number"]').value = Number.isSafeInteger(limit) && limit > 0 ? limit : 10;
+    const selectedApps = Array.isArray(apps) ? apps : ['messages'];
+    contextSettings.querySelector('.peek-context-apps').innerHTML = Object.entries(peekScreenApps).map(([id, app]) =>
+        `<label class="peek-context-app"><input type="checkbox" value="${id}"${selectedApps.includes(id) ? ' checked' : ''}><span>${peekEscapeHtml(app.name)}</span></label>`
+    ).join('');
+    updatePeekContextSelection(contextSettings);
 
     // 1. 设置壁纸输入框
     const wallpaperInput = document.getElementById('peek-wallpaper-url-input');
@@ -688,9 +801,19 @@ function recordPeekViewedByUser(char, appType) {
     const appName = (peekScreenApps[appType] && peekScreenApps[appType].name) ? peekScreenApps[appType].name : appType;
     if (!char.peekViewedByUser) char.peekViewedByUser = [];
     const idx = char.peekViewedByUser.findIndex(e => e.appId === appType);
+    const previous = char.peekViewedByUser[idx];
+    const previousTime = char.lastPeekViewedAt;
     const entry = { appId: appType, appName, content: JSON.parse(JSON.stringify(content)) };
     if (idx >= 0) char.peekViewedByUser[idx] = entry;
     else char.peekViewedByUser.push(entry);
-    char.lastPeekViewedAt = Date.now();
+    const viewedAt = Date.now();
+    char.lastPeekViewedAt = viewedAt;
+    return () => {
+        const index = char.peekViewedByUser?.indexOf(entry) ?? -1;
+        if (index < 0) return;
+        if (previous) char.peekViewedByUser[index] = previous;
+        else char.peekViewedByUser.splice(index, 1);
+        if (char.lastPeekViewedAt === viewedAt) char.lastPeekViewedAt = previousTime;
+    };
 }
 

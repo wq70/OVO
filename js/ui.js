@@ -299,8 +299,7 @@ function updateCustomBubbleStyle(chatId, css, enabled) {
     }
 
     // 处理模板变量 ({{char_avatar}}, {{user_avatar}} 等)
-    // processTemplate 定义在 js/utils.js 中
-    const processedCss = (typeof processTemplate === 'function' && chat) ? processTemplate(css, chat) : css;
+    const processedCss = (typeof processTemplate === 'function' && chat) ? processTemplate(css, chat, { css: true }) : css;
 
     const styleElement = document.createElement('style');
     styleElement.id = `custom-bubble-style-for-${chatId}`;

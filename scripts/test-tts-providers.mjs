@@ -120,6 +120,38 @@ function fixture() {
     assert.equal(request.headers['X-Api-Resource-Id'], 'seed-tts-2.0');
 }
 
+// Nested audio tags survive chat parsing and stay separate from the displayed transcript.
+{
+    const { context, service, eleven } = fixture();
+    for (const file of ['js/core/ui-and-content-utils.js', 'js/modules/chat-render/message-bubble.js']) {
+        vm.runInContext(read(file), context, { filename: file });
+    }
+    const body = '[hesitates]第一句。［pause］[low, embarrassed]第二句。[quietly, after a pause]第三句。「翻译」';
+    const voice = '[角色的语音：' + body + ']';
+    const parts = context.getMixedContent(voice + '[角色的消息：下一条]');
+    assert.equal(parts.length, 2);
+    const spoken = context.extractVoiceMessageText(parts[0].content);
+    assert.equal(spoken, body);
+    assert.equal(context.extractVoiceMessageText('[角色的语音:旧消息]'), '旧消息');
+    assert.equal(context.extractVoiceMessageText('[角色的消息：普通消息]'), null);
+
+    let requestText;
+    context.fetch = async (_url, options) => {
+        requestText = JSON.parse(options.body).text;
+        return new Response(new Uint8Array([1]), { headers: { 'content-type': 'audio/mpeg' } });
+    };
+    service.saveConfig({ ...eleven, elevenModel: 'eleven_v3' });
+    assert.equal(service.formatVoiceTranscript(spoken), '第一句。第二句。第三句。「翻译」');
+    await service.synthesize(spoken, eleven.elevenVoiceId);
+    assert.equal(requestText, '[hesitates]第一句。[pause][low, embarrassed]第二句。第三句。');
+
+    service.saveUserConfig({ ...eleven, elevenModel: 'eleven_v4_turbo', elevenTagMode: 'custom', elevenShowTagsInTranscript: true });
+    assert.equal(service.formatVoiceTranscript(spoken, true), spoken);
+    await service.synthesize(spoken, eleven.elevenVoiceId, 'auto', { forUser: true });
+    assert.equal(requestText, '[hesitates]第一句。[pause][low, embarrassed]第二句。[quietly, after a pause]第三句。');
+    assert.equal(service.cleanText(spoken, eleven), '第一句。第二句。第三句。');
+}
+
 // User synthesis works with role synthesis disabled; missing and invalid voices fail before requests.
 {
     const { service, context, eleven } = fixture();
@@ -251,14 +283,20 @@ for (const [status, message] of [[401, /Key/], [403, /权限/], [404, /音色/],
     element('minimax-tts-enabled').checked = true; element('minimax-user-tts-enabled');
     element('elevenlabs-api-key', 'private-key'); element('elevenlabs-model', 'eleven_v3');
     element('elevenlabs-voice-id', 'saved-voice'); element('elevenlabs-url', 'https://api.elevenlabs.io');
+    element('elevenlabs-tag-mode', 'custom'); element('elevenlabs-show-tags').checked = true;
     element('minimax-group-id'); element('minimax-api-key'); element('minimax-domain', 'api.minimax.cn');
     element('minimax-tts-model', 'speech-2.8-hd');
     assert.equal(settings.saveTTSConfig(), true);
     assert.equal(JSON.parse(storage.get('minimax_tts_config')).elevenVoiceId, 'saved-voice');
+    assert.equal(service.config.elevenTagMode, 'custom');
+    assert.equal(service.config.elevenShowTagsInTranscript, true);
     vm.runInContext('saveCurrentTTSAsPreset()', context);
     element('elevenlabs-voice-id', 'changed');
+    element('elevenlabs-tag-mode', 'preset'); element('elevenlabs-show-tags').checked = false;
     vm.runInContext('applyTTSPreset("saved")', context);
     assert.equal(context.document.getElementById('elevenlabs-voice-id').value, 'saved-voice');
+    assert.equal(context.document.getElementById('elevenlabs-tag-mode').value, 'custom');
+    assert.equal(context.document.getElementById('elevenlabs-show-tags').checked, true);
     let exported;
     context.document.createElement = () => ({ click() { exported = blobs.get(this.href); } });
     // Inspect the existing exporter payload; delivery is covered by file-download tests.

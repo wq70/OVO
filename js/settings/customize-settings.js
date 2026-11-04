@@ -1072,6 +1072,7 @@ body.night-mode-active .message-input-area textarea {
 
     const paneSystemHTML = `
     <div class="cust-tab-pane" id="cust-pane-system">
+        ${window.ChatKeyboardLayout?.settingsHtml() || ''}
         <!-- 顶栏状态栏 -->
         <div class="cust-card">
             <div class="cust-card-header">
@@ -1291,6 +1292,7 @@ margin-left: auto !important;
     setupNightModeBindings();
     // ---------- 顶栏状态栏事件绑定 ----------
     setupStatusBarBindings();
+    window.ChatKeyboardLayout?.bindSettings();
 }
 
 // ============================================

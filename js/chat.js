@@ -438,13 +438,14 @@ function setupChatRoom() {
                 if (transcript) {
                     transcript.classList.toggle('active');
                     if (voiceTranslation) voiceTranslation.classList.toggle('active');
-                    const voiceText = transcript.textContent.trim();
+                    const voiceText = voiceBubble.dataset.voiceText;
                     if (!voiceText) return;
 
                     const playKey = wrapper ? wrapper.dataset.id : null;
                     const svc = typeof MinimaxTTSService !== 'undefined' ? MinimaxTTSService : null;
                     const state = svc ? svc.getPlayState() : {};
                     const isUserMsg = wrapper && wrapper.classList.contains('sent');
+                    transcript.textContent = svc?.formatVoiceTranscript(voiceText, isUserMsg) ?? voiceText;
 
                     // 对应的角色/用户 API 开关 + 当前聊天语音开关必须同时打开
                     // 任一未开启则静默忽略，不弹提示

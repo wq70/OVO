@@ -16,6 +16,7 @@ const context = vm.createContext({
     crypto: webcrypto, Blob, FormData, Response, Uint8Array, DataView, TextDecoder, TextEncoder,
     AbortController, DOMException, URL, setTimeout, clearTimeout, atob, btoa,
     fetch: async (url, options) => {
+        if (url.startsWith('data:')) return fetch(url, options);
         sent.push({ url, options });
         if (url.includes('generateContent')) return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: png } }] } }] }));
         return new Response(JSON.stringify({ data: [{ b64_json: png }] }), { headers: { 'content-type': 'application/json' } });
@@ -31,7 +32,7 @@ for (const file of ['js/core/face-lock.js', 'js/core/novelai-compat.js', 'js/cor
     vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context, { filename: file });
 }
 const face = context.window.OvoFaceLock;
-const a = { id: 'A', avatar: imageA, gptArtistPrompt: 'style-A', imageFaceLock: { enabled: true, referenceImage: imageA }, history: [{ id: 'a-msg', role: 'assistant' }] };
+const a = { id: 'A', avatar: imageA, myAvatar: imageB, gptArtistPrompt: 'style-A', imageFaceLock: { enabled: true, referenceImage: imageA }, history: [{ id: 'a-msg', role: 'assistant' }, { id: 'user-portrait', role: 'assistant' }] };
 const b = { id: 'B', avatar: imageB, gptArtistPrompt: 'style-B', imageFaceLock: { enabled: true, referenceImage: imageB }, history: [{ id: 'b-msg', role: 'assistant' }] };
 context.db.characters = [a, b];
 context.db.gptImageSettings = { enabled: true, url: 'https://gpt.test/v1/images/generations', key: 'original-key', model: 'gpt-image-2', size: '512x512' };
@@ -41,7 +42,11 @@ context.db.activeImageProvider = 'gpt';
 assert.equal(face.parsePrompt('selfie, ovo_subject_self').subject, 'self');
 assert.equal(face.parsePrompt('selfie, ovo_subject_self').prompt, 'selfie');
 assert.equal(face.parsePrompt('selfie, ovo_subject_self, smiling').prompt, 'selfie,  smiling');
-for (const prompt of ['a landscape', 'a cat, ovo_subject_other', 'group photo, ovo_subject_self, ovo_subject_other']) {
+assert.equal(face.parsePrompt('portrait, OVO_SUBJECT_USER').subject, 'user');
+assert.equal(face.parsePrompt('portrait, OVO_SUBJECT_USER').prompt, 'portrait');
+assert.match(face.subjectInstruction(true), /ovo_subject_user/);
+assert.doesNotMatch(face.subjectInstruction(), /ovo_subject_user/);
+for (const prompt of ['a landscape', 'a cat, ovo_subject_other', 'group photo, ovo_subject_self, ovo_subject_other', 'group photo, ovo_subject_self, ovo_subject_user']) {
     assert.equal(face.parsePrompt(prompt).subject, 'other', 'unknown, scenery and contradictory subjects must not borrow a face');
     assert.equal(face.capture(a, face.parsePrompt(prompt).subject).settings._faceLock, undefined);
 }
@@ -52,17 +57,41 @@ context.db.groups.push(group);
 assert.equal(face.messageCharacter(group, 'group', group.history[0]).id, 'A');
 assert.equal(face.messageCharacter(group, 'group', { role: 'assistant', senderId: 'missing' }), null);
 
+// 两个开关独立，USER 默认取自己的头像，只有保存后才影响生成。
+const controls = new Map();
+for (const prefix of ['setting-face-lock-', 'setting-user-face-lock-']) {
+    for (const suffix of ['enabled', 'reference', 'preview', 'empty', 'change', 'status', 'file', 'source']) {
+        controls.set(prefix + suffix, { removeAttribute() {} });
+    }
+}
+context.document.getElementById = id => controls.get(id);
+context.compressImage = async () => imageB;
+face.loadSettings(a);
+const userToggle = controls.get('setting-user-face-lock-enabled');
+assert.equal(userToggle.checked, false);
+userToggle.checked = true;
+await userToggle.onchange();
+assert.equal(controls.get('setting-user-face-lock-preview').src, imageB);
+assert.equal(controls.get('setting-face-lock-preview').src, imageA);
+assert.equal(face.capture(a, 'user').settings._faceLock, undefined);
+face.saveSettings(a);
+assert.equal(a.userImageFaceLock.referenceImage, imageB);
+assert.equal(face.capture(b, 'user').settings._faceLock, undefined);
+
 // 实际排队后切换界面、模型、密钥和参考图；两个任务仍各用自己的排队快照。
 context.window._scheduleBackgroundNaiGen('a-msg', 'A', 'private', '自拍{{selfie, ovo_subject_self}}');
 context.window._scheduleBackgroundNaiGen('b-msg', 'B', 'private', '自拍{{selfie, ovo_subject_self}}');
+context.window._scheduleBackgroundNaiGen('user-portrait', 'A', 'private', '你的单人照{{portrait, ovo_subject_user}}');
+context.window._scheduleBackgroundNaiGen('group-msg', 'G', 'group', '你的单人照{{portrait, ovo_subject_user}}');
 a.imageFaceLock.referenceImage = imageB;
+a.userImageFaceLock.referenceImage = imageA;
 a.gptArtistPrompt = 'changed-style';
 context.db.gptImageSettings.key = 'changed-key';
 context.db.gptImageSettings.model = 'dall-e-3';
 context.db.activeImageProvider = 'google';
 for (const task of context._naiAutoGenQueue.splice(0)) await task();
-assert.equal(sent.length, 2);
-for (const request of sent) {
+assert.equal(sent.length, 4);
+for (const request of sent.slice(0, 3)) {
     assert.equal(request.url, 'https://gpt.test/v1/images/edits', 'full configured generation URLs must route to edits for references');
     assert.equal(request.options.headers.Authorization, 'Bearer original-key');
     assert.equal(request.options.body.get('model'), 'gpt-image-2');
@@ -72,10 +101,15 @@ for (const request of sent) {
 }
 assert.equal(await sent[0].options.body.get('image').text(), Buffer.from(png, 'base64').toString());
 assert.equal(await sent[1].options.body.get('image').text(), 'reference-B');
+assert.equal(await sent[2].options.body.get('image').text(), 'reference-B');
+assert.equal(sent[3].url, 'https://gpt.test/v1/images/generations', 'group messages must not borrow a private USER reference');
+assert.doesNotMatch(JSON.parse(sent[3].options.body).prompt, /ovo_subject_/);
 assert.match(sent[0].options.body.get('prompt'), /style-A/);
 assert.match(sent[1].options.body.get('prompt'), /style-B/);
 assert.equal(a.history[0].imageGenerationMeta.faceLock.characterId, 'A');
 assert.equal(b.history[0].imageGenerationMeta.faceLock.characterId, 'B');
+assert.equal(a.history[1].imageGenerationMeta.faceLock.subject, 'user');
+assert.equal(group.history[0].imageGenerationMeta.faceLock, null);
 assert.equal(JSON.parse(JSON.stringify(a)).imageFaceLock.referenceImage, imageB, 'ordinary character serialization retains the reference');
 
 // Google 输入必须实际携带图片，返回数据保留人物参考使用信息。
@@ -109,6 +143,12 @@ assert.equal(result.faceLock.characterId, 'A');
 assert.equal(vibeCalls + preciseCalls, 0);
 assert.equal(JSON.stringify([context.db.novelAiVibeSettings, context.db.novelAiPreciseReferenceSettings]), beforeGlobal);
 assert.equal(result.requestSnapshot.parameters.director_reference_images, undefined, 'diagnostics must not duplicate image data');
+a.userImageFaceLock.referenceImage = imageB;
+result = await context.generateImageDispatch('portrait of the user', null, face.capture(a, 'user', 'novelai'));
+body = JSON.parse(sent.at(-1).options.body);
+assert.equal(body.parameters.director_reference_images[0], imageB.split(',')[1]);
+assert.equal(result.faceLock.subject, 'user');
+assert.equal(vibeCalls + preciseCalls, 0);
 await context.generateImageDispatch('a cat', null, face.capture(a, 'other', 'novelai'));
 assert.equal(vibeCalls, 1);
 assert.equal(preciseCalls, 1);

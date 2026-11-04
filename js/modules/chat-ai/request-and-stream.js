@@ -413,6 +413,7 @@ async function getAiReply(chatId, chatType, isBackground = false, isSummary = fa
     const bindingFeature = replyOptions.backgroundReason === 'followUp' ? 'followUp' : apiFeature;
     const roleContext = replyOptions.member ? { chat: routeChat, member: replyOptions.member } : routeChat;
     const apiStartedAt = Date.now();
+    replyOptions = { ...replyOptions, apiStartedAt };
     apiConfig = replyOptions.apiConfigSnapshot || (typeof getApiConfigForFeature === 'function' ? getApiConfigForFeature(bindingFeature, apiConfig, roleContext) : apiConfig);
     
     let {url, key, model, provider} = apiConfig;

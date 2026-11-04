@@ -43,10 +43,13 @@ function renderPeekScreen() {
     });
 
     updateClock();
+    window.PeekHistoryUI?.mountHome();
 }
 
 function renderPeekChatList(conversations = []) {
+    window.PeekHistoryUI?.mountList();
     const container = document.getElementById('peek-chat-list-container');
+    const character = db.characters.find(item => item.id === currentChatId);
     container.innerHTML = '';
 
     if (!conversations || conversations.length === 0) {
@@ -61,15 +64,16 @@ function renderPeekChatList(conversations = []) {
         const li = document.createElement('li');
         li.className = 'list-item chat-item';
         li.dataset.name = convo.partnerName;
+        li.dataset.partnerId = convo.partnerId || '';
 
         const avatarUrl = 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg';
 
         li.innerHTML = `
-            <img src="${avatarUrl}" alt="${convo.partnerName}" class="chat-avatar">
+            <img src="${avatarUrl}" alt="${peekEscapeHtml(convo.partnerName)}" class="chat-avatar">
             <div class="item-details">
-                <div class="item-details-row"><div class="item-name">${convo.partnerName}</div></div>
+                <div class="item-details-row"><div class="item-name">${peekEscapeHtml(convo.partnerName)}</div></div>
                 <div class="item-preview-wrapper">
-                    <div class="item-preview">${lastMessage?.sender === "char" ? peekBilingualText(lastMessageText, lastMessageText) : lastMessageText}</div>
+                    <div class="item-preview">${peekConversationMessageHtml(lastMessage, character, lastMessageText)}</div>
                 </div>
             </div>`;
         container.appendChild(li);

@@ -1,4 +1,4 @@
-function getForumGenerationContext() {
+function getForumGenerationContext({ forPrivateMessage = false, includeCommunityContext = true } = {}) {
     if (typeof forumEnsureData === 'function') forumEnsureData();
     let context = "以下是论坛社区的背景设定和主要角色信息：\n\n";
     const bindings = db.forumBindings || { worldBookIds: [], charIds: [], userPersonaIds: [] };
@@ -35,7 +35,9 @@ function getForumGenerationContext() {
         });
     }
 
-    if (context.length < 50) {
+    if (!includeCommunityContext) return context;
+
+    if (!forPrivateMessage && context.length < 50) {
         context += "没有提供任何特定的背景设定，请自由发挥，创作一些通用的、有趣有网感的论坛帖子。禁止以user或者char的视角制作帖子，发帖人只能是NPC。\n\n";
     }
 
@@ -53,8 +55,8 @@ function getForumGenerationContext() {
             return isPublic && (!isAnyUserAccount || p.authorId === activeAuthorId || p.authorId === activeAccountId);
         }).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 12);
         if (recentPosts.length) {
-            context += "===== 社区近期历史（用于延续、回应、反转或让旧话题发酵，禁止机械复述） =====\n";
-            recentPosts.forEach(p => { context += `帖子ID: ${p.id}\n作者: ${p.username}\n标题: ${p.title}\n摘要: ${(p.summary || p.content || '').slice(0, 180)}\n热度: ${(p.likeCount || 0) + (p.comments || []).length * 3}\n\n`; });
+            context += "===== 社区近期历史 =====\n";
+            recentPosts.forEach(p => { context += `帖子ID: ${p.id}\n作者: ${p.username}\n标题: ${p.title}\n摘要: ${(p.summary || p.content || '').slice(0, 180)}\n\n`; });
         }
         const activeStories = (db.forumStoryThreads || []).filter(s => s.status === 'active').sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 8);
         if (activeStories.length) {
@@ -64,19 +66,16 @@ function getForumGenerationContext() {
         const socialEdges = (db.forumSocialEdges || []).slice().sort((a, b) => (b.strength || 0) - (a.strength || 0)).slice(0, 8);
         if (socialEdges.length) {
             context += "===== 居民之间已形成的互动关系 =====\n";
-            socialEdges.forEach(edge => { context += `${edge.fromNpcId} → ${edge.toNpcId}: ${edge.kind || '互动'}，强度${edge.strength || 0}/100\n`; });
+            socialEdges.forEach(edge => { context += `${edge.fromNpcId} → ${edge.toNpcId}：${edge.kind || '互动'}\n`; });
             context += '\n';
         }
         const accountRelationships = Object.keys(db.forumRelationships || {}).map(k => db.forumRelationships[k]).filter(r => r && r.accountId === activeAccountId).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 8);
         if (accountRelationships.length) {
             context += "===== 居民与当前论坛身份的关系记忆（只影响自然态度，不得强行恋爱） =====\n";
-            accountRelationships.forEach(r => { context += `账号${r.npcId}: 熟悉${r.familiarity || 0} 信任${r.trust || 0} 好感${r.attraction || 0} 戒备${r.guard || 0} 芥蒂${r.grievance || 0}\n`; });
+            accountRelationships.forEach(r => { context += `账号${r.npcId}：${forumRelationshipSummary(r)}\n`; });
             context += '\n';
         }
     }
-
-    const styleSettings = db.forumSettings || {};
-    context += `===== 互动表现偏好 =====\n主动程度 ${styleSettings.proactiveIntensity == null ? 50 : styleSettings.proactiveIntensity}/100；恋爱剧情倾向 ${styleSettings.romanceIntensity == null ? 50 : styleSettings.romanceIntensity}/100；冲突剧情强度 ${styleSettings.conflictIntensity == null ? 35 : styleSettings.conflictIntensity}/100。数值只调整题材概率与表达力度，不能覆盖角色人格、关系基础、公开信息范围、隐私和用户边界。\n`;
 
     return context;
 }
@@ -154,7 +153,7 @@ ${context}
 
         const requestBody = {
             model: apiSettings.model,
-            messages: [{ role: "user", content: systemPrompt }],
+            messages: [{ role: "user", content: systemPrompt + forumCustomPromptSection('publicCustomPrompt') }],
             temperature: temperature
         };
 
@@ -567,7 +566,7 @@ ${context}
         
         const requestBody = {
             model: apiSettings.model,
-            messages: [{ role: "user", content: systemPrompt }],
+            messages: [{ role: "user", content: systemPrompt + forumCustomPromptSection('publicCustomPrompt') }],
             temperature: temperature
         };
         

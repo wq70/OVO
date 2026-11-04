@@ -308,9 +308,7 @@
                     </div>
                     <div class="kkt-group forum-setting-group">
                         <div class="kkt-group-title">社区与陪伴</div>
-                        <div class="kkt-item"><div class="kkt-item-label">主动互动强度</div><div class="kkt-item-control forum-range-control"><input type="range" id="forum-proactive-intensity" min="0" max="100" value="50"><span id="forum-proactive-intensity-value">50</span></div></div>
-                        <div class="kkt-item"><div class="kkt-item-label">恋爱剧情倾向</div><div class="kkt-item-control forum-range-control"><input type="range" id="forum-romance-intensity" min="0" max="100" value="50"><span id="forum-romance-intensity-value">50</span></div></div>
-                        <div class="kkt-item"><div class="kkt-item-label">冲突剧情强度</div><div class="kkt-item-control forum-range-control"><input type="range" id="forum-conflict-intensity" min="0" max="100" value="35"><span id="forum-conflict-intensity-value">35</span></div></div>
+                        <div class="kkt-item"><label class="kkt-item-label" for="forum-proactive-intensity">自动更新频率</label><div class="kkt-item-control forum-range-control"><input type="range" id="forum-proactive-intensity" min="0" max="100" value="50" aria-valuetext="适中"><span id="forum-proactive-intensity-value">适中</span></div></div>
                         <div class="kkt-item"><div class="kkt-item-label">社区持续记忆</div><div class="kkt-item-control"><label class="kkt-switch"><input type="checkbox" id="forum-continuity-toggle" checked><span class="kkt-slider"></span></label></div></div>
                         <div class="kkt-item"><div class="kkt-item-label">角色认知边界</div><div class="kkt-item-control"><label class="kkt-switch"><input type="checkbox" id="forum-knowledge-toggle" checked><span class="kkt-slider"></span></label></div></div>
                         <div class="kkt-item"><div class="kkt-item-label">进入论坛自动更新</div><div class="kkt-item-control"><label class="kkt-switch"><input type="checkbox" id="forum-auto-advance-toggle"><span class="kkt-slider"></span></label></div></div>
@@ -385,6 +383,16 @@
                             </div>
                         </div>
                         <p style="font-size:12px;color:#888;margin:4px 0 8px 0;">开启后，生成陌生人私信时有机会刷到已选角色的小号；加好友后仍以小号身份聊天，可能露马脚或揭穿。</p>
+                        <div class="kkt-item" id="forum-char-alt-classic-row">
+                            <label class="kkt-item-label" for="forum-char-alt-classic-prompt">经典私信提示词</label>
+                            <div class="kkt-item-control">
+                                <label class="kkt-switch">
+                                    <input type="checkbox" id="forum-char-alt-classic-prompt" aria-describedby="forum-char-alt-classic-description">
+                                    <span class="kkt-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <p id="forum-char-alt-classic-description" style="font-size:12px;color:#888;margin:4px 0 8px 0;">开启后，角色小号在论坛里的 AI 回复以角色人设和对话为主。关闭即使用现行提示词。</p>
                         <div id="forum-char-alt-options" style="display:none;">
                             <div class="kkt-item" style="flex-direction:column;align-items:stretch;">
                                 <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
@@ -399,6 +407,14 @@
                                 <ul id="forum-char-alt-list" class="forum-char-alt-list" style="list-style:none;padding:0;margin:0;max-height:200px;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:8px;"></ul>
                             </div>
                         </div>
+                    </div>
+                    <div class="kkt-group forum-setting-group" id="forum-custom-prompt-settings">
+                        <div class="kkt-group-title">自定义论坛提示词</div>
+                        <p class="forum-setting-hint">补充你希望的内容、口吻或互动节奏。留空时使用默认规则。</p>
+                        <label class="kkt-item-label" for="forum-public-custom-prompt">帖子与评论</label>
+                        <textarea id="forum-public-custom-prompt" rows="4" placeholder="例如：多写社区日常，评论可以有不同立场，少用套路化的争吵。"></textarea>
+                        <label class="kkt-item-label" for="forum-private-custom-prompt">论坛私信（含角色小号）</label>
+                        <textarea id="forum-private-custom-prompt" rows="4" placeholder="例如：角色沿用自己的人设和说话习惯，关系从对话自然推进，刚认识时别急着追问隐私。"></textarea>
                     </div>
                     <div class="kkt-group">
                         <button class="btn btn-primary" id="save-forum-settings-btn" style="width:100%;">保存设置</button>

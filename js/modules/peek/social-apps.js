@@ -324,6 +324,7 @@ function showTimeThoughtDetail(thought) {
 }
 
 function renderPeekConversation(conversation) {
+    window.PeekHistoryUI?.mountContact(conversation);
     const titleEl = document.getElementById('peek-conversation-title');
     const messageAreaEl = document.getElementById('peek-message-area');
     const impersonateBar = document.getElementById('peek-impersonate-bar');
@@ -341,7 +342,6 @@ function renderPeekConversation(conversation) {
     } else {
         history.forEach(msg => {
             const isSentByChar = msg.sender === 'char';
-            const isImpersonated = !!msg.isImpersonated;
             const wrapper = document.createElement('div');
             wrapper.className = `message-wrapper ${isSentByChar ? 'sent' : 'received'}`;
 
@@ -350,7 +350,7 @@ function renderPeekConversation(conversation) {
 
             const bubble = document.createElement('div');
             bubble.className = `message-bubble ${isSentByChar ? 'sent' : 'received'}`;
-            bubble.innerHTML = isSentByChar && !isImpersonated ? peekBilingualText(msg.content) : peekEscapeHtml(msg.content);
+            bubble.innerHTML = peekConversationMessageHtml(msg, char);
             // isImpersonated 仅保留在数据中，界面不显示任何标注，以假乱真
 
             if (isSentByChar) {
@@ -396,12 +396,21 @@ async function sendPeekImpersonateMessage() {
         showToast('数据异常');
         return;
     }
-    currentPeekConversation.history = currentPeekConversation.history || [];
-    currentPeekConversation.history.push({ sender: 'char', content: text, isImpersonated: true });
-    if (input) input.value = '';
-    await saveData();
-    renderPeekConversation(currentPeekConversation);
-    showToast('已发送');
+    const target = currentPeekConversation;
+    const messages = [{ sender: 'char', content: text, isImpersonated: true }];
+    try {
+        if (window.PeekMemory) {
+            if (!await window.PeekMemory.editConversation(char, target, messages)) return;
+        } else {
+            target.history = [...(target.history || []), ...messages];
+            await saveData();
+        }
+        if (currentChatId === char.id && currentPeekConversation === target) {
+            if (input && input.value === text) input.value = '';
+            renderPeekConversation(target);
+        }
+        showToast('已发送');
+    } catch (error) { showApiError(error); }
 }
 
 async function requestPeekNPCReply() {
@@ -421,17 +430,32 @@ async function requestPeekNPCReply() {
         showToast('请先在设置中配置 API');
         return;
     }
-    const npcName = currentPeekConversation.partnerName;
-    const npcPersona = (currentPeekConversation.partnerPersona || '') + (currentPeekConversation.supplementPersona ? '\n补充：' + currentPeekConversation.supplementPersona : '') || '与角色认识的普通人';
+    const targetConversation = currentPeekConversation;
+    const clearRevision = getPeekClearRevision(char.id, 'messages');
+    const npcName = targetConversation.partnerName;
+    const npcPersona = (targetConversation.partnerPersona || '') + (targetConversation.supplementPersona ? '\n补充：' + targetConversation.supplementPersona : '') || '与角色认识的普通人';
     const charName = char.realName;
-    const relation = currentPeekConversation.partnerRelation || '熟人';
-    const suspicion = currentPeekConversation.suspicionLevel != null ? currentPeekConversation.suspicionLevel : 0;
-    const history = currentPeekConversation.history || [];
+    const relation = targetConversation.partnerRelation || '熟人';
+    const suspicion = targetConversation.suspicionLevel != null ? targetConversation.suspicionLevel : 0;
+    const history = targetConversation.history || [];
     const recentLines = history.slice(-16).map(m => {
         const who = m.sender === 'char' ? charName : npcName;
         const tag = m.isImpersonated ? ' [实际是别人冒充' + charName + '发的]' : '';
         return who + '：' + (m.content || '') + tag;
     }).join('\n');
+    const format = getPeekResponseFormat(char);
+    const responseGuide = format === 'json'
+        ? '只输出一个 JSON 对象，不要其他文字。newSuspicion 使用 0 到 100 的数字，suggestFriend 使用布尔值。\n{"replies":["回复1","回复2"],"newSuspicion":25,"suspicionReason":"可选","suggestFriend":false}'
+        : `只输出XML标签格式，不要其他文字：
+<result>
+  <replies>
+    <reply>回复1</reply>
+    <reply>回复2</reply>
+  </replies>
+  <newSuspicion>数字0-100</newSuspicion>
+  <suspicionReason>可选</suspicionReason>
+  <suggestFriend>false或true</suggestFriend>
+</result>`;
 
     const systemPrompt = `你是「${npcName}」，正在和「${charName}」聊天。你的人设：${npcPersona}。你和${charName}是${relation}关系。
 
@@ -443,38 +467,37 @@ ${recentLines}
 ---
 
 请根据人设和怀疑度，生成你的回复。可以自然聊天，也可以若有所察地试探。若对话氛围合适且尚未是好友，可表达想加对方为好友的意愿，并设置 "suggestFriend": true。
-只输出XML标签格式，不要其他文字：
-<result>
-  <replies>
-    <reply>回复1</reply>
-    <reply>回复2</reply>
-  </replies>
-  <newSuspicion>数字0-100</newSuspicion>
-  <suspicionReason>可选</suspicionReason>
-  <suggestFriend>false或true</suggestFriend>
-</result>`;
+${responseGuide}`;
 
     showToast('正在生成回复…');
     try {
         const endpoint = (url.endsWith('/') ? url.slice(0, -1) : url) + '/v1/chat/completions';
         const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` };
         const requestBody = { model: model, messages: [{ role: 'user', content: systemPrompt }], temperature: 0.8 };
-        const contentStr = await fetchAiResponse(apiConfig, requestBody, headers, endpoint);
-        const data = parseXmlToJson(contentStr);
+        const contentStr = await fetchAiResponse(apiConfig, requestBody, headers, endpoint, false, { allowRoleFallback: false });
+        if (getPeekClearRevision(char.id, 'messages') !== clearRevision || !char.peekData?.messages?.conversations?.includes(targetConversation)) return;
+        const data = parsePeekResponse(contentStr, format);
         const replies = Array.isArray(data.replies) ? data.replies : (data.reply ? [data.reply] : []);
+        if (replies.some(reply => typeof reply === 'object')) {
+            throw new Error('AI 返回的回复格式不正确，请手动重新生成。');
+        }
         const newSuspicion = typeof data.newSuspicion === 'number' ? Math.max(0, Math.min(100, data.newSuspicion)) : suspicion;
         if (replies.length > 0) {
-            currentPeekConversation.history = currentPeekConversation.history || [];
-            replies.forEach(t => currentPeekConversation.history.push({ sender: 'partner', content: String(t).trim() }));
-            currentPeekConversation.suspicionLevel = newSuspicion;
-            await saveData();
-            renderPeekConversation(currentPeekConversation);
+            const messages = replies.map(t => ({ sender: 'partner', content: String(t).trim() }));
+            if (window.PeekMemory) {
+                if (!await window.PeekMemory.editConversation(char, targetConversation, messages, newSuspicion)) return;
+            } else {
+                targetConversation.history = [...(targetConversation.history || []), ...messages];
+                targetConversation.suspicionLevel = newSuspicion;
+                await saveData();
+            }
+            if (currentChatId === char.id && currentPeekConversation === targetConversation) renderPeekConversation(targetConversation);
             showToast('对方已回复');
         } else {
             showToast('未生成到回复，请重试');
         }
-        if (data.suggestFriend === true && !currentPeekConversation.isFriend) {
-            peekShowFriendRequestModal(currentPeekConversation);
+        if (data.suggestFriend === true && !targetConversation.isFriend) {
+            if (currentChatId === char.id && currentPeekConversation === targetConversation) peekShowFriendRequestModal(targetConversation);
         }
     } catch (err) {
         console.error(err);
@@ -572,15 +595,22 @@ async function peekSupplementPersonaFromConversation() {
     }).join('\n');
     const basePersona = (currentPeekConversation.partnerPersona || '').slice(0, 500);
     const existingSupplement = (currentPeekConversation.supplementPersona || '').slice(0, 800);
-    const systemPrompt = '你是一个人设补充助手。请根据「最近对话」**只提取【该 NPC 在对话中透露的、关于自己的信息】**，整理成简短的人设条目。\n\n要求：只输出「关于这个 NPC 我们新知道了什么」，例如：提到喜好、经历、习惯、身份等，按「条目：内容」格式补充。不要总结对话过程。若没有新信息则返回空。\n\n只返回 XML 标签格式：\n<result>\n  <supplement>条目1：xxx\n条目2：xxx</supplement>\n</result>\n或 <result><supplement></supplement></result>。\n\n已有基础人设（节选）:\n' + basePersona + '\n\n已补充人设（节选）:\n' + existingSupplement + '\n\n最近对话:\n' + convText;
+    const format = getPeekResponseFormat(char);
+    const responseGuide = format === 'json'
+        ? '只返回一个 JSON 对象：{"supplement":"条目1：xxx\\n条目2：xxx"}。没有新信息时返回 {"supplement":""}。'
+        : '只返回 XML 标签格式：\n<result>\n  <supplement>条目1：xxx\n条目2：xxx</supplement>\n</result>\n或 <result><supplement></supplement></result>。';
+    const systemPrompt = '你是一个人设补充助手。请根据「最近对话」**只提取【该 NPC 在对话中透露的、关于自己的信息】**，整理成简短的人设条目。\n\n要求：只输出「关于这个 NPC 我们新知道了什么」，例如：提到喜好、经历、习惯、身份等，按「条目：内容」格式补充。不要总结对话过程。若没有新信息则返回空。\n\n' + responseGuide + '\n\n已有基础人设（节选）:\n' + basePersona + '\n\n已补充人设（节选）:\n' + existingSupplement + '\n\n最近对话:\n' + convText;
     showToast('正在提取人设…');
     try {
         const url = apiConfig.url.endsWith('/') ? apiConfig.url.slice(0, -1) : apiConfig.url;
         const endpoint = url + '/v1/chat/completions';
         const headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiConfig.key };
         const requestBody = { model: apiConfig.model, messages: [{ role: 'user', content: systemPrompt }], temperature: 0.3 };
-        const contentStr = await fetchAiResponse(apiConfig, requestBody, headers, endpoint);
-        const json = parseXmlToJson(contentStr);
+        const contentStr = await fetchAiResponse(apiConfig, requestBody, headers, endpoint, false, { allowRoleFallback: false });
+        const json = parsePeekResponse(contentStr, format);
+        if (json.supplement && typeof json.supplement === 'object') {
+            throw new Error('AI 返回的人设格式不正确，请手动重新生成。');
+        }
         const supplement = (json && json.supplement && String(json.supplement).trim()) ? String(json.supplement).trim() : '';
         if (supplement) {
             currentPeekConversation.supplementPersona = ((currentPeekConversation.supplementPersona || '').trim() ? (currentPeekConversation.supplementPersona || '').trim() + '\n\n' : '') + supplement;

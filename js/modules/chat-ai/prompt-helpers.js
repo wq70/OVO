@@ -179,8 +179,10 @@ b) [${character.realName}拒绝了${character.myName}的代付请求]\n`;
     }
     nextIndex++;
 
-    rules += `${nextIndex}. ✨重要✨ 你可以在对话中更新你的当前状态，但不超过15个字。比如，聊到一半你可能会说“我先去洗个澡”，然后更新你的状态，以反映你当前的行为或心情。这会让互动更真实。格式为：[${character.realName}更新状态为：xxx]。例如：[${character.realName}更新状态为：正在看电影...]。这条指令不会显示为聊天消息，只会更新你在我界面上的状态。\n`;
-    nextIndex++;
+    if (character.onlineStatusPromptEnabled !== false) {
+        rules += `${nextIndex}. ✨重要✨ 你可以在对话中更新你的当前状态，但不超过15个字。比如，聊到一半你可能会说“我先去洗个澡”，然后更新你的状态，以反映你当前的行为或心情。这会让互动更真实。格式为：[${character.realName}更新状态为：xxx]。例如：[${character.realName}更新状态为：正在看电影...]。这条指令不会显示为聊天消息，只会更新你在我界面上的状态。\n`;
+        nextIndex++;
+    }
     rules += `${nextIndex}. ✨重要✨ 关于撤回消息：你可以撤回你刚刚发送的消息。当你打错了字、说错了话、感到尴尬、反悔、或者只是改变了主意时，都可以这样做。这是一个体现你角色性格的机会。格式为：[${character.realName}撤回了一条消息：{被撤回消息的原文}]。⚠️严禁输出原消息再输出撤回指令！系统会自动处理“先显示原消息再变为撤回状态”的动画效果。你只需要输出这一条撤回指令即可。\n`;
     nextIndex++;
     rules += `${nextIndex}. ✨重要✨ 你可以选择单独一条消息引用，当你想要对于单独某句话做出回应/反驳/吐槽/补充时，**必须**使用引用格式，格式为：[${character.realName}引用“{某条消息内容}”并回复：{回复内容}]。这能让对话逻辑更清晰。\n`;
@@ -242,8 +244,9 @@ function getOnlineOutputFormats(character, worldBooksBefore, worldBooksAfter) {
         }
     }
  
-    if (_imgEnabled && character.imageFaceLock?.enabled && window.OvoFaceLock) {
-        photoVideoFormat += '\n' + window.OvoFaceLock.subjectInstruction();
+    const userFaceLockEnabled = character.userImageFaceLock?.enabled;
+    if (_imgEnabled && (character.imageFaceLock?.enabled || userFaceLockEnabled) && window.OvoFaceLock) {
+        photoVideoFormat += '\n' + window.OvoFaceLock.subjectInstruction(userFaceLockEnabled);
     }
     let outputFormats = `
 a) 普通消息: [${character.realName}的消息：{消息内容}]
@@ -260,8 +263,7 @@ f) 给我的转账: [${character.realName}的转账：{金额}元；备注：{�
     outputFormats += `
 h) 对我礼物的回应(此条不显示): [${character.realName}已接收礼物]
 i) 对我转账的回应(此条不显示): [${character.realName}接收${character.myName}的转账] 或 [${character.realName}退回${character.myName}的转账]
-ia) 对我亲属卡的回应(此条不显示): [${character.realName}接收${character.myName}的亲属卡] 或 [${character.realName}退还${character.myName}的亲属卡]
-j) 更新状态(此条不显示): [${character.realName}更新状态为：{新状态}]
+ia) 对我亲属卡的回应(此条不显示): [${character.realName}接收${character.myName}的亲属卡] 或 [${character.realName}退还${character.myName}的亲属卡]${character.onlineStatusPromptEnabled === false ? '' : `\nj) 更新状态(此条不显示): [${character.realName}更新状态为：{新状态}]`}
 k) 引用我的回复: [${character.realName}引用“{我的某条消息内容}”并回复：{回复内容}]
 l) 发送并撤回消息: [${character.realName}撤回了一条消息：{被撤回的消息内容}]。注意：直接使用此指令系统就会自动模拟“发送后撤回”的效果，请勿先发送原消息。
 m) 同意代付(此条不显示): [${character.realName}同意了${character.myName}的代付请求]
@@ -307,10 +309,13 @@ t) 赠送亲属卡: [${character.realName}赠送亲属卡：额度{金额}元；
 }
 
 function getOfflineOutputFormats(character) {
-    return `a) 剧情演绎: [剧情：{包含动作、神态、对话的长文本}]\nb) 更新状态(可选): [${character.realName}更新状态为：{新状态}]`;
+    const storyFormat = 'a) 剧情演绎: [剧情：{包含动作、神态、对话的长文本}]';
+    return character.onlineStatusPromptEnabled === false ? storyFormat
+        : `${storyFormat}\nb) 更新状态(可选): [${character.realName}更新状态为：{新状态}]`;
 }
 
 function getInjectedFormatsPrompt(character, formats) {
+    if (character.onlineStatusPromptEnabled === false) formats = formats?.filter(format => format !== 'status');
     if (!formats || formats.length === 0) return '';
     let prompt = '\n【额外允许的线上功能格式】\n你可以在回复中穿插使用以下格式：';
     formats.forEach(f => {

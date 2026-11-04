@@ -1,3 +1,33 @@
+// Use the same display path for imported and existing entries without rewriting their data.
+function worldBookCategoryPath(value) {
+    if (typeof value !== 'string') return '未分类';
+    return value.split(/[\/\\]/).map(part => part.trim()).filter(Boolean).join('/') || '未分类';
+}
+
+function worldBookInCategory(book, path) {
+    const category = worldBookCategoryPath(book.category);
+    const target = worldBookCategoryPath(path);
+    return category === target || category.startsWith(`${target}/`);
+}
+
+function worldBookEscape(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[char]);
+}
+
+function worldBookMatchesSearch(book, keyword) {
+    return [book.name, typeof book.content === 'string' ? book.content : '',
+        worldBookCategoryPath(book.category), ...(Array.isArray(book.tags) ? book.tags : [])]
+        .some(value => String(value ?? '').toLowerCase().includes(keyword));
+}
+
+function worldBookCanEdit(book) {
+    if (typeof book.content === 'string') return true;
+    showToast('此条目正文格式异常，原始数据已保留。请先导出备份，再核对原始内容。');
+    return false;
+}
+
 // --- 世界书功能 (js/modules/worldbook.js) ---
 let pendingWbCategoryDelete = null; // 删除分类弹窗用：{ category, count }
 let currentWorldBookCategory = null; // 当前正在查看的详情分类
@@ -289,7 +319,7 @@ function showMoveCategoryModal() {
     // 获取所有分类
     const categories = new Set();
     db.worldBooks.forEach(book => {
-        const cat = (book.category && book.category.trim()) || '未分类';
+        const cat = worldBookCategoryPath(book.category);
         categories.add(cat);
     });
 
@@ -309,7 +339,7 @@ function showMoveCategoryModal() {
         
         option.innerHTML = `
             <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-weight: 500; color: #333;">${category}</span>
+                <span style="font-weight: 500; color: #333;">${worldBookEscape(category)}</span>
                 <span style="color: #999; font-size: 12px;">›</span>
             </div>
         `;
@@ -445,11 +475,9 @@ function openWorldBookCustomExportModal() {
 
     // 解析多级分类，复用原有的逻辑或者重新拍平
     // 这里使用树状结构渲染
-    const categoryTree = {};
+    const categoryTree = Object.create(null);
     db.worldBooks.forEach(book => {
-        let categoryPath = book.category || '未分类';
-        categoryPath = categoryPath.trim().replace(/^[\/\\]+|[\/\\]+$/g, '');
-        if (!categoryPath) categoryPath = '未分类';
+        const categoryPath = worldBookCategoryPath(book.category);
         
         if (!categoryTree[categoryPath]) {
             categoryTree[categoryPath] = [];
@@ -480,8 +508,8 @@ function openWorldBookCustomExportModal() {
             headerEl.style.cssText = 'background: #f9f9f9; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer;';
             headerEl.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" class="custom-export-category-checkbox" data-category="${category}">
-                    <span style="font-weight: 600; font-size: 14px; color: #333;">${category} <span style="color:#999; font-size:12px; font-weight:normal;">(${books.length})</span></span>
+                    <input type="checkbox" class="custom-export-category-checkbox" data-category="${worldBookEscape(category)}">
+                    <span style="font-weight: 600; font-size: 14px; color: #333;">${worldBookEscape(category)} <span style="color:#999; font-size:12px; font-weight:normal;">(${books.length})</span></span>
                 </div>
                 <span class="custom-export-arrow" style="font-size: 12px; color: #999; transition: transform 0.2s;">▼</span>
             `;
@@ -496,14 +524,14 @@ function openWorldBookCustomExportModal() {
                 itemEl.style.cssText = 'padding: 8px 0; border-bottom: 1px solid #f5f5f5; display: flex; align-items: flex-start; gap: 8px;';
                 
                 // 处理描述的截断
-                let briefContent = book.content || '';
+                let briefContent = typeof book.content === 'string' ? book.content : '正文格式异常，原始数据已保留';
                 if (briefContent.length > 30) briefContent = briefContent.substring(0, 30) + '...';
 
                 itemEl.innerHTML = `
                     <input type="checkbox" class="custom-export-item-checkbox" value="${book.id}" style="margin-top: 3px;">
                     <div style="flex: 1;">
-                        <div style="font-size: 14px; color: #333;">${book.name}</div>
-                        <div style="font-size: 12px; color: #999; margin-top: 2px;">${briefContent}</div>
+                        <div style="font-size: 14px; color: #333;">${worldBookEscape(book.name)}</div>
+                        <div style="font-size: 12px; color: #999; margin-top: 2px;">${worldBookEscape(briefContent)}</div>
                     </div>
                 `;
                 itemsContainer.appendChild(itemEl);
@@ -591,10 +619,7 @@ function handleCustomExportConfirm() {
 
 function handleDetailExportWorldBookBtnClick() {
     if (!currentWorldBookCategory) return;
-    const books = db.worldBooks.filter(b => {
-        const cat = b.category || '未分类';
-        return cat === currentWorldBookCategory || cat.startsWith(`${currentWorldBookCategory}/`);
-    });
+    const books = db.worldBooks.filter(b => worldBookInCategory(b, currentWorldBookCategory));
     exportWorldBooks(books, `worldbooks_${currentWorldBookCategory.replace(/[\/\\]/g, '_')}`);
 }
 

@@ -145,4 +145,107 @@ assert.equal(context.forumPostMatchesDeleteMode(context.db.forumPosts[0]), true,
 assert.equal(context.forumPostMatchesDeleteMode(context.db.forumPosts[1]), false, 'existing own-post mode still excludes other identities');
 context.forumPostCancelDeleteMode();
 
-console.log('Forum tests passed: migration, XSS safety, account isolation, reactions, stable NPCs, relationships, knowledge, stale jobs, story continuity, local search, and post deletion modes.');
+vm.runInContext(read('js/modules/forum/accounts-and-binding.js'), context, { filename: 'forum/accounts-and-binding.js' });
+vm.runInContext(generationSource, context, { filename: 'forum/post-generation.js' });
+vm.runInContext(aiInteractionSource, context, { filename: 'forum/ai-interactions.js' });
+
+const classicPromptToggle = { checked: false };
+const publicPromptField = { value: '' };
+const privatePromptField = { value: '' };
+const forumElements = {
+    'forum-char-alt-classic-prompt': classicPromptToggle,
+    'forum-public-custom-prompt': publicPromptField,
+    'forum-private-custom-prompt': privatePromptField,
+    'forum-refresh-btn': {},
+    'forum-posts-container': {},
+    'forum-search-input': { value: '' }
+};
+context.document.getElementById = id => forumElements[id] || null;
+context.forumLoadSettings();
+assert.equal(classicPromptToggle.checked, false, 'existing settings default to the current prompt');
+assert.equal(privatePromptField.value, '', 'existing settings default to an empty custom prompt');
+
+context.db.apiSettings = { url: 'https://example.invalid', key: 'test-key', model: 'test-model' };
+context.db.characters = [{ id: 'char_one', realName: '角色甲', persona: '现在的人设：寡言而克制' }];
+context.db.forumStrangerProfiles.npc_alt = {
+    name: '论坛马甲', linkedCharId: 'char_one', basicPersona: '普通论坛用户', privatePersona: '创建小号时的人设'
+};
+context.db.forumMessages.push(
+    { accountId: 'main', fromUserId: 'user', toUserId: 'npc_alt', content: '当前账号的对话' },
+    { accountId: 'alt_a', fromUserId: 'user', toUserId: 'npc_alt', content: '另一个账号的对话' }
+);
+context.forumAddKnowledge('npc_alt', 'main', '公开文字习惯相似（相似度72%）', 'public_writing_analysis', 72, 'main');
+context.BilingualContent = { prompt: () => '\n双语要求' };
+context.forumRenderDMConversation = () => {};
+context.showApiError = error => { throw error; };
+let dmPrompt;
+let aiResponse = '<result><replies><reply>测试回复</reply></replies></result>';
+context.fetchAiResponse = async (_apiSettings, request) => {
+    dmPrompt = request.messages[0].content;
+    return aiResponse;
+};
+context.forumCurrentDMUserId = 'npc_alt';
+await context.forumGenerateAIDMReply();
+assert.match(dmPrompt, /角色与马甲[\s\S]*现在的人设：寡言而克制[\s\S]*语气、态度和习惯可以自然流露/);
+assert.match(dmPrompt, /这只是线索，不能据此认定身份/);
+assert.match(dmPrompt, /按你的人设和当下的关系决定同意、拒绝或暂缓/);
+assert.doesNotMatch(dmPrompt, /创建小号时的人设|主动程度|恋爱剧情倾向|冲突剧情强度|\/100|72%|低于10个回合|创作一些通用的、有趣有网感的论坛帖子/);
+assert.doesNotMatch(dmPrompt, /自定义论坛提示词/, 'empty settings leave the default prompt intact');
+
+classicPromptToggle.checked = true;
+publicPromptField.value = '  多写社区日常  ';
+privatePromptField.value = '  关系自然推进\n沿用角色口吻  ';
+context.forumSaveSettings();
+classicPromptToggle.checked = false;
+privatePromptField.value = '';
+context.forumLoadSettings();
+assert.equal(classicPromptToggle.checked, true, 'the saved classic selection reloads');
+assert.equal(privatePromptField.value, '关系自然推进\n沿用角色口吻', 'saved prompt keeps its line breaks');
+await context.forumGenerateAIDMReply();
+assert.match(dmPrompt, /现在的人设：寡言而克制/);
+assert.match(dmPrompt, /维持马甲[\s\S]*双语要求[\s\S]*当前账号的对话/);
+assert.doesNotMatch(dmPrompt, /另一个账号的对话|创建小号时的人设|冲突剧情强度|社区常驻居民/);
+assert.match(dmPrompt, /<friendDecision>none<\/friendDecision>[\s\S]*关系自然推进\n沿用角色口吻/);
+assert.doesNotMatch(dmPrompt, /多写社区日常/);
+
+context.forumCurrentDMUserId = 'npc_main';
+await context.forumGenerateAIDMReply();
+assert.match(dmPrompt, /社区常驻居民/, 'unbound NPCs still use the full forum context');
+assert.doesNotMatch(dmPrompt, /角色与马甲|冲突剧情强度/);
+
+classicPromptToggle.checked = false;
+context.forumSaveSettings();
+context.forumCurrentDMUserId = 'npc_alt';
+await context.forumGenerateAIDMReply();
+assert.match(dmPrompt, /社区常驻居民[\s\S]*角色与马甲/, 'turning off classic restores the full forum context');
+assert.match(dmPrompt, /关系自然推进/, 'custom private style also works with the current prompt');
+
+context.renderForumPosts = () => {};
+context.renderPostDetail = () => {};
+context.forumRenderDMList = () => {};
+context.forumUpdateDMUnreadBadge = () => {};
+const publicPostId = context.db.forumPosts[0].id;
+const commentResponse = '<comments><comment><username>测试居民</username><content>测试评论</content></comment></comments>';
+for (const [generate, response] of [
+    [() => context.handleForumRefresh(), '<posts><post><title>新帖</title><content>测试帖子</content></post></posts>'],
+    [() => context.forumGenerateAutoReplies(publicPostId, 1), commentResponse],
+    [() => context.forumGenerateAICommentReplies(publicPostId), commentResponse]
+]) {
+    dmPrompt = '';
+    aiResponse = response;
+    await generate();
+    assert.match(dmPrompt, /多写社区日常/);
+    assert.doesNotMatch(dmPrompt, /关系自然推进|主动程度|恋爱剧情倾向|冲突剧情强度|\/100/);
+}
+
+aiResponse = '<dms><dm><senderName>测试网友</senderName><content>测试开场</content></dm></dms>';
+await context.forumGenerateStrangerDMs();
+assert.match(dmPrompt, /<dms>/);
+assert.match(dmPrompt, /关系自然推进/);
+assert.doesNotMatch(dmPrompt, /多写社区日常/);
+
+privatePromptField.value = '   ';
+context.forumSaveSettings();
+assert.equal(context.forumCustomPromptSection('privateCustomPrompt'), '', 'clearing the field restores the built-in prompt');
+
+console.log('Forum tests passed: migration, XSS safety, account isolation, reactions, stable NPCs, relationships, knowledge, stale jobs, story continuity, local search, post deletion, and custom prompts.');
