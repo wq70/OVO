@@ -246,7 +246,7 @@ function getOnlineOutputFormats(character, worldBooksBefore, worldBooksAfter) {
  
     const userFaceLockEnabled = character.userImageFaceLock?.enabled;
     if (_imgEnabled && (character.imageFaceLock?.enabled || userFaceLockEnabled) && window.OvoFaceLock) {
-        photoVideoFormat += '\n' + window.OvoFaceLock.subjectInstruction(userFaceLockEnabled);
+        photoVideoFormat += '\n' + window.OvoFaceLock.subjectInstruction(true);
     }
     let outputFormats = `
 a) 普通消息: [${character.realName}的消息：{消息内容}]

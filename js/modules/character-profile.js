@@ -24,12 +24,58 @@
             if (byId(field.toggle)) byId(field.toggle).checked = chat[field.permission] === true;
         }
         if (byId('setting-user-remark')) byId('setting-user-remark').value = chat.userRemarkName || '';
+        const enabled = byId('setting-user-nickname-enabled');
+        const visible = byId('setting-user-nickname-visible');
+        const nickname = byId('setting-user-nickname');
+        if (enabled && visible && nickname) {
+            enabled.checked = chat.userNicknameEnabled === true;
+            visible.checked = chat.userNicknameVisible === true;
+            nickname.value = chat.userNickname || '';
+            enabled.onchange = () => { visible.disabled = !enabled.checked; };
+            enabled.onchange();
+        }
+    }
+
+    function getUserNickname(chat) {
+        return chat?.userNicknameEnabled === true && typeof chat.userNickname === 'string' ? chat.userNickname.trim() : '';
+    }
+
+    function getVisibleUserNickname(chat) {
+        return chat.userNicknameVisible === true ? getUserNickname(chat) : '';
+    }
+
+    function nicknamePrompt(chat) {
+        const nickname = getVisibleUserNickname(chat);
+        return nickname ? `【旁白】用户在这个聊天里的网名是 ${JSON.stringify(nickname)}。可以在合适时用网名称呼用户，消息格式中的身份名字仍是 ${JSON.stringify(chat.myName || '用户')}。` : '';
+    }
+
+    function saveNicknameSettings(chat) {
+        const enabled = byId('setting-user-nickname-enabled');
+        const visible = byId('setting-user-nickname-visible');
+        const input = byId('setting-user-nickname');
+        if (!enabled || !visible || !input) return;
+        const nickname = validate(input.value, { max: 24 });
+        const previous = getVisibleUserNickname(chat);
+        chat.userNicknameEnabled = enabled.checked;
+        chat.userNicknameVisible = visible.checked;
+        chat.userNickname = nickname;
+        const shared = getVisibleUserNickname(chat);
+        if (shared && shared !== previous) {
+            const action = previous ? '你将公开的网名改为' : '你向角色公开了网名';
+            (chat.history ||= []).push({
+                id: `nickname_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                type: 'profile_update', role: 'system', timestamp: Date.now(),
+                content: '[system-display:聊天网名旁白]', displayText: `${action}「${shared}」`,
+                isUserNicknameNotice: true, isContextDisabled: true, excludeFromContext: true
+            });
+        }
     }
 
     function saveSettings(chat) {
         const input = byId('setting-user-remark');
         // 先校验再写入，避免无效输入导致开关只保存一半。
         const remark = input ? validate(input.value, fields.userRemark) : chat.userRemarkName;
+        saveNicknameSettings(chat);
         for (const field of Object.values(fields)) {
             if (byId(field.toggle)) chat[field.permission] = byId(field.toggle).checked;
         }
@@ -38,7 +84,7 @@
 
     function prompt(chat) {
         const enabled = Object.entries(fields).filter(([, field]) => allowed(chat, field));
-        if (!enabled.length && !chat.userRemarkName) return '';
+        if (!enabled.length && !chat.userRemarkName) return nicknamePrompt(chat);
         const lines = ['【单聊备注与拍一拍资料】', `用户的身份名字是 ${JSON.stringify(chat.myName || '')}；你给用户的独立备注是 ${JSON.stringify(chat.userRemarkName || '')}。独立备注可自然用于称呼，但不能替换消息格式中的用户名字。`];
         lines.push(`你在此单聊的当前备注是 ${JSON.stringify(chat.remarkName || chat.realName || '')}，当前双方被拍后缀分别是 ${JSON.stringify(chat.pokeCharacterSuffix || '')}、${JSON.stringify(chat.pokeUserSuffix || '')}。`);
         if (enabled.length) {
@@ -48,6 +94,8 @@
             }
             lines.push('每条指令各占一行，独立放在普通消息之外，不在思考、代码块、引用示例或互动页面中输出；系统负责保存和展示修改提示，无须另发一条声称修改成功的消息。');
         }
+        const narration = nicknamePrompt(chat);
+        if (narration) lines.push(narration);
         return lines.join('\n');
     }
 
@@ -135,5 +183,5 @@
         finally { if (queues.get(key) === task) queues.delete(key); }
     }
 
-    window.CharacterProfile = { loadSettings, saveSettings, prompt, consumeAiCommands, renderMessage };
+    window.CharacterProfile = { loadSettings, saveSettings, prompt, getUserNickname, nicknamePrompt, consumeAiCommands, renderMessage };
 })();

@@ -203,6 +203,8 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate, options
         systemPrompt += `3. 关于我的人设：${chat.myPersona}\n`;
     }
     systemPrompt += `</user_settings>\n`
+    const nicknameNarration = window.CharacterProfile?.nicknamePrompt(chat);
+    if (nicknameNarration) systemPrompt += `${nicknameNarration}\n`;
     
     if (window.WeatherService) {
         const charWeather = await window.WeatherService.getCharacterWeatherPrompt(chat);
@@ -239,7 +241,7 @@ async function getCallReply(chat, callType, callContext, onStreamUpdate, options
 
     // --- 注入最近聊天记录 ---
     const maxMemory = chat.maxMemory || 20;
-    let recentHistory = chat.history.slice(-maxMemory);
+    let recentHistory = chat.history.filter(message => !message.isUserNicknameNotice).slice(-maxMemory);
     
     // 使用通用过滤函数
     if (typeof filterHistoryForAI === 'function') {

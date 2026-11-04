@@ -627,6 +627,7 @@ body.night-mode-active .kkt-item-control select:focus {
 
 /* 折叠面板或次级卡片内的独立表单输入框精致微边框样式 */
 .api-nested-details .kkt-item-control input[type="text"],
+.api-nested-details.tts-details .kkt-item-control input[type="password"],
 .api-nested-details .kkt-item-control input:not([type]) {
     text-align: left !important;
     border: 1px solid #e2e8f0 !important;
@@ -642,6 +643,7 @@ body.night-mode-active .kkt-item-control select:focus {
 }
 
 .api-nested-details .kkt-item-control input[type="text"]:focus,
+.api-nested-details.tts-details .kkt-item-control input[type="password"]:focus,
 .api-nested-details .kkt-item-control input:not([type]):focus {
     border-color: var(--primary-color, #2563eb) !important;
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
@@ -1065,6 +1067,44 @@ textarea.api-generation-value { min-height: 48px; height: 48px; resize: vertical
     cursor: pointer;
     user-select: none;
 }
+
+.tts-details > summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 10px 15px;
+    box-sizing: border-box;
+    list-style: none;
+    background: transparent;
+    color: inherit;
+    font-size: calc(14px * var(--app-font-scale));
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.tts-details > summary::-webkit-details-marker { display: none; }
+.tts-details > summary::after {
+    content: '';
+    width: 7px;
+    height: 7px;
+    flex: none;
+    margin-inline-start: auto;
+    margin-inline-end: 3px;
+    border-inline-end: 1.5px solid currentColor;
+    border-block-end: 1.5px solid currentColor;
+    opacity: .55;
+    transform: rotate(-45deg);
+}
+.tts-details[open] > summary { border-bottom: 1px solid rgba(128, 128, 128, .15); }
+.tts-details[open] > summary::after { transform: rotate(45deg); }
+.tts-details > summary span { font-size: .82em; font-weight: 400; opacity: .65; }
+#api-settings-screen .tts-details .kkt-item { padding-inline: 14px; gap: 12px; }
+.tts-details .kkt-item-label { flex-shrink: 0; }
+.tts-details .kkt-item[hidden] { display: none; }
+.tts-details .kkt-item-control, .tts-details select { min-width: 0; }
+.tts-details .kkt-item-control input, .tts-details select { max-width: 100%; }
+.tts-details .api-field-tip { padding-bottom: 10px; }
 
 .api-details-body {
     padding: 12px;

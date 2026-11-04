@@ -76,6 +76,47 @@ function fixture() {
     assert.equal(service.cleanText('你好(laughs)（旁白）[系统]'), '你好(laughs)');
 }
 
+// Fish can read older chats without reusing their MiniMax voice, and user credentials stay separate.
+{
+    const { service, context, selector, settings, element, blobs } = fixture();
+    element('tts-provider', 'fish');
+    element('user-tts-provider', 'fish');
+    element('minimax-tts-enabled').checked = true;
+    element('minimax-user-tts-enabled').checked = true;
+    element('fish-api-key', 'role-key');
+    element('fish-user-api-key', 'user-key');
+    element('fish-user-voice-id', 'https://fish.audio/m/user-voice/');
+    const roleOverride = element('setting-custom-voice-id');
+    element('setting-chat-tts-enabled').checked = true;
+    assert.equal(settings.saveTTSConfig(), true);
+    const { voiceId } = selector.getVoiceConfig('chat');
+    assert.equal(voiceId, 'default');
+    assert.equal(selector.getVoiceConfig('chat', 'user').voiceId, 'user-voice');
+    let request;
+    context.fetch = async (url, options) => {
+        request = { url, options };
+        return new Response(new Uint8Array([1, 2, 3]), { headers: { 'content-type': 'audio/mpeg' } });
+    };
+    const url = await service.synthesize('你好', voiceId);
+    assert.equal(request.url, 'https://api.fish.audio/compat/v1/audio/speech');
+    assert.equal(request.options.headers.Authorization, 'Bearer role-key');
+    assert.deepEqual(JSON.parse(request.options.body), {
+        model: 'fish-audio/s2.1-pro-free', input: '你好', voice: 'default', response_format: 'mp3', speed: 1
+    });
+    assert.equal(blobs.get(url).type, 'audio/mpeg');
+
+    roleOverride.value = 'https://fish.audio/m/role-override';
+    await settings.saveChatTTSConfig();
+    assert.equal(context.db.characters[0].ttsConfig.customVoiceId, 'old-clone');
+    await service.synthesize('你好', selector.getVoiceConfig('chat').voiceId);
+    assert.equal(JSON.parse(request.options.body).voice, 'role-override');
+    await service.synthesize('你好', selector.getVoiceConfig('chat', 'user').voiceId, 'auto', { forUser: true });
+    assert.equal(request.options.headers.Authorization, 'Bearer user-key');
+    assert.equal(JSON.parse(request.options.body).voice, 'user-voice');
+    context.fetch = async () => new Response('{}', { status: 402 });
+    await assert.rejects(service.synthesize('额度测试', voiceId), /Fish Audio.*额度.*402/);
+}
+
 // ElevenLabs returns binary audio, uses its own key/voice and clamps only its own speed range.
 {
     const { service, context, eleven, blobs } = fixture();

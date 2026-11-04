@@ -1,4 +1,4 @@
-// 每个角色聊天独立保存角色和用户的人物参考，只用于明确标记的单人图。
+// 每个角色聊天独立保存角色和用户的人物参考，按出镜标记选用。
 (function () {
     'use strict';
     const clone = value => JSON.parse(JSON.stringify(value || {}));
@@ -20,22 +20,31 @@
         return false;
     }
 
-    function parsePrompt(value) {
+    function supportsTwoReferences(engine, settings) {
+        return supported(engine, settings) && (engine === 'gpt'
+            || (engine === 'google' && !/flash-lite/i.test(settings.model || '')));
+    }
+
+    function parsePrompt(value, includeUser = true) {
         const text = String(value || '');
-        const markerPattern = /\bovo_subject_(?:self|user|other)\b/gi;
+        const markerPattern = /\bovo_subject_(?:self|user|both|other)\b/gi;
         const markers = (text.match(markerPattern) || []).map(marker => marker.toLowerCase());
         const first = markers[0];
+        // 有冲突或缺少主体标记时不猜人物，历史消息保持普通生图行为。
+        const subject = first && markers.every(marker => marker === first) ? first.slice('ovo_subject_'.length) : 'other';
         return {
-            // 有冲突或缺少主体标记时不猜人物，历史消息保持普通生图行为。
-            subject: first && markers.every(marker => marker === first) ? first.slice('ovo_subject_'.length) : 'other',
+            subject: !includeUser && (subject === 'user' || subject === 'both') ? 'other' : subject,
             markers,
             prompt: text.replace(markerPattern, '').replace(/[,，]\s*[,，]/g, ', ').replace(/^[,，\s]+|[,，\s]+$/g, '').trim()
         };
     }
 
     function subjectInstruction(includeUser = false) {
-        const userRule = includeUser ? '用户（USER，你正在聊天的对方）单独出镜时，加 , ovo_subject_user；' : '';
-        return '人物参考内部标记：按实际出镜者判断，每张图只标记一次。发送者本人单独出镜（自拍、单人人像）时，在 {{英文生图提示词}} 末尾加 , ovo_subject_self；' + userRule + '风景、食物、宠物、其他人物、多人合照均加 , ovo_subject_other。标记只写在双花括号内，中文描述不出现标记。';
+        const prefix = '人物参考内部标记：按实际出镜者判断，在 {{英文生图提示词}} 末尾只加一个标记。';
+        const rules = includeUser
+            ? '你是 CHAR，与你私聊的用户是 USER。CHAR 和 USER 都出镜时用 ovo_subject_both；CHAR 出镜但 USER 没出镜时用 ovo_subject_self；USER 出镜但 CHAR 没出镜时用 ovo_subject_user；两人都没出镜时用 ovo_subject_other。其他人是否同框不影响选择。合照的英文提示词须描述每位人物的位置或动作，并用 CHAR 和 USER 标明对应人物。'
+            : '发送者本人单独出镜时用 ovo_subject_self；风景、食物、宠物、其他人物、多人合照均用 ovo_subject_other。';
+        return prefix + rules + '标记只写在双花括号内，中文描述不出现标记。';
     }
 
     function messageCharacter(chat, chatType, message) {
@@ -45,20 +54,23 @@
         return (db.characters || []).find(item => item.id === member?.originalCharId) || null;
     }
 
-    function subjectLock(character, subject) {
-        if (subject === 'self') return character?.imageFaceLock;
-        if (subject === 'user') return character?.userImageFaceLock;
+    function enabledReferences(character, subject) {
+        const references = [];
+        if ((subject === 'self' || subject === 'both') && character?.imageFaceLock?.enabled) {
+            references.push({ subject: 'self', referenceImage: character.imageFaceLock.referenceImage || '' });
+        }
+        if ((subject === 'user' || subject === 'both') && character?.userImageFaceLock?.enabled) {
+            references.push({ subject: 'user', referenceImage: character.userImageFaceLock.referenceImage || '' });
+        }
+        return references;
     }
 
     function capture(character, subject, engine = provider()) {
         const settings = clone(db[settingKeys[engine]]);
         settings._hasCharacterContext = true;
         settings._character = character ? { id: character.id, gptArtistPrompt: character.gptArtistPrompt || '', gptImageSizeOverride: character.gptImageSizeOverride || '' } : null;
-        const lock = subjectLock(character, subject);
-        if (lock?.enabled) {
-            settings._faceLock = { characterId: character.id, referenceImage: lock.referenceImage || '' };
-            if (subject === 'user') settings._faceLock.subject = 'user';
-        }
+        const references = enabledReferences(character, subject);
+        if (references.length) settings._faceLock = { characterId: character.id, references };
         if (engine === 'novelai') {
             settings._referenceSnapshot = { vibe: clone(db.novelAiVibeSettings), precise: clone(db.novelAiPreciseReferenceSettings) };
         }
@@ -81,25 +93,35 @@
         return compressImage(blob, { quality: 0.95, maxWidth: 1536, maxHeight: 1536 });
     }
 
-    async function reference(settings, engine, signal) {
-        const lock = settings._faceLock;
-        if (!lock) return null;
-        if (!supported(engine, settings)) throw new Error('当前生图模型不支持锁脸，请选择支持人物参考的模型，或关闭对应的生图锁脸');
-        if (!lock.referenceImage) throw new Error('人物参考图已丢失，请在角色设置中重新上传');
-        let dataUrl = lock.referenceImage;
+    async function resolveReference(reference, signal) {
+        const source = reference.referenceImage;
+        if (!source) throw new Error('人物参考图已丢失，请在角色设置中重新上传');
+        let dataUrl = source;
         if (!/^data:image\/(?:png|jpeg|webp);base64,/i.test(dataUrl)) {
-            dataUrl = referenceCache.get(lock.referenceImage);
+            dataUrl = referenceCache.get(source);
             if (!dataUrl) {
-                dataUrl = await normalizeImage(lock.referenceImage, signal);
+                dataUrl = await normalizeImage(source, signal);
                 if (referenceCache.size >= 4) referenceCache.delete(referenceCache.keys().next().value);
-                referenceCache.set(lock.referenceImage, dataUrl);
+                referenceCache.set(source, dataUrl);
             }
         }
         const match = dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=\s]+)$/);
         if (!match) throw new Error('人物参考图无效，请重新上传');
+        return { dataUrl, mimeType: match[1], data: match[2], subject: reference.subject };
+    }
+
+    async function reference(settings, engine, signal) {
+        const lock = settings._faceLock;
+        if (!lock) return null;
+        if (!supported(engine, settings)) throw new Error('当前生图模型不支持锁脸，请选择支持人物参考的模型，或关闭对应的生图锁脸');
+        if (lock.references.length > 1 && !supportsTwoReferences(engine, settings)) {
+            throw new Error('当前模型无法在合照中分别锁定 CHAR 和 USER，请切换到支持多张人物参考的 GPT Image 或 Gemini 图片模型，或只开启一方的锁脸');
+        }
+        const images = await Promise.all(lock.references.map(item => resolveReference(item, signal)));
         const metadata = { characterId: lock.characterId };
-        if (lock.subject === 'user') metadata.subject = 'user';
-        return { dataUrl, mimeType: match[1], data: match[2], metadata };
+        if (images.length > 1) metadata.subject = 'both';
+        else if (images[0].subject === 'user') metadata.subject = 'user';
+        return { images, metadata };
     }
 
     function renderDraft(draft) {
@@ -120,7 +142,8 @@
         control('status').textContent = draft.busy ? '正在处理参考图片…'
             : !engine ? '请先在 API 设置中启用生图服务。'
             : !supported(engine, settings) ? '当前模型不支持锁脸，请在 API 设置中选择支持人物参考的模型。'
-            : engine === 'novelai' ? '锁脸图片使用此人物参考，不叠加全局参考与 VIBE；参考图片可能额外计费。'
+            : engine === 'novelai' ? 'NovelAI 每张图只能锁定一方。锁脸时暂停使用全局参考与 VIBE，人物参考可能额外计费。'
+            : !supportsTwoReferences(engine, settings) ? '当前模型每张图只能锁定一方。'
             : '当前模型可使用人物参考；第三方接口需支持图片输入，参考图片可能额外计费。';
     }
 
@@ -210,5 +233,5 @@
         }
     }
 
-    window.OvoFaceLock = { provider, supported, parsePrompt, subjectInstruction, messageCharacter, subjectLock, capture, reference, loadSettings, saveSettings };
+    window.OvoFaceLock = { provider, supported, parsePrompt, subjectInstruction, messageCharacter, enabledReferences, capture, reference, loadSettings, saveSettings };
 })();

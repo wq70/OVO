@@ -8,6 +8,25 @@ function extractVoiceMessageText(content) {
     return end > start ? content.slice(start, end).trim() : null;
 }
 
+function createQuotedMessageElement(quote, chat, chatType) {
+    let name;
+    if (quote.senderId === 'user_me') {
+        name = chatType === 'private' ? window.CharacterProfile?.getUserNickname(chat) || chat.myName : chat.me.nickname;
+    } else if (chatType === 'private') {
+        name = chat.remarkName;
+    } else {
+        const sender = chat.members.find(member => member.id === quote.senderId);
+        name = sender ? sender.groupNickname : '未知成员';
+    }
+
+    const element = document.createElement('div');
+    element.className = 'quoted-message';
+    element.innerHTML = '<span class="quoted-sender"></span><p class="quoted-text"></p>';
+    element.firstElementChild.textContent = `回复 ${name}`;
+    element.lastElementChild.innerHTML = DOMPurify.sanitize(quote.content, { ALLOWED_TAGS: [] });
+    return element;
+}
+
 function createMessageBubbleElement(message, isContinuous = false) {
     const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
     const showDebugContent = currentChatType === 'private' && !!chat.showDebugContent;
@@ -330,32 +349,8 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
             wrapper.appendChild(translationDiv);
         }
 
-        // --- 【新增】在双语消息中注入引用(回复)气泡渲染逻辑 ---
-        if (quote) {
-            let quotedSenderName = '';
-            // 解析被引用人的名字
-            if (quote.senderId === 'user_me') {
-                quotedSenderName = (currentChatType === 'private') ? chat.myName : chat.me.nickname;
-            } else {
-                if (currentChatType === 'private') {
-                    quotedSenderName = chat.remarkName;
-                } else {
-                    const sender = chat.members.find(m => m.id === quote.senderId);
-                    quotedSenderName = sender ? sender.groupNickname : '未知成员';
-                }
-            }
-            
-            // 创建引用气泡 DOM
-            const quoteDiv = document.createElement('div');
-            quoteDiv.className = 'quoted-message';
-            const sanitizedQuotedText = DOMPurify.sanitize(quote.content, { ALLOWED_TAGS: [] });
-            quoteDiv.innerHTML = `<span class="quoted-sender">回复 ${quotedSenderName}</span><p class="quoted-text">${sanitizedQuotedText}</p>`;
-            
-            // 将引用气泡插入到双语主气泡的前面 (CSS绝对定位会自动处理位置)
-            bubbleElement.prepend(quoteDiv);
-        }
-        // ---------------------------------------------------
-        
+        if (quote) bubbleElement.prepend(createQuotedMessageElement(quote, chat, currentChatType));
+
         return wrapper;
     }
 
@@ -1316,6 +1311,8 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
         messageInfo.appendChild(timeSpan);
     }
 
+    if (quote && bubbleElement) bubbleElement.prepend(createQuotedMessageElement(quote, chat, currentChatType));
+
     if (currentChatType === 'group' && !isSent) {
         // 群聊接收消息布局：头像左侧，右侧垂直排列昵称和气泡
         const contentContainer = document.createElement('div');
@@ -1326,24 +1323,6 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
         }
         
         if (bubbleElement) {
-            if (quote) {
-                let quotedSenderName = '';
-                if (quote.senderId === 'user_me') {
-                    quotedSenderName = (currentChatType === 'private') ? chat.myName : chat.me.nickname;
-                } else {
-                    if (currentChatType === 'private') {
-                        quotedSenderName = chat.remarkName;
-                    } else {
-                        const sender = chat.members.find(m => m.id === quote.senderId);
-                        quotedSenderName = sender ? sender.groupNickname : '未知成员';
-                    }
-                }
-                const quoteDiv = document.createElement('div');
-                quoteDiv.className = 'quoted-message';
-                const sanitizedQuotedText = DOMPurify.sanitize(quote.content, { ALLOWED_TAGS: [] });
-                quoteDiv.innerHTML = `<span class="quoted-sender">回复 ${quotedSenderName}</span><p class="quoted-text">${sanitizedQuotedText}</p>`;
-                bubbleElement.prepend(quoteDiv);
-            }
             contentContainer.appendChild(bubbleElement);
         }
         
@@ -1354,24 +1333,6 @@ const contentMatch = content.match(/^\[.*?(?:消息|回复)[：:]([\s\S]+)\]$/);
         bubbleRow.appendChild(messageInfo);
         
         if (bubbleElement) {
-            if (quote) {
-                let quotedSenderName = '';
-                if (quote.senderId === 'user_me') {
-                    quotedSenderName = (currentChatType === 'private') ? chat.myName : chat.me.nickname;
-                } else {
-                    if (currentChatType === 'private') {
-                        quotedSenderName = chat.remarkName;
-                    } else {
-                        const sender = chat.members.find(m => m.id === quote.senderId);
-                        quotedSenderName = sender ? sender.groupNickname : '未知成员';
-                    }
-                }
-                const quoteDiv = document.createElement('div');
-                quoteDiv.className = 'quoted-message';
-                const sanitizedQuotedText = DOMPurify.sanitize(quote.content, { ALLOWED_TAGS: [] });
-                quoteDiv.innerHTML = `<span class="quoted-sender">回复 ${quotedSenderName}</span><p class="quoted-text">${sanitizedQuotedText}</p>`;
-                bubbleElement.prepend(quoteDiv);
-            }
             bubbleRow.appendChild(bubbleElement);
         }
     }

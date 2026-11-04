@@ -20,6 +20,7 @@
                                         <option value="minimax" selected>Minimax (海螺)</option>
                                         <option value="volcengine">火山引擎 (豆包语音)</option>
                                         <option value="elevenlabs">ElevenLabs</option>
+                                        <option value="fish">Fish Audio</option>
                                     </select>
                                     <span class="kkt-arrow">›</span>
                                 </div>
@@ -73,6 +74,34 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <details id="fish-config-wrap" class="api-nested-details tts-details" hidden>
+                                <summary>Fish Audio 设置</summary>
+                                <div class="kkt-item">
+                                    <label class="kkt-item-label" for="fish-api-key">API Key</label>
+                                    <div class="kkt-item-control">
+                                        <input type="password" id="fish-api-key" autocomplete="new-password" placeholder="输入 Fish Audio API Key">
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <label class="kkt-item-label" for="fish-model">语音模型</label>
+                                    <div class="kkt-item-control">
+                                        <select id="fish-model">
+                                            <option value="fish-audio/s2.1-pro-free">S2.1 Pro（免费版）</option>
+                                            <option value="fish-audio/s2.1-pro">S2.1 Pro（付费）</option>
+                                            <option value="fish-audio/s2-pro">S2 Pro（付费）</option>
+                                        </select>
+                                        <span class="kkt-arrow" aria-hidden="true">›</span>
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <label class="kkt-item-label" for="fish-voice-id">默认音色</label>
+                                    <div class="kkt-item-control">
+                                        <input type="text" id="fish-voice-id" autocomplete="off" placeholder="音色 ID 或分享链接">
+                                    </div>
+                                </div>
+                                <p class="api-field-tip tts-eleven-tip">留空使用模型默认音色。试听和朗读使用 Fish Audio 账号额度。</p>
+                            </details>
 
                             <div id="elevenlabs-tts-config-wrap" class="tts-eleven-config" style="display:none;">
                                 <div class="kkt-item"><div class="kkt-item-label">API Key</div><div class="kkt-item-control"><input type="password" id="elevenlabs-api-key" autocomplete="new-password" placeholder="输入 ElevenLabs API Key"></div></div>
@@ -146,6 +175,7 @@
                                         <option value="minimax" selected>Minimax (海螺)</option>
                                         <option value="volcengine">火山引擎 (豆包语音)</option>
                                         <option value="elevenlabs">ElevenLabs</option>
+                                        <option value="fish">Fish Audio</option>
                                     </select>
                                     <span class="kkt-arrow">›</span>
                                 </div>
@@ -195,6 +225,34 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <details id="fish-user-config-wrap" class="api-nested-details tts-details" hidden>
+                                <summary>Fish Audio 设置</summary>
+                                <div class="kkt-item">
+                                    <label class="kkt-item-label" for="fish-user-api-key">API Key</label>
+                                    <div class="kkt-item-control">
+                                        <input type="password" id="fish-user-api-key" autocomplete="new-password" placeholder="输入 Fish Audio API Key">
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <label class="kkt-item-label" for="fish-user-model">语音模型</label>
+                                    <div class="kkt-item-control">
+                                        <select id="fish-user-model">
+                                            <option value="fish-audio/s2.1-pro-free">S2.1 Pro（免费版）</option>
+                                            <option value="fish-audio/s2.1-pro">S2.1 Pro（付费）</option>
+                                            <option value="fish-audio/s2-pro">S2 Pro（付费）</option>
+                                        </select>
+                                        <span class="kkt-arrow" aria-hidden="true">›</span>
+                                    </div>
+                                </div>
+                                <div class="kkt-item">
+                                    <label class="kkt-item-label" for="fish-user-voice-id">默认音色</label>
+                                    <div class="kkt-item-control">
+                                        <input type="text" id="fish-user-voice-id" autocomplete="off" placeholder="音色 ID 或分享链接">
+                                    </div>
+                                </div>
+                                <p class="api-field-tip tts-eleven-tip">留空使用模型默认音色。试听和朗读使用 Fish Audio 账号额度。</p>
+                            </details>
 
                             <div id="elevenlabs-user-tts-config-wrap" class="tts-eleven-config" style="display:none;">
                                 <div class="kkt-item"><div class="kkt-item-label">API Key</div><div class="kkt-item-control"><input type="password" id="elevenlabs-user-api-key" autocomplete="new-password" placeholder="输入 ElevenLabs API Key"></div></div>

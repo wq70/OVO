@@ -280,13 +280,11 @@ function openImageViewer(src, msgId = null) {
             const tagMatch = originalPrompt.match(/\{\{([\s\S]+?)\}\}/);
             if (tagMatch) originalPrompt = tagMatch[1].trim();
             const faceLock = window.OvoFaceLock;
-            const parsedPrompt = faceLock?.parsePrompt(originalPrompt);
+            const parsedPrompt = faceLock?.parsePrompt(originalPrompt, currentChatType === 'private');
             if (parsedPrompt) originalPrompt = parsedPrompt.prompt;
             const referenceNote = document.getElementById('edit-image-face-lock-note');
             const referenceCharacter = faceLock?.messageCharacter(chatObj, currentChatType, msgObj);
-            const subject = parsedPrompt?.subject;
-            const lock = subject === 'user' && currentChatType !== 'private' ? null : faceLock?.subjectLock(referenceCharacter, subject);
-            if (referenceNote) referenceNote.hidden = !lock?.enabled;
+            if (referenceNote) referenceNote.hidden = !faceLock?.enabledReferences(referenceCharacter, parsedPrompt?.subject).length;
 
             textarea.value = originalPrompt;
             editModal.classList.add('visible');
@@ -357,7 +355,10 @@ function openImageViewer(src, msgId = null) {
                 if (activeMeta?.model) logText += `\n模型: ${activeMeta.model}`;
                 if (activeMeta?.size) logText += `\n尺寸/比例: ${activeMeta.size}`;
                 if (activeMeta?.seed != null) logText += `\nSeed: ${activeMeta.seed}`;
-                if (activeMeta?.faceLock) logText += activeMeta.faceLock.subject === 'user' ? '\n人物参考: 已使用 USER 参考' : '\n人物参考: 已使用角色参考';
+                if (activeMeta?.faceLock) {
+                    const labels = { both: 'CHAR 和 USER', user: 'USER' };
+                    logText += `\n人物参考: 已使用 ${labels[activeMeta.faceLock.subject] || 'CHAR'} 参考`;
+                }
                 if (activeMeta?.vibeGroup) logText += `\nVIBE 组: ${activeMeta.vibeGroup}（${activeMeta.vibeCount || 0} 个）`;
                 if (activeMeta?.correlationId) logText += `\n请求 ID: ${activeMeta.correlationId}`;
                 logText += `\n\n[提取的提示词]\n${finalPrompt}`;
@@ -1052,7 +1053,7 @@ async function generateGptImage(prompt, overrideSettings = {}, signal = null) {
     const merged = _imageMergePrompt(promptParts.filter(Boolean).join(', '), 'gpt', '', negativePrompt);
     let finalPrompt = merged.prompt;
     if (merged.negativePrompt) finalPrompt = `${finalPrompt} --no ${merged.negativePrompt}`;
-    if (faceReference) finalPrompt += '\n使用参考图中的同一个人，保持主要面部特征与人物身份。服装、表情、动作、背景和构图按上述描述生成，不照搬参考图的场景。';
+    if (faceReference) finalPrompt += _imageFaceReferenceInstruction(faceReference.images);
 
     const endpoint = faceReference && /\/images\/generations(?:\?|$)/i.test(url)
         ? url.replace(/\/images\/generations(?=\?|$)/i, '/images/edits')
@@ -1065,7 +1066,11 @@ async function generateGptImage(prompt, overrideSettings = {}, signal = null) {
         body.append('prompt', finalPrompt);
         body.append('n', '1');
         body.append('size', size);
-        body.append('image', _image_base64ToBlob(faceReference.data, faceReference.mimeType), 'character-reference.' + (faceReference.mimeType === 'image/jpeg' ? 'jpg' : faceReference.mimeType.split('/')[1]));
+        const imageField = faceReference.images.length > 1 ? 'image[]' : 'image';
+        for (const { data, mimeType, subject } of faceReference.images) {
+            const extension = mimeType === 'image/jpeg' ? 'jpg' : mimeType.split('/')[1];
+            body.append(imageField, _image_base64ToBlob(data, mimeType), `${subject}-reference.${extension}`);
+        }
         if (/^gpt-image-1(?:\.5)?$/.test(model)) body.append('input_fidelity', 'high');
     } else {
         headers['Content-Type'] = 'application/json';
@@ -1186,7 +1191,7 @@ async function generateNovelAiImage(prompt, overrideSettings = {}, signal = null
         ? await window.NovelAiVibe.resolveForGeneration(model, settings, signal)
         : { images: [], information: [], strengths: [], groupName: '' };
     const precise = faceReference
-        ? { images: [await compat.fitImage(faceReference.dataUrl, undefined, undefined, 'black', signal)], strengths: [0.8], fidelity: [1], descriptions: ['character'] }
+        ? { images: [await compat.fitImage(faceReference.images[0].dataUrl, undefined, undefined, 'black', signal)], strengths: [0.8], fidelity: [1], descriptions: ['character'] }
         : window.NovelAiVibe?.resolvePreciseReferences
         ? await window.NovelAiVibe.resolvePreciseReferences(model, settings, signal)
         : { images: [], strengths: [], fidelity: [], descriptions: [] };
@@ -1451,6 +1456,11 @@ async function generateNovelAiImage(prompt, overrideSettings = {}, signal = null
     };
 }
 
+function _imageFaceReferenceInstruction(images) {
+    const identities = images.map(({ subject }, index) => `参考图 ${index + 1} 对应 ${subject === 'user' ? 'USER' : 'CHAR'}`);
+    return '\n' + identities.join('，') + '。每张参考图只用于对应人物的身份与面部特征，其他出镜者各自保持独立的外貌。人物数量、位置、服装、表情、动作、背景和构图按上述场景描述生成。';
+}
+
 /** 使用 Google Gemini 原生图片模型生成图片。 */
 async function generateGoogleImage(prompt, overrideSettings = {}, signal = null) {
     const settings = overrideSettings._hasCharacterContext ? Object.assign({}, overrideSettings) : Object.assign({}, db.googleImageSettings || {}, overrideSettings);
@@ -1464,7 +1474,7 @@ async function generateGoogleImage(prompt, overrideSettings = {}, signal = null)
     const merged = _imageMergePrompt(prompt.trim(), 'google', settings.systemPrompt || '', settings.negativePrompt || '');
     let finalPrompt = merged.prompt;
     if (merged.negativePrompt) finalPrompt += `\n\n画面中不要出现：${merged.negativePrompt}`;
-    if (faceReference) finalPrompt += '\n参考图只用于人物身份：保持同一个人的主要面部特征。服装、表情、动作、背景和构图按上述描述生成，不照搬参考图的场景。';
+    if (faceReference) finalPrompt += _imageFaceReferenceInstruction(faceReference.images);
     const endpoint = /:generateContent(?:\?|$)/.test(baseUrl)
         ? baseUrl
         : `${baseUrl.replace(/\/$/, '')}/v1beta/models/${encodeURIComponent(model)}:generateContent`;
@@ -1472,7 +1482,7 @@ async function generateGoogleImage(prompt, overrideSettings = {}, signal = null)
     if (settings.aspectRatio) generationConfig.imageConfig = { aspectRatio: settings.aspectRatio };
 
     const inputParts = [{ text: finalPrompt }];
-    if (faceReference) inputParts.push({ inlineData: { mimeType: faceReference.mimeType, data: faceReference.data } });
+    for (const { mimeType, data } of faceReference?.images || []) inputParts.push({ inlineData: { mimeType, data } });
     const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },

@@ -461,8 +461,12 @@ async function saveSettingsFromSidebar() {
         if (window.McpManager && document.getElementById('chat-mcp-settings')) e.mcpSettings = window.McpManager.readPermissionEditor(document.getElementById('chat-mcp-settings'));
         // phoneControlVisibleCharIds 的保存将在弹窗确认时直接操作 db 并触发 saveData，这里无需额外处理，只需保持状态同步
 
-        await saveData();
+        if (await saveData() === false) return;
         if (window.MomentsControls) await window.MomentsControls.reschedule(e.momentsActorId || 'char:' + e.id);
+        if (currentChatId === e.id && typeof currentQuoteInfo !== 'undefined' && currentQuoteInfo?.senderId === 'user_me') {
+            const name = window.CharacterProfile?.getUserNickname(e) || e.myName;
+            document.querySelector('#reply-preview-bar .reply-preview-name').textContent = `回复 ${name}`;
+        }
         showToast('设置已保存！');
         chatRoomTitle.textContent = e.remarkName;
         renderChatList();

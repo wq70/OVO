@@ -688,7 +688,7 @@ function calculateVoiceDuration(text) {
 }
 
 // 模板处理函数：替换头像、名字等变量
-function processTemplate(html, char, { css = false } = {}) {
+function processTemplate(html, char, { css = false, domValue = false } = {}) {
     if (!html || !char) return html;
     let processed = html;
     
@@ -722,6 +722,12 @@ function processTemplate(html, char, { css = false } = {}) {
     processed = processed.replace(/{{user_remark}}/g, userName); // user_remark 等同于 user_name
     const userRemarkName = (isPrivate && char.userRemarkName) || userName;
     processed = processed.replace(/{{user_remark_name}}/g, () => css ? CSS.escape(userRemarkName) : userRemarkName);
+    processed = processed.replace(/{{\s*user_nickname\s*}}/g, () => {
+        const nickname = isPrivate ? window.CharacterProfile?.getUserNickname(char) || '' : '';
+        if (css) return CSS.escape(nickname);
+        if (domValue) return nickname;
+        return nickname.replace(/[&<>"'`=\\$\s]/gu, char => `&#${char.codePointAt(0)};`);
+    });
 
     // 标签替换 (支持可选的 style 和 class 属性)
     // <user-avatar class="..." style="..."> -> <img src="..." class="uwu-user-avatar ..." style="...">
@@ -869,6 +875,8 @@ function isChatStatusUpdate(content) {
 }
 
 function filterHistoryForAI(chat, historySlice, ignoreContextDisabled = false) {
+    // 网名旁白仅用于本地展示，角色只收到当前设置生成的旁白。
+    historySlice = (historySlice || chat.history || []).filter(message => !message.isUserNicknameNotice);
     // Only concise page summaries enter model context; executable source stays local.
     if (window.InteractiveMessages) historySlice = (historySlice || chat.history || []).map(message => {
         const summary = window.InteractiveMessages.contextText(message);

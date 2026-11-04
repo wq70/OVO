@@ -614,7 +614,8 @@ function saveCurrentVoiceAsPreset() {
         userSpeed: tc.userSpeed != null ? tc.userSpeed : 1
     };
     for (const key of ['elevenVoiceId', 'elevenCustomVoiceId', 'elevenVoiceName', 'elevenSpeed',
-        'userElevenVoiceId', 'userElevenCustomVoiceId', 'userElevenVoiceName', 'userElevenSpeed']) {
+        'userElevenVoiceId', 'userElevenCustomVoiceId', 'userElevenVoiceName', 'userElevenSpeed',
+        'fishVoiceId', 'fishSpeed', 'userFishVoiceId', 'userFishSpeed']) {
         if (tc[key] != null) preset[key] = tc[key];
     }
 
@@ -651,7 +652,8 @@ function applyVoicePreset(name) {
     chat.ttsConfig.userLanguage = p.userLanguage || 'auto';
     chat.ttsConfig.userSpeed = p.userSpeed != null ? p.userSpeed : 1;
     for (const key of ['elevenVoiceId', 'elevenCustomVoiceId', 'elevenVoiceName', 'elevenSpeed',
-        'userElevenVoiceId', 'userElevenCustomVoiceId', 'userElevenVoiceName', 'userElevenSpeed']) {
+        'userElevenVoiceId', 'userElevenCustomVoiceId', 'userElevenVoiceName', 'userElevenSpeed',
+        'fishVoiceId', 'fishSpeed', 'userFishVoiceId', 'userFishSpeed']) {
         if (p[key] != null) chat.ttsConfig[key] = p[key];
     }
 

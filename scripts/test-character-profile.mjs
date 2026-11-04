@@ -35,7 +35,7 @@ for (const file of ['js/modules/character-profile.js', 'js/modules/poke.js', 'js
     vm.runInContext(read(file), context, { filename: file });
 }
 const api = context.window.CharacterProfile;
-const utilsContext = vm.createContext({ window: context.window, console });
+const utilsContext = vm.createContext({ window: context.window, console, currentChatType: 'private' });
 vm.runInContext(read('js/core/ui-and-content-utils.js'), utilsContext);
 context.getMixedContent = utilsContext.getMixedContent;
 const permissions = ['allowCharacterRemarkUpdate', 'allowUserRemarkUpdate', 'allowCharacterPokeUpdate', 'allowUserPokeUpdate'];
@@ -194,6 +194,60 @@ permissions.forEach(key => { prompted[key] = false; });
 assert.ok(api.prompt(prompted).includes('小月亮'));
 assert.ok(!api.prompt(prompted).includes('[PROFILE:'));
 assert.equal(api.prompt(character()), '');
+
+// 网名独立控制本地显示与请求上下文，旁白记录不会占用后续请求的历史窗口。
+const nicknameChat = character();
+const nicknameEnabled = { checked: true };
+const nicknameVisible = { checked: true };
+const nicknameInput = { value: '' };
+inputs.set('setting-user-nickname-enabled', nicknameEnabled);
+inputs.set('setting-user-nickname-visible', nicknameVisible);
+inputs.set('setting-user-nickname', nicknameInput);
+api.loadSettings(nicknameChat);
+assert.equal(nicknameEnabled.checked, false);
+assert.equal(nicknameVisible.checked, false);
+assert.equal(nicknameVisible.disabled, true);
+nicknameInput.value = '  星屿 & 月亮  ';
+nicknameEnabled.checked = true;
+nicknameEnabled.onchange();
+assert.equal(nicknameVisible.disabled, false);
+api.saveSettings(nicknameChat);
+assert.equal(nicknameChat.myName, '原名字');
+assert.equal(api.getUserNickname(nicknameChat), '星屿 & 月亮');
+assert.equal(utilsContext.processTemplate('{{user_nickname}}', nicknameChat, { domValue: true }), '星屿 & 月亮');
+assert.match(utilsContext.processTemplate('{{user_nickname}}', nicknameChat), /&#38;/);
+const assertNoNicknamePrompt = () => assert.doesNotMatch(context.generatePrivateSystemPrompt(nicknameChat, { preview: true }), /【旁白】|星屿|月白/);
+assertNoNicknamePrompt();
+assert.equal(nicknameChat.history.length, 0);
+
+nicknameVisible.checked = true;
+api.saveSettings(nicknameChat);
+api.saveSettings(nicknameChat);
+assert.equal(nicknameChat.history.length, 1);
+assert.match(nicknameChat.history[0].displayText, /星屿 & 月亮/);
+assert.match(context.generatePrivateSystemPrompt(nicknameChat), /【旁白】.*星屿 & 月亮/);
+assert.match(context.window.PromptStudio.compileItems(nicknameChat, [], { preview: true }).prompt, /【旁白】.*星屿 & 月亮/);
+nicknameInput.value = '月白';
+api.saveSettings(nicknameChat);
+assert.equal(nicknameChat.history.length, 2);
+assert.match(nicknameChat.history[1].displayText, /改为「月白」/);
+nicknameVisible.checked = false;
+api.saveSettings(nicknameChat);
+assert.equal(api.getUserNickname(nicknameChat), '月白');
+assertNoNicknamePrompt();
+nicknameVisible.checked = true;
+nicknameEnabled.checked = false;
+api.saveSettings(nicknameChat);
+assert.equal(api.getUserNickname(nicknameChat), '');
+assert.equal(utilsContext.processTemplate('{{user_nickname}}', nicknameChat), '');
+assertNoNicknamePrompt();
+assert.equal(utilsContext.filterHistoryForAI(nicknameChat, nicknameChat.history, true).length, 0);
+vm.runInContext(read('js/modules/chat-ai/request-and-stream.js'), utilsContext);
+const quotedMessage = { id: 'chat-message', role: 'user', content: '[原名字的消息：你好]', quote: { senderId: 'user_me', content: '早上好' } };
+nicknameChat.maxMemory = 1;
+nicknameChat.history.unshift(quotedMessage);
+assert.equal(utilsContext.getChatRequestHistory(nicknameChat)[0].id, quotedMessage.id);
+inputs.clear();
 
 // 真实回复管线：后台修改目标角色、旧拍一拍快照保留、新事件使用新后缀。
 const integrated = enable(character({ pokeCharacterSuffix: '的旧袖口', pokeUserSuffix: '的旧耳朵', pokeEffectMode: 'off', pokeVibrationEnabled: false }));

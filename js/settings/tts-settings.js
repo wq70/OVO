@@ -12,6 +12,7 @@ function saveCurrentTTSAsPreset() {
     const provider = document.getElementById('tts-provider')?.value || 'minimax';
     const volc = typeof TTSSettings !== 'undefined' ? TTSSettings.readVolcengineFields('char') : {};
     const eleven = typeof TTSSettings !== 'undefined' ? TTSSettings.readElevenFields('char') : {};
+    const fish = typeof TTSSettings !== 'undefined' ? TTSSettings.readFishFields('char') : {};
     
     if (!db.ttsPresets) db.ttsPresets = [];
     
@@ -24,7 +25,8 @@ function saveCurrentTTSAsPreset() {
         domain,
         model,
         ...volc,
-        ...eleven
+        ...eleven,
+        ...fish
     });
     
     saveTTSGlobalSettings();
@@ -48,6 +50,7 @@ function applyTTSPreset(name) {
     if (typeof TTSSettings !== 'undefined') {
         TTSSettings.loadVolcengineFields('char', preset);
         TTSSettings.loadElevenFields('char', preset);
+        TTSSettings.loadFishFields('char', preset);
         TTSSettings.toggleProviderConfig('char', provider);
     }
     
@@ -150,7 +153,7 @@ function importTTSPresets() {
 async function exportTTSPresets() {
     const presets = db.ttsPresets || [];
     if (!presets.length) return showToast('没有可导出的 TTS 预设');
-    const safePresets = presets.map(({ apiKey, volcAccessToken, elevenApiKey, ...preset }) => ({ ...preset, apiKey: '', volcAccessToken: '', elevenApiKey: '' }));
+    const safePresets = presets.map(({ apiKey, volcAccessToken, elevenApiKey, fishApiKey, ...preset }) => ({ ...preset, apiKey: '', volcAccessToken: '', elevenApiKey: '', fishApiKey: '' }));
     const blob = new Blob([JSON.stringify(safePresets, null, 2)], { type: 'application/json' });
     await OvoFileDownload.save(blob, 'tts_presets_' + Date.now() + '.json');
 

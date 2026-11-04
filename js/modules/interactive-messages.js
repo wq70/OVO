@@ -262,11 +262,11 @@
             const walker = parsed.createTreeWalker(parsed.body, 4);
             let node;
             while ((node = walker.nextNode())) {
-                if (!node.parentElement.closest('script,style')) node.textContent = processTemplate(node.textContent, chat);
+                if (!node.parentElement.closest('script,style')) node.textContent = processTemplate(node.textContent, chat, { domValue: true });
             }
             parsed.querySelectorAll('*').forEach(node => {
                 for (const attribute of Array.from(node.attributes)) {
-                    if (!attribute.name.toLowerCase().startsWith('on')) node.setAttribute(attribute.name, processTemplate(attribute.value, chat));
+                    if (!attribute.name.toLowerCase().startsWith('on')) node.setAttribute(attribute.name, processTemplate(attribute.value, chat, { domValue: true }));
                 }
             });
             parsed.querySelectorAll('user-avatar,char-avatar').forEach(node => {
@@ -406,7 +406,8 @@
         const wrapper = element('div', `message-wrapper ${message.role === 'user' ? 'sent' : 'received'}`);
         wrapper.dataset.id = message.id;
         wrapper.dataset.ovoInteractiveKey = JSON.stringify([type, chat.id, message.id]);
-        wrapper.dataset.ovoInteractiveSignature = hash(JSON.stringify([message.content, message.parts, message.interactive?.revision, message.interactive?.resources, message.interactive?.disabled, message.timestamp, message.quote, message.role, message.senderId, continuous, chat.avatar, chat.myAvatar, chat.avatarMode, chat.timestampStyle, chat.timestampFormat, chat.myName, chat.me, chat.members]));
+        const userNickname = type === 'private' ? window.CharacterProfile?.getUserNickname(chat) : '';
+        wrapper.dataset.ovoInteractiveSignature = hash(JSON.stringify([message.content, message.parts, message.interactive?.revision, message.interactive?.resources, message.interactive?.disabled, message.timestamp, message.quote, message.role, message.senderId, continuous, chat.avatar, chat.myAvatar, chat.avatarMode, chat.timestampStyle, chat.timestampFormat, chat.myName, chat.me, chat.members, userNickname]));
         if (message.isContextDisabled) wrapper.classList.add('context-disabled');
         const row = element('div', 'message-bubble-row');
         const info = element('div', 'message-info');
@@ -427,7 +428,8 @@
         const host = createHost(record);
         host.classList.add(sent ? 'sent' : 'received');
         if (message.quote) {
-            const quote = element('div', 'ovo-interactive-quote', `回复：${message.quote.content || ''}`);
+            const quoteName = message.quote.senderId === 'user_me' && userNickname ? ` ${userNickname}` : '';
+            const quote = element('div', 'ovo-interactive-quote', `回复${quoteName}：${message.quote.content || ''}`);
             content.append(quote);
         }
         content.append(host);

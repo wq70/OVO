@@ -74,6 +74,7 @@ const TTSSettings = {
                 this.setSelectValue(modelSelect, config.model || 'speech-2.8-hd');
                 this.loadVolcengineFields('char', config);
                 this.loadElevenFields('char', config);
+                this.loadFishFields('char', config);
 
                 const userConfig = MinimaxTTSService.userConfig;
                 const userEnabledInput = document.getElementById('minimax-user-tts-enabled');
@@ -96,6 +97,7 @@ const TTSSettings = {
                 this.setSelectValue(userModelSelect, userConfig.model || 'speech-2.8-hd');
                 this.loadVolcengineFields('user', userConfig);
                 this.loadElevenFields('user', userConfig);
+                this.loadFishFields('user', userConfig);
             } catch (err) {
                 console.error('[TTSSettings] 加载设置失败:', err);
             }
@@ -109,6 +111,30 @@ const TTSSettings = {
             if (volcWrap) volcWrap.style.display = provider === 'volcengine' ? 'block' : 'none';
             const elevenWrap = document.getElementById(type === 'user' ? 'elevenlabs-user-tts-config-wrap' : 'elevenlabs-tts-config-wrap');
             if (elevenWrap) elevenWrap.style.display = provider === 'elevenlabs' ? 'block' : 'none';
+            const fishWrap = document.getElementById(type === 'user' ? 'fish-user-config-wrap' : 'fish-config-wrap');
+            if (fishWrap) {
+                fishWrap.hidden = provider !== 'fish';
+                if (fishWrap.hidden) fishWrap.open = false;
+            }
+        },
+
+        readFishFields: function(type) {
+            const prefix = type === 'user' ? 'fish-user-' : 'fish-';
+            const read = id => document.getElementById(prefix + id)?.value.trim() || '';
+            return { fishApiKey: read('api-key'), fishVoiceId: read('voice-id'),
+                fishModel: read('model') || 'fish-audio/s2.1-pro-free' };
+        },
+
+        loadFishFields: function(type, config) {
+            const prefix = type === 'user' ? 'fish-user-' : 'fish-';
+            for (const [id, value] of Object.entries({
+                'api-key': config.fishApiKey || '',
+                'voice-id': config.fishVoiceId || ''
+            })) {
+                const input = document.getElementById(prefix + id);
+                if (input) input.value = value;
+            }
+            this.setSelectValue(document.getElementById(prefix + 'model'), config.fishModel || 'fish-audio/s2.1-pro-free');
         },
 
         setSelectValue: function(select, value) {
@@ -228,7 +254,8 @@ const TTSSettings = {
                     domain: domainSelect?.value || 'api.minimax.cn',
                     model: modelSelect?.value || 'speech-2.8-hd',
                     ...this.readVolcengineFields('char'),
-                    ...this.readElevenFields('char')
+                    ...this.readElevenFields('char'),
+                    ...this.readFishFields('char')
                 };
                 
                 if (config.enabled) {
@@ -261,7 +288,8 @@ const TTSSettings = {
                     domain: userDomainSelect?.value || 'api.minimax.cn',
                     model: userModelSelect?.value || 'speech-2.8-hd',
                     ...this.readVolcengineFields('user'),
-                    ...this.readElevenFields('user')
+                    ...this.readElevenFields('user'),
+                    ...this.readFishFields('user')
                 };
 
                 if (userConfig.enabled) {
@@ -278,6 +306,19 @@ const TTSSettings = {
                         return false;
                     }
                     if (userConfig.provider === 'elevenlabs') TTSService._elevenBaseUrl(userConfig);
+                }
+                for (const [label, cfg] of [['角色', config], ['用户', userConfig]]) {
+                    if (cfg.provider !== 'fish' || !cfg.enabled) continue;
+                    if (!cfg.fishApiKey) {
+                        showToast(`请展开 Fish Audio 设置并填写${label} API Key`);
+                        return false;
+                    }
+                    try {
+                        cfg.fishVoiceId = TTSService.parseFishVoiceId(cfg.fishVoiceId);
+                    } catch (err) {
+                        showToast(`${label} Fish Audio：${err.message}`);
+                        return false;
+                    }
                 }
                 if (!MinimaxTTSService.saveConfig(config) || !MinimaxTTSService.saveUserConfig(userConfig)) {
                     showToast('保存失败，请检查浏览器存储空间');
@@ -316,6 +357,7 @@ const TTSSettings = {
             const testText = '你好，这是一个语音合成测试。Hello, this is a text-to-speech test.';
             const cfg = forUser ? MinimaxTTSService.userConfig : MinimaxTTSService.config;
             const testVoiceId = cfg.provider === 'elevenlabs' ? cfg.elevenVoiceId
+                : cfg.provider === 'fish' ? cfg.fishVoiceId
                 : cfg.provider === 'volcengine' ? cfg.volcVoiceType : 'female-shaonv';
 
             const played = await MinimaxTTSService.synthesizeAndPlay(testText, testVoiceId, 'auto', { forUser });
@@ -353,9 +395,11 @@ const TTSSettings = {
             const chatTtsEnabledInput = document.getElementById('setting-chat-tts-enabled');
             const eleven = MinimaxTTSService.config.provider === 'elevenlabs';
             const userEleven = MinimaxTTSService.userConfig.provider === 'elevenlabs';
+            const fish = MinimaxTTSService.config.provider === 'fish';
+            const userFish = MinimaxTTSService.userConfig.provider === 'fish';
             chat.ttsConfig.language = languageSelect?.value || 'auto';
-            chat.ttsConfig[eleven ? 'elevenCustomVoiceId' : 'customVoiceId'] = customVoiceIdInput?.value?.trim() || '';
-            chat.ttsConfig[eleven ? 'elevenSpeed' : 'speed'] = eleven
+            chat.ttsConfig[fish ? 'fishVoiceId' : eleven ? 'elevenCustomVoiceId' : 'customVoiceId'] = customVoiceIdInput?.value?.trim() || '';
+            chat.ttsConfig[fish ? 'fishSpeed' : eleven ? 'elevenSpeed' : 'speed'] = eleven
                 ? Math.min(1.2, Math.max(0.7, parseFloat(speedInput?.value) || 1))
                 : Math.min(2, Math.max(0.5, parseFloat(speedInput?.value) || 1));
             chat.ttsConfig.chatTtsEnabled = chatTtsEnabledInput?.checked || false;
@@ -364,8 +408,8 @@ const TTSSettings = {
             const userCustomVoiceIdInput = document.getElementById('setting-user-custom-voice-id');
             const userSpeedInput = document.getElementById('setting-user-tts-speed');
             if (userLanguageSelect) chat.ttsConfig.userLanguage = userLanguageSelect.value || 'auto';
-            if (userCustomVoiceIdInput) chat.ttsConfig[userEleven ? 'userElevenCustomVoiceId' : 'userCustomVoiceId'] = userCustomVoiceIdInput.value?.trim() || '';
-            if (userSpeedInput) chat.ttsConfig[userEleven ? 'userElevenSpeed' : 'userSpeed'] = userEleven
+            if (userCustomVoiceIdInput) chat.ttsConfig[userFish ? 'userFishVoiceId' : userEleven ? 'userElevenCustomVoiceId' : 'userCustomVoiceId'] = userCustomVoiceIdInput.value?.trim() || '';
+            if (userSpeedInput) chat.ttsConfig[userFish ? 'userFishSpeed' : userEleven ? 'userElevenSpeed' : 'userSpeed'] = userEleven
                 ? Math.min(1.2, Math.max(0.7, parseFloat(userSpeedInput.value) || 1))
                 : Math.min(2, Math.max(0.5, parseFloat(userSpeedInput.value) || 1));
 
@@ -385,16 +429,25 @@ const TTSSettings = {
 
             const eleven = MinimaxTTSService.config.provider === 'elevenlabs';
             const userEleven = MinimaxTTSService.userConfig.provider === 'elevenlabs';
+            const fish = MinimaxTTSService.config.provider === 'fish';
+            const userFish = MinimaxTTSService.userConfig.provider === 'fish';
+            for (const [id, hide] of [['tts-voice-picker-row', fish], ['user-tts-voice-picker-row', userFish]]) {
+                const row = document.getElementById(id);
+                if (row) row.hidden = hide;
+            }
 
             const languageSelect = document.getElementById('setting-tts-language');
             if (languageSelect) languageSelect.value = (chat.ttsConfig && chat.ttsConfig.language) || 'auto';
             const customVoiceIdInput = document.getElementById('setting-custom-voice-id');
-            if (customVoiceIdInput) customVoiceIdInput.value = chat.ttsConfig?.[eleven ? 'elevenCustomVoiceId' : 'customVoiceId'] || '';
+            if (customVoiceIdInput) {
+                customVoiceIdInput.value = chat.ttsConfig?.[fish ? 'fishVoiceId' : eleven ? 'elevenCustomVoiceId' : 'customVoiceId'] || '';
+                customVoiceIdInput.placeholder = fish ? 'ID 或分享链接' : '可选，优先使用';
+            }
             const chatTtsEnabledInput = document.getElementById('setting-chat-tts-enabled');
             if (chatTtsEnabledInput) chatTtsEnabledInput.checked = (chat.ttsConfig && chat.ttsConfig.chatTtsEnabled) || false;
             const speedInput = document.getElementById('setting-tts-speed');
             const speedValueSpan = document.getElementById('setting-tts-speed-value');
-            const charSpeed = chat.ttsConfig?.[eleven ? 'elevenSpeed' : 'speed'] ?? 1;
+            const charSpeed = chat.ttsConfig?.[fish ? 'fishSpeed' : eleven ? 'elevenSpeed' : 'speed'] ?? 1;
             if (speedInput) { speedInput.min = eleven ? '0.7' : '0.5'; speedInput.max = eleven ? '1.2' : '2'; speedInput.value = charSpeed; }
             if (speedValueSpan) speedValueSpan.textContent = String(charSpeed);
 
@@ -421,10 +474,13 @@ const TTSSettings = {
                 const userLanguageSelect = document.getElementById('setting-user-tts-language');
                 if (userLanguageSelect) userLanguageSelect.value = (chat.ttsConfig && chat.ttsConfig.userLanguage) || 'auto';
                 const userCustomInput = document.getElementById('setting-user-custom-voice-id');
-                if (userCustomInput) userCustomInput.value = chat.ttsConfig?.[userEleven ? 'userElevenCustomVoiceId' : 'userCustomVoiceId'] || '';
+                if (userCustomInput) {
+                    userCustomInput.value = chat.ttsConfig?.[userFish ? 'userFishVoiceId' : userEleven ? 'userElevenCustomVoiceId' : 'userCustomVoiceId'] || '';
+                    userCustomInput.placeholder = userFish ? 'ID 或分享链接' : '可选，优先使用';
+                }
                 const userSpeedInput = document.getElementById('setting-user-tts-speed');
                 const userSpeedValueSpan = document.getElementById('setting-user-tts-speed-value');
-                const userSpeed = chat.ttsConfig?.[userEleven ? 'userElevenSpeed' : 'userSpeed'] ?? 1;
+                const userSpeed = chat.ttsConfig?.[userFish ? 'userFishSpeed' : userEleven ? 'userElevenSpeed' : 'userSpeed'] ?? 1;
                 if (userSpeedInput) { userSpeedInput.min = userEleven ? '0.7' : '0.5'; userSpeedInput.max = userEleven ? '1.2' : '2'; userSpeedInput.value = userSpeed; }
                 if (userSpeedValueSpan) userSpeedValueSpan.textContent = String(userSpeed);
 
@@ -442,7 +498,7 @@ const TTSSettings = {
                 // 仅当启用但未配置完全时显示「未配置完全」
                 const hasUserVoice = userEleven ? !!VoiceSelector.getVoiceConfig(chatId, 'user')?.voiceId
                     : (chat.ttsConfig && (chat.ttsConfig.userVoiceId || (chat.ttsConfig.userCustomVoiceId && chat.ttsConfig.userCustomVoiceId.trim())));
-                if (userIncompleteHint) userIncompleteHint.style.display = hasUserVoice ? 'none' : 'block';
+                if (userIncompleteHint) userIncompleteHint.style.display = userFish || hasUserVoice ? 'none' : 'block';
             } else if (userIncompleteHint) {
                 userIncompleteHint.style.display = 'none';
             }

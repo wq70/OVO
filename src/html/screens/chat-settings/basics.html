@@ -207,6 +207,18 @@
                                     </div>
                                 </div>
                                 <div class="kkt-item">
+                                    <label class="kkt-item-label" for="setting-user-nickname-enabled">启用独立网名<p class="kkt-item-hint">仅当前私聊，开启后引用你的消息时显示网名</p></label>
+                                    <div class="kkt-item-control"><label class="kkt-switch"><input type="checkbox" id="setting-user-nickname-enabled"><span class="kkt-slider"></span></label></div>
+                                </div>
+                                <div class="kkt-item">
+                                    <label class="kkt-item-label" for="setting-user-nickname">我的网名<p class="kkt-item-hint">美化变量 <code>{{user_nickname}}</code></p></label>
+                                    <div class="kkt-item-control" style="flex:1; min-width:0; max-width:45%;"><input type="text" id="setting-user-nickname" maxlength="24" autocomplete="off" style="text-align:right; border:none; background:transparent; min-width:0; width:100%;" placeholder="尚未设置"></div>
+                                </div>
+                                <div class="kkt-item">
+                                    <label class="kkt-item-label" for="setting-user-nickname-visible">角色可见网名<p class="kkt-item-hint">公开或改名时显示旁白，角色会在回复时获知网名</p></label>
+                                    <div class="kkt-item-control"><label class="kkt-switch"><input type="checkbox" id="setting-user-nickname-visible" disabled><span class="kkt-slider"></span></label></div>
+                                </div>
+                                <div class="kkt-item">
                                     <label class="kkt-item-label" style="display:block; min-width:0; max-width:52%;" for="setting-user-remark">TA 给我的备注<p class="kkt-item-hint">仅当前角色使用，保留“我的名字”；清空即可移除</p></label>
                                     <div class="kkt-item-control" style="flex:1; min-width:0; max-width:45%;"><input type="text" id="setting-user-remark" maxlength="24" autocomplete="off" style="text-align:right; border:none; background:transparent; min-width:0; width:100%;" placeholder="尚未设置"></div>
                                 </div>

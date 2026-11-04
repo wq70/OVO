@@ -584,24 +584,36 @@ function setupChatRoom() {
     }
     document.addEventListener('ttsStateChange', updateVoiceBubblesPlayState);
 
+    let longPressTimer;
+    const cancelMessageLongPress = () => clearTimeout(longPressTimer);
+    const shouldUseNativeSelection = target =>
+        target.isContentEditable || target.closest('input, textarea, select') ||
+        window.getSelection()?.isCollapsed === false;
+
     messageArea.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        if (e.target.id === 'load-more-btn' || e.target.id === 'load-newer-btn' || isInMultiSelectMode) return;
+        cancelMessageLongPress();
+        if (e.button !== 2 || e.pointerType === 'touch' || e.sourceCapabilities?.firesTouchEvents) return;
+        if (isInMultiSelectMode || shouldUseNativeSelection(e.target)) return;
         const messageWrapper = e.target.closest('.message-wrapper, .node-divider-wrapper');
         if (!messageWrapper) return;
+        e.preventDefault();
         handleMessageLongPress(messageWrapper, e.clientX, e.clientY);
     });
     messageArea.addEventListener('touchstart', (e) => {
-        if (e.target.id === 'load-more-btn' || e.target.id === 'load-newer-btn') return;
+        cancelMessageLongPress();
+        if (e.touches.length !== 1 || isInMultiSelectMode || shouldUseNativeSelection(e.target)) return;
         const messageWrapper = e.target.closest('.message-wrapper, .node-divider-wrapper');
         if (!messageWrapper) return;
+        const { clientX, clientY } = e.touches[0];
         longPressTimer = setTimeout(() => {
-            const touch = e.touches[0];
-            handleMessageLongPress(messageWrapper, touch.clientX, touch.clientY);
+            if (messageArea.contains(messageWrapper) && !shouldUseNativeSelection(e.target)) {
+                handleMessageLongPress(messageWrapper, clientX, clientY);
+            }
         }, 400);
-    });
-    messageArea.addEventListener('touchend', () => clearTimeout(longPressTimer));
-    messageArea.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+    }, { passive: true });
+    messageArea.addEventListener('touchend', cancelMessageLongPress);
+    messageArea.addEventListener('touchmove', cancelMessageLongPress);
+    messageArea.addEventListener('touchcancel', cancelMessageLongPress);
     
     const messageEditForm = document.getElementById('message-edit-form');
     if(messageEditForm) {

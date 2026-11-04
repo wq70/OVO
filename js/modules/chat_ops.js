@@ -4,11 +4,6 @@ let currentMultiSelectMode = 'delete'; // 'delete' or 'capture'
 
 function handleMessageLongPress(messageWrapper, x, y) {
     if (isInMultiSelectMode) return;
-    clearTimeout(longPressTimer);
-    // 清除可能存在的文本选择，防止干扰菜单点击
-    if (window.getSelection) {
-        window.getSelection().removeAllRanges();
-    }
     const messageId = messageWrapper.dataset.id;
     const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
     const message = chat.history.find(m => m.id === messageId);
@@ -343,7 +338,7 @@ function startQuoteReply(messageId) {
     let senderName = '';
     let senderId = '';
     if (message.role === 'user') {
-        senderName = (currentChatType === 'private') ? chat.myName : chat.me.nickname;
+        senderName = currentChatType === 'private' ? window.CharacterProfile?.getUserNickname(chat) || chat.myName : chat.me.nickname;
         senderId = 'user_me';
     } else { 
         if (currentChatType === 'private') {

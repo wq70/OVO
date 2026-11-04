@@ -47,11 +47,8 @@
                             </div>
 
                             <!-- TTS 语音配置 -->
-                            <div class="kkt-group">
-                                <div style="margin-bottom: 15px; padding-top: 5px; padding-left: 8px;">
-                                    <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">语音设置</div>
-                                    <p style="font-size: 11px; color: #999; margin: 5px 0 0;">通话时的语音合成设置</p>
-                                </div>
+                            <details class="kkt-group tts-details">
+                                <summary>语音设置 <span>角色消息与通话</span></summary>
                                 <div class="kkt-item">
                                     <div class="kkt-item-label">启用 TTS 语音</div>
                                     <div class="kkt-item-control">
@@ -74,7 +71,7 @@
                                     </div>
                                 </div>
                                 
-                                <div class="kkt-item">
+                                <div class="kkt-item" id="tts-voice-picker-row">
                                     <div class="kkt-item-label">语音音色</div>
                                     <div class="kkt-item-control">
                                         <button type="button" id="select-voice-id-btn"
@@ -131,16 +128,13 @@
                                         <span id="setting-tts-speed-value" style="min-width: 32px;">1.0</span>
                                     </div>
                                 </div>
-                            </div>
+                            </details>
 
                             <!-- 用户语音设置（仅当 API 中启用用户 TTS 时显示） -->
-                            <div id="user-voice-settings-wrap" class="kkt-group" style="margin-top: 20px; display: none;">
-                                <div style="margin-bottom: 15px; padding-top: 5px; padding-left: 8px;">
-                                    <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">用户语音设置</div>
-                                    <p style="font-size: 11px; color: #999; margin: 5px 0 0;">播放「我的」消息时使用的音色</p>
-                                    <p id="user-voice-incomplete-hint" style="font-size: 11px; color: #e65100; margin: 5px 0 0; display: none;">未配置完全：请选择用户音色并保存</p>
-                                </div>
-                                <div class="kkt-item">
+                            <details id="user-voice-settings-wrap" class="kkt-group tts-details" style="display: none;">
+                                <summary>用户语音设置 <span>朗读我的消息</span></summary>
+                                <p id="user-voice-incomplete-hint" class="api-field-tip tts-eleven-tip" style="display: none;">请选择用户音色并保存。</p>
+                                <div class="kkt-item" id="user-tts-voice-picker-row">
                                     <div class="kkt-item-label">用户语音音色</div>
                                     <div class="kkt-item-control">
                                         <button type="button" id="select-user-voice-id-btn"
@@ -195,14 +189,14 @@
                                         <span id="setting-user-tts-speed-value" style="min-width: 32px;">1.0</span>
                                     </div>
                                 </div>
-                            </div>
+                            </details>
                             
                             <div class="kkt-group face-lock-settings">
                                 <div class="kkt-item">
                                     <label for="setting-face-lock-enabled" class="kkt-item-label">生图锁脸</label>
                                     <label class="kkt-switch"><input type="checkbox" id="setting-face-lock-enabled" aria-label="生图锁脸"><span class="kkt-slider"></span></label>
                                 </div>
-                                <p class="face-lock-tip">尽量保持角色长相一致，服装、表情和场景可变化。</p>
+                                <p class="face-lock-tip">角色出镜时使用，包括单人照和合照。服装、表情和场景可变化。</p>
                                 <div id="setting-face-lock-reference" hidden>
                                     <div class="kkt-item face-lock-reference-row">
                                         <span class="kkt-item-label">人物参考</span>
@@ -228,7 +222,7 @@
                                     <label for="setting-user-face-lock-enabled" class="kkt-item-label">USER 生图锁脸</label>
                                     <label class="kkt-switch"><input type="checkbox" id="setting-user-face-lock-enabled" aria-label="USER 生图锁脸"><span class="kkt-slider"></span></label>
                                 </div>
-                                <p class="face-lock-tip">用于本私聊中只有 USER 单独出镜的生图照片。</p>
+                                <p class="face-lock-tip">用于本私聊中 USER 出镜的单人照和合照。CHAR 和 USER 同时锁脸需要支持多张人物参考的生图模型。</p>
                                 <div id="setting-user-face-lock-reference" hidden>
                                     <div class="kkt-item face-lock-reference-row">
                                         <span class="kkt-item-label">USER 参考图</span>

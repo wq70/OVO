@@ -28,7 +28,7 @@ const ChatTokenStats = (() => {
     }
     function history(chat, type = 'private') {
         if (typeof getChatRequestHistory === 'function') return getChatRequestHistory(chat, type);
-        let list = (chat.history || []).filter(m => m && !m.isMomentsActivity).slice(-Math.max(1, Number(chat.maxMemory) || 20));
+        let list = (chat.history || []).filter(m => m && !m.isMomentsActivity && !m.isUserNicknameNotice).slice(-Math.max(1, Number(chat.maxMemory) || 20));
         if (typeof filterHistoryForAI === 'function') list = filterHistoryForAI(chat, list);
         return list.filter(m => !m.isContextDisabled && !m.excludeFromContext && m.type !== 'mcp_activity' && !m.isThinking && !(typeof m.content === 'string' && m.content.trim().startsWith('<thinking>')));
     }

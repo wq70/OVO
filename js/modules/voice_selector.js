@@ -381,6 +381,13 @@ const VoiceSelector = {
 
             const isUser = mode === 'user';
             const cfg = isUser ? MinimaxTTSService.userConfig : MinimaxTTSService.config;
+            if (cfg.provider === 'fish') {
+                return {
+                    voiceId: chat.ttsConfig[isUser ? 'userFishVoiceId' : 'fishVoiceId']?.trim() || cfg.fishVoiceId || 'default',
+                    language: chat.ttsConfig[isUser ? 'userLanguage' : 'language'] || 'auto',
+                    speed: Math.min(2, Math.max(0.5, Number(chat.ttsConfig[isUser ? 'userFishSpeed' : 'fishSpeed']) || 1))
+                };
+            }
             if (cfg.provider === 'elevenlabs') {
                 const custom = chat.ttsConfig[isUser ? 'userElevenCustomVoiceId' : 'elevenCustomVoiceId'];
                 return {

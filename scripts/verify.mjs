@@ -264,7 +264,9 @@ omitStatusStorageAdditions(protectedDocument);
 // Exclude only the authorized additive TTS controls; keep the release baseline
 // protecting every old provider, field, preset and unrelated screen.
 const ttsAdditionIds = ['test-user-tts-btn', ...['elevenlabs-', 'elevenlabs-user-'].flatMap(prefix =>
-    ['tts-config-wrap', 'api-key', 'model', 'load-models', 'voice-id', 'select-voice', 'url', 'tag-mode', 'show-tags'].map(suffix => prefix + suffix))];
+    ['tts-config-wrap', 'api-key', 'model', 'load-models', 'voice-id', 'select-voice', 'url', 'tag-mode', 'show-tags'].map(suffix => prefix + suffix)),
+    ...['fish-', 'fish-user-'].flatMap(prefix => ['config-wrap', 'api-key', 'model', 'voice-id'].map(suffix => prefix + suffix)),
+    'tts-voice-picker-row', 'user-tts-voice-picker-row'];
 function omitTtsAdditions(node) {
     const ownId = node.attrs?.find(attr => attr.name === 'id')?.value;
     if (['minimax-group-id', 'minimax-user-group-id'].includes(ownId)) {
@@ -273,11 +275,11 @@ function omitTtsAdditions(node) {
     }
     node.childNodes = (node.childNodes || []).filter(child => {
         const id = child.attrs?.find(attr => attr.name === 'id')?.value;
-        if (['elevenlabs-tts-config-wrap', 'elevenlabs-user-tts-config-wrap'].includes(id)) return false;
+        if (['elevenlabs-tts-config-wrap', 'elevenlabs-user-tts-config-wrap', 'fish-config-wrap', 'fish-user-config-wrap'].includes(id)) return false;
         if (child.attrs?.some(attr => attr.name === 'class' && attr.value === 'api-actions-row') && findNodeById(child, 'test-user-tts-btn')) return false;
         if (child.tagName === 'option') {
             const value = child.attrs?.find(attr => attr.name === 'value')?.value;
-            if (['tts-provider', 'user-tts-provider'].includes(ownId) && value === 'elevenlabs') return false;
+            if (['tts-provider', 'user-tts-provider'].includes(ownId) && ['elevenlabs', 'fish'].includes(value)) return false;
             if (['minimax-domain', 'minimax-user-domain'].includes(ownId) && ['api.minimax.cn', 'api.minimax.io'].includes(value)) return false;
             if (['minimax-tts-model', 'minimax-user-tts-model'].includes(ownId) && ['speech-01-hd', 'speech-01-turbo'].includes(value)) return false;
         }
@@ -286,6 +288,31 @@ function omitTtsAdditions(node) {
     });
 }
 omitTtsAdditions(findNodeById(protectedDocument, 'api-pane-tts'));
+// Normalize the two voice disclosures while keeping their original form fields protected.
+for (const [rowId, title, description, user] of [
+    ['tts-voice-picker-row', '语音设置', '通话时的语音合成设置', false],
+    ['user-tts-voice-picker-row', '用户语音设置', '播放「我的」消息时使用的音色', true]
+]) {
+    const row = findNodeById(protectedDocument, rowId);
+    const group = row?.parentNode;
+    const summary = group?.childNodes.find(node => node.tagName === 'summary');
+    if (group?.tagName !== 'details' || !summary) {
+        fail('Missing chat TTS disclosure: ' + rowId);
+        continue;
+    }
+    row.attrs = row.attrs.filter(attr => attr.name !== 'id');
+    group.tagName = group.nodeName = 'div';
+    group.attrs.find(attr => attr.name === 'class').value = 'kkt-group';
+    if (user) group.attrs.find(attr => attr.name === 'style').value = 'margin-top: 20px; display: none;';
+    const header = parseFragment(`<div style="margin-bottom: 15px; padding-top: 5px; padding-left: 8px;">
+        <div class="kkt-item-label" style="font-weight: bold; color: var(--primary-color);">${title}</div>
+        <p style="font-size: 11px; color: #999; margin: 5px 0 0;">${description}</p>
+        ${user ? '<p id="user-voice-incomplete-hint" style="font-size: 11px; color: #e65100; margin: 5px 0 0; display: none;">未配置完全：请选择用户音色并保存</p>' : ''}
+    </div>`).childNodes[0];
+    group.childNodes[group.childNodes.indexOf(summary)] = header;
+    header.parentNode = group;
+    if (user) group.childNodes = group.childNodes.filter(node => !node.attrs?.some(attr => attr.name === 'id' && attr.value === 'user-voice-incomplete-hint'));
+}
 // Restore only the authorized Pomodoro roots; the release hash still protects all other UI.
 const pomodoroLayoutBaseline = JSON.parse(read('scripts/fixtures/pomodoro-layout-before.json'));
 for (const [id, markup] of Object.entries(pomodoroLayoutBaseline)) {
@@ -362,8 +389,12 @@ function omitMusicStyles(node) {
     });
 }
 omitMusicStyles(protectedDocument);
-// Only omit the five new profile rows; retain every existing setting in the release comparison.
-const characterProfileAdditionIds = ['setting-user-remark', 'setting-allow-character-remark-update', 'setting-allow-user-remark-update', 'setting-allow-character-poke-update', 'setting-allow-user-poke-update'];
+// Only omit the additive profile rows; retain every other setting in the release comparison.
+const characterProfileAdditionIds = [
+    'setting-user-remark', 'setting-allow-character-remark-update', 'setting-allow-user-remark-update',
+    'setting-allow-character-poke-update', 'setting-allow-user-poke-update',
+    'setting-user-nickname-enabled', 'setting-user-nickname', 'setting-user-nickname-visible',
+];
 function omitCharacterProfileAdditions(node) {
     node.childNodes = (node.childNodes || []).filter(child => {
         const classes = child.attrs?.find(attr => attr.name === 'class')?.value.split(/\s+/) || [];
@@ -477,8 +508,7 @@ const requiredIds = [
     'keep-alive-page-status', 'keep-alive-wake-status', 'keep-alive-task-status',
     'setting-follow-up-enabled', 'setting-follow-up-options', 'setting-follow-up-probability',
     'setting-poke-enabled', 'setting-poke-options', 'setting-poke-char-suffix',
-    'setting-user-remark', 'setting-allow-character-remark-update', 'setting-allow-user-remark-update',
-    'setting-allow-character-poke-update', 'setting-allow-user-poke-update',
+    ...characterProfileAdditionIds,
     'setting-group-poke-enabled', 'setting-group-poke-options', 'setting-group-poke-member-btn',
 ];
 for (const id of requiredIds) {

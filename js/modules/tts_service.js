@@ -49,7 +49,10 @@ const TTSService = {
         elevenTagMode: 'preset',
         elevenShowTagsInTranscript: false,
         elevenVoiceId: '',
-        elevenUrl: 'https://api.elevenlabs.io'
+        elevenUrl: 'https://api.elevenlabs.io',
+        fishApiKey: '',
+        fishModel: 'fish-audio/s2.1-pro-free',
+        fishVoiceId: ''
     },
 
     // 用户 TTS 配置（独立存储）
@@ -72,7 +75,10 @@ const TTSService = {
         elevenTagMode: 'preset',
         elevenShowTagsInTranscript: false,
         elevenVoiceId: '',
-        elevenUrl: 'https://api.elevenlabs.io'
+        elevenUrl: 'https://api.elevenlabs.io',
+        fishApiKey: '',
+        fishModel: 'fish-audio/s2.1-pro-free',
+        fishVoiceId: ''
     },
 
     // 音频缓存 (文本+音色ID作为key，用户缓存加 user_ 前缀)
@@ -213,11 +219,13 @@ const TTSService = {
         const provider = cfg.provider || 'minimax';
         if (provider === 'volcengine') return !!(cfg.volcAppId && cfg.volcAccessToken && cfg.volcResourceId && cfg.volcVoiceType && cfg.volcUrl);
         if (provider === 'elevenlabs') return !!(cfg.elevenApiKey && cfg.elevenModel);
+        if (provider === 'fish') return !!(cfg.fishApiKey && cfg.fishModel);
         if (provider === 'minimax') return !!cfg.apiKey;
         return false;
     },
 
     resolveVoiceId: function(voiceId, cfg) {
+        if (cfg.provider === 'fish') return this.parseFishVoiceId(voiceId || cfg.fishVoiceId);
         if (cfg.provider !== 'elevenlabs') return voiceId;
         const isMinimaxVoice = globalThis.VoiceSelector?.voices?.some(item => item.id === voiceId);
         return (voiceId && !isMinimaxVoice ? voiceId : cfg.elevenVoiceId) || '';
@@ -287,6 +295,8 @@ const TTSService = {
                 audioUrl = await this._synthesizeVolcengine(cleanText, voiceId, language, speed, cfg, controller.signal);
             } else if (provider === 'elevenlabs') {
                 audioUrl = await this._synthesizeElevenLabs(cleanText, voiceId, language, speed, cfg, controller.signal);
+            } else if (provider === 'fish') {
+                audioUrl = await this._synthesizeFish(cleanText, voiceId, language, speed, cfg, controller.signal);
             } else if (provider === 'minimax') {
                 // 默认使用 Minimax TTS 服务
                 const url = `https://${cfg.domain || 'api.minimax.cn'}/v1/t2a_v2${cfg.groupId ? `?GroupId=${encodeURIComponent(cfg.groupId)}` : ''}`;
@@ -375,6 +385,46 @@ const TTSService = {
             clearTimeout(timeout);
             this.requestControllers.delete(controller);
         }
+    },
+
+    parseFishVoiceId: function(value) {
+        let id = String(value || '').trim();
+        if (/^https?:\/\//i.test(id)) {
+            const url = new URL(id);
+            const match = url.pathname.match(/^\/(?:m|model|voice|app\/u)\/([^/]+)\/?$/);
+            if (!/(^|\.)fish\.audio$/i.test(url.hostname) || !match) throw new Error('请填写 Fish 音色 ID 或音色分享链接');
+            id = decodeURIComponent(match[1]);
+        }
+        if (/[\s/?#]/.test(id) || id.length > 200) throw new Error('Fish 音色 ID 格式不正确');
+        return id;
+    },
+
+    _synthesizeFish: async function(text, voiceId, language, speed, cfg, signal) {
+        const body = { model: cfg.fishModel, input: text, voice: voiceId, response_format: 'mp3', speed };
+        if (language && language !== 'auto') {
+            body.provider = { options: { 'fish-audio': { language } } };
+        }
+        let response;
+        try {
+            response = await fetch('https://api.fish.audio/compat/v1/audio/speech', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${cfg.fishApiKey}`, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
+                body: JSON.stringify(body), signal
+            });
+        } catch (err) {
+            if (err instanceof TypeError && !signal.aborted) throw new Error('无法连接 Fish Audio，请检查网络');
+            throw err;
+        }
+        if (!response.ok) {
+            const labels = { 401: 'API Key 无效或已过期', 402: '额度不足或免费模型不可用', 403: '账号或音色权限不足',
+                404: '模型或音色不存在', 429: '请求过多或额度受限' };
+            const error = await response.json().catch(() => null);
+            const detail = error?.error?.message || error?.detail?.message || error?.detail || error?.message;
+            throw new Error(`Fish Audio ${labels[response.status] || '请求失败'}（${response.status}）${typeof detail === 'string' ? ' · ' + detail.slice(0, 160) : ''}`);
+        }
+        const data = await response.blob();
+        if (!data.size || /json|text\//i.test(data.type)) throw new Error('Fish Audio 未返回有效音频');
+        return URL.createObjectURL(new Blob([data], { type: 'audio/mpeg' }));
     },
 
     _elevenBaseUrl: function(cfg) {

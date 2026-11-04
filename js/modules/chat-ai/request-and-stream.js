@@ -5,7 +5,8 @@ const OVO_REPLY_TOTAL_TIMEOUT_MS = 10 * 60 * 1000;
 function getChatRequestHistory(chat, chatType = 'private') {
     const rawLimit = Number(chat.maxMemory);
     const historyLimit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.floor(rawLimit) : 20;
-    let historySlice = (chat.history || []).filter(message => message && !message.isMomentsActivity).slice(-historyLimit);
+    const isRequestMessage = message => message && !message.isMomentsActivity && !message.isUserNicknameNotice;
+    let historySlice = (chat.history || []).filter(isRequestMessage).slice(-historyLimit);
 
     // 节点系统：上下文截断与记忆隔离
     if (chatType === 'private' && chat.activeNodeId && chat.nodes) {
@@ -21,7 +22,7 @@ function getChatRequestHistory(chat, chatType = 'private') {
             }
             if (startIndex !== -1) {
                 // 无论是否开启 readMemory，当前对话视口严格只保留节点内的消息
-                const nodeMsgs = chat.history.slice(startIndex + 1).filter(message => !message.isMomentsActivity);
+                const nodeMsgs = chat.history.slice(startIndex + 1).filter(isRequestMessage);
                 historySlice = nodeMsgs.slice(-historyLimit);
 
                 // 上下文截断 (保留摘要)
