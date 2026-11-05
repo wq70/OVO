@@ -481,6 +481,23 @@
     flex-direction: column;
 }
 
+/* Keep mobile native selection/callouts from taking over message actions.
+   Do not disable scrolling, desktop selection, or controls inside HTML cards. */
+@media (any-pointer: coarse) {
+    #message-area :is(.message-wrapper, .node-divider-wrapper),
+    #message-area :is(.message-wrapper, .node-divider-wrapper) * {
+        -webkit-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none;
+    }
+    #message-area :is(input, textarea, select, [contenteditable]:not([contenteditable="false"])),
+    #message-area [contenteditable]:not([contenteditable="false"]) * {
+        -webkit-user-select: text !important;
+        user-select: text !important;
+        -webkit-touch-callout: default;
+    }
+}
+
 /* 防遮挡补丁：引用消息 */
 .message-wrapper:has(.quoted-message) {
     margin-bottom: 35px !important;

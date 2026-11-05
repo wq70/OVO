@@ -9,6 +9,80 @@ async function saveCurrentChat() {
     }
 }
 
+function setupMessageLongPress(messageArea) {
+    let timer;
+    let press = null;
+    let suppressClick = null;
+    const isEditable = target => target.isContentEditable || target.closest('input, textarea, select');
+    const wrapperOf = target => target.closest('.message-wrapper, .node-divider-wrapper');
+    const stopTimer = () => clearTimeout(timer);
+    const cancelPress = () => {
+        stopTimer();
+        if (press) press.cancelled = true;
+    };
+    const openTouchMenu = () => {
+        stopTimer();
+        if (!press || press.cancelled || press.opened || isInMultiSelectMode || !messageArea.contains(press.wrapper)) return;
+        press.opened = true;
+        // A native selection must not veto a message action on touch screens.
+        const selection = window.getSelection();
+        if (selection && (messageArea.contains(selection.anchorNode) || messageArea.contains(selection.focusNode))) selection.removeAllRanges();
+        suppressClick = { wrapper: press.wrapper, until: Date.now() + 1000 };
+        handleMessageLongPress(press.wrapper, press.x, press.y);
+    };
+
+    messageArea.addEventListener('touchstart', e => {
+        cancelPress();
+        press = { cancelled: true, time: Date.now() };
+        suppressClick = null;
+        if (e.touches.length !== 1 || isInMultiSelectMode || isEditable(e.target)) return;
+        const wrapper = wrapperOf(e.target);
+        if (!wrapper) return;
+        const touch = e.touches[0];
+        press = { wrapper, id: touch.identifier, x: touch.clientX, y: touch.clientY, time: Date.now() };
+        timer = setTimeout(openTouchMenu, 400);
+    }, { passive: true });
+    messageArea.addEventListener('touchmove', e => {
+        if (!press) return;
+        const touch = Array.from(e.touches).find(item => item.identifier === press.id);
+        // Small finger jitter is not a scroll; real movement cancels the menu.
+        if (e.touches.length !== 1 || !touch || Math.hypot(touch.clientX - press.x, touch.clientY - press.y) > 10) cancelPress();
+    }, { passive: true });
+    messageArea.addEventListener('touchend', e => {
+        cancelPress();
+        if (press?.opened) {
+            suppressClick = { wrapper: press.wrapper, until: Date.now() + 1000 };
+            if (e.cancelable) e.preventDefault();
+        }
+    }, { passive: false });
+    messageArea.addEventListener('touchcancel', cancelPress, { passive: true });
+    messageArea.addEventListener('scroll', cancelPress, { passive: true });
+
+    messageArea.addEventListener('contextmenu', e => {
+        const wrapper = wrapperOf(e.target);
+        if (!wrapper || isEditable(e.target)) return;
+        const fromTouch = e.pointerType === 'touch' || e.sourceCapabilities?.firesTouchEvents ||
+            (!e.pointerType && press && Date.now() - press.time < 1500);
+        if (fromTouch) {
+            // Android browsers can emit this before OR after our 400 ms timer.
+            e.preventDefault();
+            if (!press) press = { wrapper, x: e.clientX, y: e.clientY };
+            if (press.wrapper === wrapper) openTouchMenu();
+            return;
+        }
+        stopTimer();
+        if (isInMultiSelectMode || window.getSelection()?.isCollapsed === false) return;
+        e.preventDefault();
+        handleMessageLongPress(wrapper, e.clientX, e.clientY);
+    });
+    messageArea.addEventListener('click', e => {
+        if (!suppressClick || Date.now() > suppressClick.until || !suppressClick.wrapper.contains(e.target)) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        suppressClick = null;
+    }, true);
+}
+
 function setupChatRoom() {
     const memoryJournalBtn = document.getElementById('memory-journal-btn');
     const memoryTableBtn = document.getElementById('memory-table-btn');
@@ -584,36 +658,7 @@ function setupChatRoom() {
     }
     document.addEventListener('ttsStateChange', updateVoiceBubblesPlayState);
 
-    let longPressTimer;
-    const cancelMessageLongPress = () => clearTimeout(longPressTimer);
-    const shouldUseNativeSelection = target =>
-        target.isContentEditable || target.closest('input, textarea, select') ||
-        window.getSelection()?.isCollapsed === false;
-
-    messageArea.addEventListener('contextmenu', (e) => {
-        cancelMessageLongPress();
-        if (e.button !== 2 || e.pointerType === 'touch' || e.sourceCapabilities?.firesTouchEvents) return;
-        if (isInMultiSelectMode || shouldUseNativeSelection(e.target)) return;
-        const messageWrapper = e.target.closest('.message-wrapper, .node-divider-wrapper');
-        if (!messageWrapper) return;
-        e.preventDefault();
-        handleMessageLongPress(messageWrapper, e.clientX, e.clientY);
-    });
-    messageArea.addEventListener('touchstart', (e) => {
-        cancelMessageLongPress();
-        if (e.touches.length !== 1 || isInMultiSelectMode || shouldUseNativeSelection(e.target)) return;
-        const messageWrapper = e.target.closest('.message-wrapper, .node-divider-wrapper');
-        if (!messageWrapper) return;
-        const { clientX, clientY } = e.touches[0];
-        longPressTimer = setTimeout(() => {
-            if (messageArea.contains(messageWrapper) && !shouldUseNativeSelection(e.target)) {
-                handleMessageLongPress(messageWrapper, clientX, clientY);
-            }
-        }, 400);
-    }, { passive: true });
-    messageArea.addEventListener('touchend', cancelMessageLongPress);
-    messageArea.addEventListener('touchmove', cancelMessageLongPress);
-    messageArea.addEventListener('touchcancel', cancelMessageLongPress);
+    setupMessageLongPress(messageArea);
     
     const messageEditForm = document.getElementById('message-edit-form');
     if(messageEditForm) {

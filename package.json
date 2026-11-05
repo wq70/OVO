@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:long-press": "node scripts/test-message-long-press-browser.mjs",
     "test:keyboard": "node scripts/test-chat-keyboard-browser.mjs",
     "test:worldbook": "node scripts/test-worldbook-browser.mjs",
     "test:push": "node scripts/test-push.mjs",
